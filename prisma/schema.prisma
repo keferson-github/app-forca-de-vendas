@@ -1,0 +1,327 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum PaymentTerm {
+  DAYS_14
+  DAYS_15_30_45
+  DAYS_21
+  DAYS_21_28
+  DAYS_21_28_35
+  DAYS_28
+  DAYS_30
+  DAYS_7
+  DAYS_7_14_21
+  DAYS_7_14_21_28
+  A_VISTA_ANTECIPADA
+  BONIFICACAO
+  CARTAO_CREDITO
+  CARTAO_DEBITO
+  TROCA
+}
+
+enum FreightType {
+  CIF
+  FOB
+}
+
+enum DeliveryType {
+  ENTREGA
+  ENTREGA_FATURA
+  ENCOMENDA
+  RETIRADA
+}
+
+enum OrderOperation {
+  VENDA
+}
+
+enum ProspectStatus {
+  PROSPECT
+  QUALIFIED
+  DISQUALIFIED
+  CONVERTED
+}
+
+enum OrderStatus {
+  DRAFT
+  CONFIRMED
+  CANCELLED
+}
+
+enum DocumentType {
+  DECLARACAO_CONTEUDO
+}
+
+enum DispatchChannel {
+  WHATSAPP
+}
+
+enum DispatchStatus {
+  PENDING
+  SENT
+  FAILED
+}
+
+model User {
+  id                 String                @id @default(cuid())
+  name               String
+  email              String                @unique
+  passwordHash       String
+  createdAt          DateTime              @default(now())
+  updatedAt          DateTime              @updatedAt
+  customers          Customer[]
+  carriers           Carrier[]
+  products           Product[]
+  orders             Order[]
+  crmNotes           CrmNote[]
+  agendaEvents       AgendaEvent[]
+  checkins           Checkin[]
+  salesTargets       SalesTarget[]
+  customerContacts   CustomerContact[]
+  orderDocuments     OrderDocument[]
+  whatsappDispatches WhatsappDispatchLog[]
+}
+
+model Customer {
+  id                String            @id @default(cuid())
+  userId            String
+  name              String
+  companyName       String?
+  cnpjCpf           String?
+  customerCode      String?
+  phone             String?
+  commercialAddress String?
+  deliveryAddress   String?
+  isProspect        Boolean           @default(false)
+  prospectStatus    ProspectStatus    @default(PROSPECT)
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+  user              User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  orders            Order[]
+  crmNotes          CrmNote[]
+  agendaEvents      AgendaEvent[]
+  checkins          Checkin[]
+  contacts          CustomerContact[]
+
+  @@index([userId, name])
+  @@index([userId, customerCode])
+}
+
+model Carrier {
+  id        String   @id @default(cuid())
+  userId    String
+  name      String
+  phone     String?
+  contact   String?
+  notes     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  orders    Order[]
+
+  @@index([userId, name])
+}
+
+model Product {
+  id          String      @id @default(cuid())
+  userId      String
+  code        String
+  name        String
+  price       Decimal     @db.Decimal(10, 2)
+  imageUrl    String?
+  description String?
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  orderItems  OrderItem[]
+
+  @@unique([userId, code])
+  @@index([userId, name])
+}
+
+model Order {
+  id                  String                @id @default(cuid())
+  userId              String
+  customerId          String
+  carrierId           String?
+  orderNumber         Int                   @unique
+  operation           OrderOperation        @default(VENDA)
+  status              OrderStatus           @default(CONFIRMED)
+  paymentTerm         PaymentTerm
+  receivingCompany    String?
+  freightType         FreightType           @default(CIF)
+  deliveryType        DeliveryType          @default(ENTREGA)
+  notes               String?
+  customerOrderNumber String?
+  total               Decimal               @default(0) @db.Decimal(12, 2)
+  approvedAt          DateTime?
+  billedAt            DateTime?
+  cancelledAt         DateTime?
+  cancelledReason     String?
+  createdAt           DateTime              @default(now())
+  updatedAt           DateTime              @updatedAt
+  user                User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  customer            Customer              @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  carrier             Carrier?              @relation(fields: [carrierId], references: [id], onDelete: SetNull)
+  items               OrderItem[]
+  crmNotes            CrmNote[]
+  documents           OrderDocument[]
+  whatsappDispatches  WhatsappDispatchLog[]
+
+  @@index([userId, createdAt])
+  @@index([userId, customerId])
+  @@index([userId, status, createdAt])
+  @@index([userId, billedAt])
+}
+
+model OrderItem {
+  id              String         @id @default(cuid())
+  orderId         String
+  productId       String?
+  projectNameCode String
+  quantity        Int
+  discount        Decimal        @default(0) @db.Decimal(5, 2)
+  role            String?
+  operation       OrderOperation @default(VENDA)
+  unitPrice       Decimal        @default(0) @db.Decimal(10, 2)
+  totalPrice      Decimal        @default(0) @db.Decimal(12, 2)
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  order           Order          @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product         Product?       @relation(fields: [productId], references: [id], onDelete: SetNull)
+
+  @@index([orderId])
+}
+
+model CrmNote {
+  id            String    @id @default(cuid())
+  userId        String
+  customerId    String?
+  orderId       String?
+  subject       String
+  note          String?
+  visitNumber   Int?
+  replenishment Boolean   @default(false)
+  eventAt       DateTime  @default(now())
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  customer      Customer? @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  order         Order?    @relation(fields: [orderId], references: [id], onDelete: SetNull)
+
+  @@index([userId, eventAt])
+}
+
+model AgendaEvent {
+  id          String    @id @default(cuid())
+  userId      String
+  customerId  String?
+  subject     String
+  description String?
+  startAt     DateTime
+  endAt       DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  customer    Customer? @relation(fields: [customerId], references: [id], onDelete: SetNull)
+
+  @@index([userId, startAt])
+}
+
+model Checkin {
+  id         String    @id @default(cuid())
+  userId     String
+  customerId String?
+  notes      String?
+  latitude   Decimal?  @db.Decimal(10, 7)
+  longitude  Decimal?  @db.Decimal(10, 7)
+  checkedAt  DateTime  @default(now())
+  createdAt  DateTime  @default(now())
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  customer   Customer? @relation(fields: [customerId], references: [id], onDelete: SetNull)
+
+  @@index([userId, checkedAt])
+}
+
+model SalesTarget {
+  id            String   @id @default(cuid())
+  userId        String
+  year          Int
+  month         Int
+  targetAmount  Decimal  @db.Decimal(12, 2)
+  revenueAmount Decimal  @default(0) @db.Decimal(12, 2)
+  salesAmount   Decimal  @default(0) @db.Decimal(12, 2)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, year, month])
+  @@index([userId, year, month])
+}
+
+model CustomerContact {
+  id           String                @id @default(cuid())
+  userId       String
+  customerId   String
+  name         String
+  phone        String
+  email        String?
+  role         String?
+  isPrimary    Boolean               @default(false)
+  canWhatsapp  Boolean               @default(true)
+  createdAt    DateTime              @default(now())
+  updatedAt    DateTime              @updatedAt
+  user         User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  customer     Customer              @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  dispatchLogs WhatsappDispatchLog[]
+
+  @@index([userId, customerId])
+  @@index([userId, phone])
+}
+
+model OrderDocument {
+  id                 String                @id @default(cuid())
+  userId             String
+  orderId            String
+  type               DocumentType          @default(DECLARACAO_CONTEUDO)
+  fileName           String
+  fileUrl            String
+  generatedAt        DateTime              @default(now())
+  generatedByUserId  String?
+  createdAt          DateTime              @default(now())
+  user               User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  order              Order                 @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  whatsappDispatches WhatsappDispatchLog[]
+
+  @@index([userId, orderId, type])
+}
+
+model WhatsappDispatchLog {
+  id                String           @id @default(cuid())
+  userId            String
+  orderId           String
+  orderDocumentId   String?
+  customerContactId String?
+  channel           DispatchChannel  @default(WHATSAPP)
+  status            DispatchStatus   @default(PENDING)
+  destinationPhone  String
+  providerMessageId String?
+  providerPayload   Json?
+  errorMessage      String?
+  sentAt            DateTime?
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+  user              User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  order             Order            @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  orderDocument     OrderDocument?   @relation(fields: [orderDocumentId], references: [id], onDelete: SetNull)
+  customerContact   CustomerContact? @relation(fields: [customerContactId], references: [id], onDelete: SetNull)
+
+  @@index([userId, status, createdAt])
+  @@index([orderId, createdAt])
+}
