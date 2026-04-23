@@ -25,7 +25,7 @@ export function AuthShell({ children }: AuthShellProps) {
           className="object-cover"
           priority
         />
-        <div className="absolute inset-0 bg-black/90" />
+        <div className="absolute inset-0 bg-black/50" />
       </div>
 
       <div className="relative z-10 mx-auto min-h-[calc(100vh-2rem)] w-full max-w-[1240px] overflow-hidden rounded-[28px] bg-card shadow-[0_24px_70px_-36px_rgba(15,23,42,0.4)] sm:min-h-[calc(100vh-3rem)] lg:min-h-[720px] lg:rounded-[44px]">
@@ -45,7 +45,7 @@ export function AuthShell({ children }: AuthShellProps) {
             />
             <div className="absolute inset-0 bg-gradient-to-b from-black/55 via-black/75 to-black/95" />
             <div className="absolute inset-x-0 top-0 flex items-center justify-between p-8 text-white">
-              <p className="text-sm font-semibold">App Forca de Vendas</p>
+              <h1 className="text-sm font-semibold">inteligente e integrada</h1>
               <span className="rounded-full bg-white/14 px-3 py-1 text-xs font-medium text-white/90 backdrop-blur">
                 Representante Comercial
               </span>

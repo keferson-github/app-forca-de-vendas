@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useActionState } from "react";
 import { RegisterState, registerAction } from "@/app/(auth)/register/actions";
+import { AuthFormHeader } from "@/components/auth/auth-form-header";
 import { PasswordField } from "@/components/auth/password-field";
 import { SubmitButton } from "@/components/auth/submit-button";
 import { Input } from "@/components/ui/input";
@@ -15,15 +16,11 @@ export function RegisterForm() {
 
   return (
     <div className="mx-auto w-full max-w-[480px]">
-      <div className="mb-8 text-center">
-        <p className="mb-10 text-left text-lg font-bold tracking-normal text-foreground">
-          Forca de Vendas
-        </p>
-        <h1 className="text-4xl font-semibold tracking-normal text-foreground">
-          Criar conta
-        </h1>
-        <p className="mt-3 text-sm text-muted-foreground">Informe seus dados para comecar.</p>
-      </div>
+      <AuthFormHeader
+        eyebrow="Novo acesso"
+        title="Criar conta"
+        description="Cadastre seus dados para organizar clientes, pedidos e CRM."
+      />
 
       <form action={action} className="space-y-4">
         <div className="grid gap-4 lg:grid-cols-2">

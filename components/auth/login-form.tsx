@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useActionState } from "react";
 import { LoginState, loginAction } from "@/app/(auth)/login/actions";
+import { AuthFormHeader } from "@/components/auth/auth-form-header";
 import { PasswordField } from "@/components/auth/password-field";
 import { SubmitButton } from "@/components/auth/submit-button";
 import { Input } from "@/components/ui/input";
@@ -15,17 +16,11 @@ export function LoginForm() {
 
   return (
     <div className="mx-auto w-full max-w-[430px]">
-      <div className="mb-9 text-center">
-        <p className="mb-12 text-left text-lg font-bold tracking-normal text-foreground">
-          Forca de Vendas
-        </p>
-        <h1 className="text-4xl font-semibold tracking-normal text-foreground">
-          Acessar conta
-        </h1>
-        <p className="mt-3 text-sm text-muted-foreground">
-          Use e-mail e senha para entrar no app.
-        </p>
-      </div>
+      <AuthFormHeader
+        eyebrow="Acesso seguro"
+        title="Acessar conta"
+        description="Entre para acompanhar clientes, pedidos e agenda comercial."
+      />
 
       <form action={action} className="space-y-4">
         <div className="space-y-2">
