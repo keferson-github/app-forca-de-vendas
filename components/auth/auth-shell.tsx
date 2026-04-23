@@ -46,6 +46,7 @@ export function AuthShell({ children }: AuthShellProps) {
           src={authImage}
           alt="Conceito visual de CRM e gestao de relacionamento com clientes"
           fill
+          sizes="(max-width: 1024px) 100vw, 58vw"
           className="object-cover"
           priority
         />
@@ -65,6 +66,7 @@ export function AuthShell({ children }: AuthShellProps) {
               src={authImage}
               alt="Conceito visual de CRM e gestao de relacionamento com clientes"
               fill
+              sizes="(max-width: 1024px) 100vw, 50vw"
               className="object-cover"
               priority
             />
