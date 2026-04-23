@@ -39,7 +39,7 @@ export function SiteHeader() {
         <div className="grid">
           <h1 className="text-base font-medium">{resolveTitle(pathname)}</h1>
           <p className="hidden text-xs text-muted-foreground sm:block">
-            Indicadores e operacao comercial conectados ao PostgreSQL.
+            Indicadores, clientes e pedidos em uma visao comercial integrada.
           </p>
         </div>
         <div className="ml-auto flex items-center gap-2">
