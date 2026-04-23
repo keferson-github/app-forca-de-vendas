@@ -7,7 +7,7 @@ type SectionPlaceholderProps = {
 
 export function SectionPlaceholder({ title, description }: SectionPlaceholderProps) {
   return (
-    <Card className="w-full max-w-3xl">
+    <Card className="m-4 w-auto max-w-3xl lg:m-6">
       <CardHeader>
         <CardTitle>{title}</CardTitle>
         <CardDescription>{description}</CardDescription>

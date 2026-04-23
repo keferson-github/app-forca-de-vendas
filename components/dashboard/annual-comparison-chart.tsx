@@ -1,14 +1,18 @@
 "use client";
 
 import {
-  Bar,
-  BarChart,
+  Area,
+  AreaChart,
   CartesianGrid,
-  ResponsiveContainer,
-  Tooltip,
   XAxis,
   YAxis,
 } from "recharts";
+import {
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+  type ChartConfig,
+} from "@/components/ui/chart";
 
 type AnnualPoint = {
   month: string;
@@ -20,6 +24,17 @@ type AnnualComparisonChartProps = {
   data: AnnualPoint[];
   metric: "vendas" | "faturamento";
 };
+
+const chartConfig = {
+  sales: {
+    label: "Vendas",
+    color: "var(--chart-2)",
+  },
+  revenue: {
+    label: "Faturamento",
+    color: "var(--chart-1)",
+  },
+} satisfies ChartConfig;
 
 const currencyFormatter = new Intl.NumberFormat("pt-BR", {
   style: "currency",
@@ -35,42 +50,58 @@ export function AnnualComparisonChart({
   const dataKey = isRevenue ? "revenue" : "sales";
 
   return (
-    <div className="h-[290px] w-full">
-      <ResponsiveContainer width="100%" height="100%">
-        <BarChart data={data} margin={{ left: 4, right: 4, top: 10, bottom: 0 }}>
-          <CartesianGrid strokeDasharray="3 3" vertical={false} strokeOpacity={0.35} />
-          <XAxis
-            dataKey="month"
-            tickLine={false}
-            axisLine={false}
-            tickMargin={10}
-            fontSize={12}
-          />
-          <YAxis
-            tickLine={false}
-            axisLine={false}
-            width={72}
-            tickFormatter={(value: number) =>
-              isRevenue ? currencyFormatter.format(value) : String(value)
-            }
-          />
-          <Tooltip
-            cursor={{ fill: "rgba(0,0,0,0.04)" }}
-            formatter={(value) =>
-              isRevenue
-                ? currencyFormatter.format(Number(value ?? 0))
-                : `${Number(value ?? 0)} vendas`
-            }
-            labelFormatter={(label) => `Mes: ${label}`}
-          />
-          <Bar
-            dataKey={dataKey}
-            fill={isRevenue ? "#171717" : "#2563eb"}
-            radius={[8, 8, 0, 0]}
-            maxBarSize={34}
-          />
-        </BarChart>
-      </ResponsiveContainer>
-    </div>
+    <ChartContainer
+      config={chartConfig}
+      className="aspect-auto h-[280px] w-full md:h-[340px]"
+    >
+      <AreaChart data={data} margin={{ left: 0, right: 12, top: 8 }}>
+        <defs>
+          <linearGradient id="fillSales" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="5%" stopColor="var(--color-sales)" stopOpacity={0.42} />
+            <stop offset="95%" stopColor="var(--color-sales)" stopOpacity={0.04} />
+          </linearGradient>
+          <linearGradient id="fillRevenue" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="5%" stopColor="var(--color-revenue)" stopOpacity={0.42} />
+            <stop offset="95%" stopColor="var(--color-revenue)" stopOpacity={0.04} />
+          </linearGradient>
+        </defs>
+        <CartesianGrid vertical={false} />
+        <XAxis
+          dataKey="month"
+          tickLine={false}
+          axisLine={false}
+          tickMargin={8}
+          minTickGap={12}
+        />
+        <YAxis
+          tickLine={false}
+          axisLine={false}
+          width={72}
+          tickFormatter={(value: number) =>
+            isRevenue ? currencyFormatter.format(value) : String(value)
+          }
+        />
+        <ChartTooltip
+          cursor={false}
+          content={
+            <ChartTooltipContent
+              indicator="dot"
+              formatter={(value) =>
+                isRevenue
+                  ? currencyFormatter.format(Number(value ?? 0))
+                  : `${Number(value ?? 0)} vendas`
+              }
+            />
+          }
+        />
+        <Area
+          dataKey={dataKey}
+          type="natural"
+          fill={isRevenue ? "url(#fillRevenue)" : "url(#fillSales)"}
+          stroke={isRevenue ? "var(--color-revenue)" : "var(--color-sales)"}
+          strokeWidth={2}
+        />
+      </AreaChart>
+    </ChartContainer>
   );
 }

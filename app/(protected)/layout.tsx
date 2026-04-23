@@ -1,6 +1,9 @@
+import type * as React from "react";
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { AppSidebar } from "@/components/layout/app-sidebar";
+import { SiteHeader } from "@/components/layout/site-header";
+import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 
 export default async function ProtectedLayout({
   children,
@@ -13,11 +16,29 @@ export default async function ProtectedLayout({
   }
 
   return (
-    <div className="min-h-screen bg-[linear-gradient(180deg,#f8f9fc_0%,#f5f7fb_100%)] lg:grid lg:grid-cols-[18rem_minmax(0,1fr)]">
-      <AppSidebar />
-      <main className="min-w-0 p-4 sm:p-6 lg:p-8">
-        <div className="mx-auto w-full max-w-6xl">{children}</div>
-      </main>
-    </div>
+    <SidebarProvider
+      style={
+        {
+          "--sidebar-width": "calc(var(--spacing) * 72)",
+          "--header-height": "calc(var(--spacing) * 12)",
+        } as React.CSSProperties
+      }
+    >
+      <AppSidebar
+        variant="inset"
+        user={{
+          name: session.user.name ?? "Usuario",
+          email: session.user.email,
+        }}
+      />
+      <SidebarInset>
+        <SiteHeader />
+        <div className="flex flex-1 flex-col">
+          <div className="@container/main flex flex-1 flex-col gap-2">
+            {children}
+          </div>
+        </div>
+      </SidebarInset>
+    </SidebarProvider>
   );
 }

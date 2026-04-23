@@ -1,15 +1,24 @@
 import Link from "next/link";
 import {
-  CalendarClock,
-  CheckCheck,
-  ClipboardList,
-  Package,
-  Truck,
-  UserRoundPlus,
-  Users,
-} from "lucide-react";
+  IconCalendar,
+  IconClipboardList,
+  IconFileDescription,
+  IconMapPinCheck,
+  IconMessageCircle,
+  IconNotes,
+  IconPackage,
+  IconTruck,
+  IconUserPlus,
+  IconUsers,
+} from "@tabler/icons-react";
 import { auth } from "@/auth";
 import { AnnualComparisonChart } from "@/components/dashboard/annual-comparison-chart";
+import {
+  OperationalTable,
+  type OperationalRow,
+} from "@/components/dashboard/operational-table";
+import { SectionCards } from "@/components/dashboard/section-cards";
+import { Badge } from "@/components/ui/badge";
 import {
   Card,
   CardContent,
@@ -17,6 +26,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { prisma } from "@/lib/prisma";
 
 type SearchParams = Promise<{
@@ -246,223 +256,176 @@ export default async function DashboardPage(props: { searchParams: SearchParams 
       label: "Clientes",
       value: data.cards.customersCount,
       extra: `${data.cards.prospectsCount} prospects`,
-      icon: Users,
+      icon: IconUsers,
     },
     {
       href: "/transportadoras",
       label: "Transportadoras",
       value: data.cards.carriersCount,
       extra: "Cadastros ativos",
-      icon: Truck,
+      icon: IconTruck,
     },
     {
       href: "/produtos",
       label: "Produtos",
       value: data.cards.productsCount,
       extra: "Itens no catalogo",
-      icon: Package,
+      icon: IconPackage,
     },
     {
       href: "/pedidos",
       label: "Pedidos",
       value: data.cards.ordersCount,
       extra: `${data.cards.ordersToday} hoje`,
-      icon: ClipboardList,
+      icon: IconClipboardList,
     },
     {
       href: "/crm",
       label: "CRM",
       value: data.modules.crmNotesCount,
       extra: "Anotacoes registradas",
-      icon: UserRoundPlus,
+      icon: IconUserPlus,
     },
     {
       href: "/agenda",
       label: "Agenda",
       value: data.modules.agendaEventsCount,
       extra: `${data.modules.upcomingAgendaCount} proximos`,
-      icon: CalendarClock,
+      icon: IconCalendar,
     },
     {
       href: "/checkins",
       label: "Checkins",
       value: data.modules.checkinsCount,
       extra: `${data.modules.checkinsMonthCount} no mes`,
-      icon: CheckCheck,
+      icon: IconMapPinCheck,
     },
-  ];
+  ] satisfies OperationalRow[];
 
   return (
-    <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <CardTitle>Ola, {userName}</CardTitle>
-          <CardDescription>
-            Painel consolidado com indicadores reais de todas as secoes do Web App.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-            <div className="rounded-lg bg-muted p-4 shadow-sm">
-              <p className="text-xs uppercase tracking-wide text-muted-foreground">
-                Pedidos no mes
-              </p>
-              <p className="mt-2 text-xl font-semibold sm:text-2xl">
-                {data.cards.monthSales}
+    <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
+      <div className="px-4 lg:px-6">
+        <div className="flex flex-col gap-2">
+          <Badge variant="outline" className="w-fit">
+            Ola, {userName}
+          </Badge>
+          <div className="flex flex-col justify-between gap-3 md:flex-row md:items-end">
+            <div>
+              <h2 className="text-2xl font-semibold tracking-tight md:text-3xl">
+                Visao comercial em tempo real
+              </h2>
+              <p className="text-sm text-muted-foreground">
+                Dashboard no padrao shadcn/ui com metricas reais de clientes,
+                pedidos, CRM, agenda, checkins e documentos.
               </p>
             </div>
-            <div className="rounded-lg bg-muted p-4 shadow-sm">
-              <p className="text-xs uppercase tracking-wide text-muted-foreground">
-                Pedidos hoje
-              </p>
-              <p className="mt-2 text-xl font-semibold sm:text-2xl">
-                {data.cards.ordersToday}
-              </p>
-            </div>
-            <div className="rounded-lg bg-muted p-4 shadow-sm">
-              <p className="text-xs uppercase tracking-wide text-muted-foreground">
-                Vendas / Faturamento no mes
-              </p>
-              <p className="mt-2 text-xl font-semibold sm:text-2xl">
-                {currency(data.cards.monthRevenue)}
-              </p>
-            </div>
-            <div className="rounded-lg bg-muted p-4 shadow-sm">
-              <p className="text-xs uppercase tracking-wide text-muted-foreground">
-                Meta mes
-              </p>
-              <p className="mt-2 text-xl font-semibold sm:text-2xl">
-                {currency(data.cards.targetMonth)}
-              </p>
-            </div>
-            <div className="rounded-lg bg-muted p-4 shadow-sm">
-              <p className="text-xs uppercase tracking-wide text-muted-foreground">Saldo</p>
-              <p className="mt-2 text-xl font-semibold sm:text-2xl">
-                {currency(data.cards.balance)}
-              </p>
-            </div>
-            <div className="rounded-lg bg-muted p-4 shadow-sm">
-              <p className="text-xs uppercase tracking-wide text-muted-foreground">
-                Falta(m) para fechar o mes
-              </p>
-              <p className="mt-2 text-xl font-semibold sm:text-2xl">
-                {data.daysToMonthEnd} dias
-              </p>
-            </div>
+            {data.hasDataError ? (
+              <Badge variant="outline" className="border-amber-500/50 text-amber-700">
+                Verifique migrations/conexao
+              </Badge>
+            ) : null}
           </div>
-          {data.hasDataError ? (
-            <p className="mt-4 text-sm text-amber-700">
-              Nao foi possivel ler parte dos dados do banco. Verifique migrations e conexao.
-            </p>
-          ) : null}
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader className="gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <CardTitle>Comparativo de Vendas Anual</CardTitle>
-            <CardDescription>
-              Filtro entre Vendas e Faturamento para o ano selecionado.
-            </CardDescription>
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <Link
-              href={`?metric=vendas&year=${year}`}
-              className={`rounded-lg px-3 py-1.5 text-sm ${
-                metric === "vendas"
-                  ? "bg-primary text-primary-foreground"
-                  : "bg-muted text-foreground"
-              }`}
-            >
-              Vendas
-            </Link>
-            <Link
-              href={`?metric=faturamento&year=${year}`}
-              className={`rounded-lg px-3 py-1.5 text-sm ${
-                metric === "faturamento"
-                  ? "bg-primary text-primary-foreground"
-                  : "bg-muted text-foreground"
-              }`}
-            >
-              Faturamento
-            </Link>
-            <div className="flex flex-wrap gap-1">
-              {yearOptions.map((option) => (
-                <Link
-                  key={option}
-                  href={`?metric=${metric}&year=${option}`}
-                  className={`rounded-md px-2.5 py-1 text-xs ${
-                    option === year
-                      ? "bg-primary text-primary-foreground"
-                      : "bg-muted text-foreground"
-                  }`}
-                >
-                  {option}
-                </Link>
-              ))}
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <AnnualComparisonChart data={data.annualComparison} metric={metric} />
-        </CardContent>
-      </Card>
-
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-        {sectionLinks.map((item) => {
-          const Icon = item.icon;
-          return (
-            <Link key={item.href} href={item.href}>
-              <Card className="h-full transition-transform hover:-translate-y-0.5">
-                <CardHeader className="pb-3">
-                  <CardDescription className="flex items-center gap-2">
-                    <Icon className="h-4 w-4" />
-                    {item.label}
-                  </CardDescription>
-                  <CardTitle className="text-2xl">{item.value}</CardTitle>
-                </CardHeader>
-                <CardContent className="pt-0">
-                  <p className="text-sm text-muted-foreground">{item.extra}</p>
-                </CardContent>
-              </Card>
-            </Link>
-          );
-        })}
+        </div>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Analytics Operacional</CardTitle>
-          <CardDescription>
-            Indicadores de CRM, agenda, contatos, documentos e envios via WhatsApp.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            <div className="rounded-lg bg-muted p-4">
-              <p className="text-xs uppercase tracking-wide text-muted-foreground">Anotacoes CRM</p>
-              <p className="mt-2 text-xl font-semibold">{data.modules.crmNotesCount}</p>
+      <SectionCards
+        customersCount={data.cards.customersCount}
+        monthSales={data.cards.monthSales}
+        ordersToday={data.cards.ordersToday}
+        monthRevenue={currency(data.cards.monthRevenue)}
+        targetMonth={currency(data.cards.targetMonth)}
+        balance={currency(data.cards.balance)}
+        balanceRaw={data.cards.balance}
+        daysToMonthEnd={data.daysToMonthEnd}
+      />
+
+      <div className="px-4 lg:px-6">
+        <Card>
+          <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <CardTitle>Comparativo de Vendas Anual</CardTitle>
+              <CardDescription>
+                Filtro entre vendas e faturamento para o ano selecionado.
+              </CardDescription>
             </div>
-            <div className="rounded-lg bg-muted p-4">
-              <p className="text-xs uppercase tracking-wide text-muted-foreground">Contatos</p>
-              <p className="mt-2 text-xl font-semibold">{data.modules.contactsCount}</p>
+            <div className="flex flex-wrap items-center gap-2">
+              <Tabs value={metric}>
+                <TabsList>
+                  <TabsTrigger asChild value="vendas">
+                    <Link href={`?metric=vendas&year=${year}`}>Vendas</Link>
+                  </TabsTrigger>
+                  <TabsTrigger asChild value="faturamento">
+                    <Link href={`?metric=faturamento&year=${year}`}>
+                      Faturamento
+                    </Link>
+                  </TabsTrigger>
+                </TabsList>
+              </Tabs>
+              <div className="flex flex-wrap gap-1">
+                {yearOptions.map((option) => (
+                  <Link
+                    key={option}
+                    href={`?metric=${metric}&year=${option}`}
+                    className={`rounded-md px-2.5 py-1 text-xs transition-colors ${
+                      option === year
+                        ? "bg-primary text-primary-foreground"
+                        : "bg-muted text-foreground hover:bg-muted/80"
+                    }`}
+                  >
+                    {option}
+                  </Link>
+                ))}
+              </div>
             </div>
-            <div className="rounded-lg bg-muted p-4">
-              <p className="text-xs uppercase tracking-wide text-muted-foreground">Docs de pedido</p>
-              <p className="mt-2 text-xl font-semibold">{data.modules.documentsCount}</p>
-            </div>
-            <div className="rounded-lg bg-muted p-4">
-              <p className="text-xs uppercase tracking-wide text-muted-foreground">WhatsApp (enviados)</p>
-              <p className="mt-2 text-xl font-semibold">{data.modules.dispatchSentCount}</p>
-            </div>
-            <div className="rounded-lg bg-muted p-4 sm:col-span-2 lg:col-span-4">
-              <p className="text-xs uppercase tracking-wide text-muted-foreground">WhatsApp (falhas)</p>
-              <p className="mt-2 text-xl font-semibold">{data.modules.dispatchFailedCount}</p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+          </CardHeader>
+          <CardContent>
+            <AnnualComparisonChart data={data.annualComparison} metric={metric} />
+          </CardContent>
+        </Card>
+      </div>
+
+      <OperationalTable rows={sectionLinks} />
+
+      <div className="grid gap-4 px-4 lg:grid-cols-3 lg:px-6">
+        <Card>
+          <CardHeader>
+            <CardDescription className="flex items-center gap-2">
+              <IconNotes className="size-4" />
+              CRM e contatos
+            </CardDescription>
+            <CardTitle className="text-2xl">
+              {data.modules.crmNotesCount + data.modules.contactsCount}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="text-sm text-muted-foreground">
+            {data.modules.crmNotesCount} anotacoes e {data.modules.contactsCount} contatos cadastrados.
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardDescription className="flex items-center gap-2">
+              <IconFileDescription className="size-4" />
+              Documentos
+            </CardDescription>
+            <CardTitle className="text-2xl">{data.modules.documentsCount}</CardTitle>
+          </CardHeader>
+          <CardContent className="text-sm text-muted-foreground">
+            Declaracoes e documentos gerados a partir de pedidos.
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardDescription className="flex items-center gap-2">
+              <IconMessageCircle className="size-4" />
+              WhatsApp
+            </CardDescription>
+            <CardTitle className="text-2xl">{data.modules.dispatchSentCount}</CardTitle>
+          </CardHeader>
+          <CardContent className="text-sm text-muted-foreground">
+            {data.modules.dispatchFailedCount} falha(s) registrada(s) no envio via Evolution API.
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }

@@ -1,103 +1,189 @@
 "use client";
 
-import { useState } from "react";
+import type * as React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
-  BadgeInfo,
-  BookText,
-  CalendarClock,
-  CheckCheck,
-  ClipboardList,
-  LayoutDashboard,
-  Menu,
-  Package,
-  Truck,
-  UserRoundPlus,
-  Users,
-  X,
-} from "lucide-react";
+  IconCalendar,
+  IconCheckupList,
+  IconCirclePlusFilled,
+  IconClipboardList,
+  IconDashboard,
+  IconInnerShadowTop,
+  IconLogout,
+  IconMapPinCheck,
+  IconNotes,
+  IconPackage,
+  IconTruck,
+  IconUserPlus,
+  IconUsers,
+  type Icon,
+} from "@tabler/icons-react";
 import { logoutAction } from "@/app/(protected)/actions";
-import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarFooter,
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarGroupLabel,
+  SidebarHeader,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  SidebarSeparator,
+} from "@/components/ui/sidebar";
 
-const links = [
-  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/clientes", label: "Clientes", icon: Users },
-  { href: "/transportadoras", label: "Transportadoras", icon: Truck },
-  { href: "/produtos", label: "Produtos", icon: Package },
-  { href: "/pedidos", label: "Pedidos", icon: ClipboardList },
-  { href: "/crm", label: "CRM", icon: UserRoundPlus },
-  { href: "/checkins", label: "Checkins", icon: CheckCheck },
-  { href: "/anotacoes", label: "Anotacoes", icon: BookText },
-  { href: "/agenda", label: "Agenda", icon: CalendarClock },
+type NavItem = {
+  title: string;
+  url: string;
+  icon: Icon;
+};
+
+type AppSidebarProps = React.ComponentProps<typeof Sidebar> & {
+  user: {
+    name: string;
+    email?: string | null;
+  };
+};
+
+const primaryItems: NavItem[] = [
+  { title: "Dashboard", url: "/dashboard", icon: IconDashboard },
+  { title: "Clientes", url: "/clientes", icon: IconUsers },
+  { title: "Pedidos", url: "/pedidos", icon: IconClipboardList },
+  { title: "Produtos", url: "/produtos", icon: IconPackage },
 ];
 
-export function AppSidebar() {
+const operationItems: NavItem[] = [
+  { title: "Transportadoras", url: "/transportadoras", icon: IconTruck },
+  { title: "CRM", url: "/crm", icon: IconUserPlus },
+  { title: "Checkins", url: "/checkins", icon: IconMapPinCheck },
+  { title: "Anotacoes", url: "/anotacoes", icon: IconNotes },
+  { title: "Agenda", url: "/agenda", icon: IconCalendar },
+];
+
+function isActivePath(pathname: string, url: string) {
+  return pathname === url || pathname.startsWith(`${url}/`);
+}
+
+function NavGroup({ label, items }: { label: string; items: NavItem[] }) {
   const pathname = usePathname();
-  const [isOpen, setIsOpen] = useState(false);
 
   return (
-    <aside className="w-full lg:sticky lg:top-0 lg:h-screen lg:w-72 lg:shrink-0">
-      <div className="border-b border-border/50 bg-card/95 p-4 shadow-[0_12px_30px_-26px_rgba(0,0,0,0.5)] backdrop-blur-sm lg:h-full lg:border-r lg:border-b-0">
-        <div className="flex items-center justify-between gap-3">
-          <div className="flex items-center gap-2 px-1">
-            <div className="rounded-lg bg-primary p-2 text-primary-foreground">
-              <BadgeInfo className="h-4 w-4" />
-            </div>
-            <div>
-              <p className="text-sm font-semibold">App Forca de Vendas</p>
-              <p className="text-xs text-muted-foreground">Representante Comercial</p>
-            </div>
-          </div>
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            className="lg:hidden"
-            aria-label={isOpen ? "Fechar menu" : "Abrir menu"}
-            onClick={() => setIsOpen((value) => !value)}
-          >
-            {isOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-          </Button>
-        </div>
-
-        <div
-          className={cn(
-            "overflow-hidden transition-[max-height,opacity,margin] duration-500 ease-out lg:mt-6 lg:max-h-none lg:opacity-100",
-            isOpen ? "mt-6 max-h-[42rem] opacity-100" : "mt-0 max-h-0 opacity-0 lg:mt-6"
-          )}
-        >
-          <nav className="grid gap-1">
-            {links.map((link) => {
-              const Icon = link.icon;
-              const active = pathname === link.href;
-              return (
-                <Link
-                  key={link.href}
-                  href={link.href}
-                  onClick={() => setIsOpen(false)}
-                  className={cn(
-                    "inline-flex items-center gap-2 rounded-lg px-3 py-2.5 text-sm transition-colors",
-                    active
-                      ? "bg-muted text-foreground"
-                      : "text-muted-foreground hover:bg-muted/70 hover:text-foreground"
-                  )}
-                >
-                  <Icon className="h-4 w-4" />
-                  {link.label}
+    <SidebarGroup>
+      <SidebarGroupLabel>{label}</SidebarGroupLabel>
+      <SidebarGroupContent>
+        <SidebarMenu>
+          {items.map((item) => (
+            <SidebarMenuItem key={item.url}>
+              <SidebarMenuButton
+                asChild
+                tooltip={item.title}
+                isActive={isActivePath(pathname, item.url)}
+              >
+                <Link href={item.url}>
+                  <item.icon />
+                  <span>{item.title}</span>
                 </Link>
-              );
-            })}
-          </nav>
-          <form action={logoutAction} className="mt-6">
-            <Button variant="secondary" className="w-full">
-              Sair
-            </Button>
-          </form>
-          <p className="mt-4 text-center text-xs text-muted-foreground">Versao: 0.1.0</p>
-        </div>
-      </div>
-    </aside>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          ))}
+        </SidebarMenu>
+      </SidebarGroupContent>
+    </SidebarGroup>
+  );
+}
+
+export function AppSidebar({ user, ...props }: AppSidebarProps) {
+  const initials = user.name
+    .split(" ")
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase())
+    .join("");
+
+  return (
+    <Sidebar collapsible="icon" {...props}>
+      <SidebarHeader>
+        <SidebarMenu>
+          <SidebarMenuItem>
+            <SidebarMenuButton
+              asChild
+              size="lg"
+              className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
+            >
+              <Link href="/dashboard">
+                <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
+                  <IconInnerShadowTop className="size-4" />
+                </div>
+                <div className="grid flex-1 text-left text-sm leading-tight">
+                  <span className="truncate font-semibold">Forca de Vendas</span>
+                  <span className="truncate text-xs">Representante Comercial</span>
+                </div>
+              </Link>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+        </SidebarMenu>
+      </SidebarHeader>
+
+      <SidebarContent>
+        <SidebarGroup>
+          <SidebarGroupContent className="flex flex-col gap-2">
+            <SidebarMenu>
+              <SidebarMenuItem className="flex items-center gap-2">
+                <SidebarMenuButton
+                  asChild
+                  tooltip="Novo pedido"
+                  className="min-w-8 bg-primary text-primary-foreground duration-200 ease-linear hover:bg-primary/90 hover:text-primary-foreground active:bg-primary/90 active:text-primary-foreground"
+                >
+                  <Link href="/pedidos">
+                    <IconCirclePlusFilled />
+                    <span>Novo pedido</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        <NavGroup label="Principal" items={primaryItems} />
+        <NavGroup label="Operacao" items={operationItems} />
+      </SidebarContent>
+
+      <SidebarFooter>
+        <SidebarSeparator />
+        <SidebarMenu>
+          <SidebarMenuItem>
+            <SidebarMenuButton size="lg" tooltip={user.name}>
+              <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-accent text-xs font-semibold text-sidebar-accent-foreground">
+                {initials || "U"}
+              </div>
+              <div className="grid flex-1 text-left text-sm leading-tight">
+                <span className="truncate font-medium">{user.name}</span>
+                <span className="truncate text-xs text-muted-foreground">
+                  {user.email ?? "Sessao ativa"}
+                </span>
+              </div>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+          <SidebarMenuItem>
+            <form action={logoutAction}>
+              <SidebarMenuButton asChild tooltip="Sair">
+                <button type="submit">
+                  <IconLogout />
+                  <span>Sair</span>
+                </button>
+              </SidebarMenuButton>
+            </form>
+          </SidebarMenuItem>
+          <SidebarMenuItem>
+            <SidebarMenuButton disabled className="opacity-70">
+              <IconCheckupList />
+              <span>Versao 0.1.0</span>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+        </SidebarMenu>
+      </SidebarFooter>
+    </Sidebar>
   );
 }
