@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import { usePathname } from "next/navigation";
+import { useEffect, useRef, useState } from "react";
 import { AuthTransition } from "@/components/auth/auth-transition";
 
 type AuthShellProps = {
@@ -14,6 +15,29 @@ const authImage =
 export function AuthShell({ children }: AuthShellProps) {
   const pathname = usePathname();
   const isRegister = pathname === "/register";
+  const previousPathname = useRef(pathname);
+  const [isSwapping, setIsSwapping] = useState(false);
+
+  useEffect(() => {
+    if (previousPathname.current === pathname) {
+      return;
+    }
+
+    previousPathname.current = pathname;
+    setIsSwapping(false);
+
+    const frame = window.requestAnimationFrame(() => {
+      setIsSwapping(true);
+    });
+    const timeout = window.setTimeout(() => {
+      setIsSwapping(false);
+    }, 760);
+
+    return () => {
+      window.cancelAnimationFrame(frame);
+      window.clearTimeout(timeout);
+    };
+  }, [pathname]);
 
   return (
     <main className="relative min-h-screen overflow-hidden bg-[#f3f5f9] p-4 sm:p-6 lg:grid lg:place-items-center lg:p-10">
@@ -33,6 +57,7 @@ export function AuthShell({ children }: AuthShellProps) {
           className={[
             "relative hidden h-full p-3 transition-transform duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] lg:absolute lg:inset-y-0 lg:left-0 lg:z-20 lg:block lg:w-1/2",
             isRegister ? "lg:translate-x-full" : "lg:translate-x-0",
+            isSwapping ? "auth-swap-fade" : "",
           ].join(" ")}
         >
           <div className="relative h-full overflow-hidden rounded-[34px]">
@@ -67,6 +92,7 @@ export function AuthShell({ children }: AuthShellProps) {
           className={[
             "flex min-h-[calc(100vh-2rem)] min-w-0 items-center justify-center px-5 py-10 transition-transform duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] sm:min-h-[calc(100vh-3rem)] sm:px-8 lg:absolute lg:inset-y-0 lg:right-0 lg:w-1/2 lg:px-14 lg:py-12",
             isRegister ? "lg:-translate-x-full" : "lg:translate-x-0",
+            isSwapping ? "auth-swap-fade" : "",
           ].join(" ")}
         >
           <AuthTransition>{children}</AuthTransition>
