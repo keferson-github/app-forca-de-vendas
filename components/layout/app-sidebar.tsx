@@ -103,7 +103,7 @@ export function AppSidebar({ user, ...props }: AppSidebarProps) {
     .join("");
 
   return (
-    <Sidebar collapsible="icon" {...props}>
+    <Sidebar collapsible="icon" className="dark" {...props}>
       <SidebarHeader>
         <SidebarMenu>
           <SidebarMenuItem>
