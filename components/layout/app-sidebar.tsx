@@ -14,6 +14,7 @@ import {
   IconMapPinCheck,
   IconNotes,
   IconPackage,
+  IconPlugConnected,
   IconTruck,
   IconUserPlus,
   IconUsers,
@@ -60,6 +61,7 @@ const operationItems: NavItem[] = [
   { title: "Checkins", url: "/checkins", icon: IconMapPinCheck },
   { title: "Anotacoes", url: "/anotacoes", icon: IconNotes },
   { title: "Agenda", url: "/agenda", icon: IconCalendar },
+  { title: "Integracoes", url: "/integracoes/bling", icon: IconPlugConnected },
 ];
 
 function isActivePath(pathname: string, url: string) {

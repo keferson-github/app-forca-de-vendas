@@ -16,6 +16,24 @@ bun dev
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
+## Integracao Bling
+
+Configure as variaveis abaixo no ambiente:
+
+```bash
+BLING_CLIENT_ID="..."
+BLING_CLIENT_SECRET="..."
+BLING_APP_URL="https://seu-dominio.com.br"
+BLING_REDIRECT_URI="https://seu-dominio.com.br/api/bling/oauth/callback"
+```
+
+No cadastro do aplicativo Bling, use a URL de redirecionamento acima. Na aba
+Webhooks, cadastre `https://seu-dominio.com.br/api/bling/webhook` como servidor
+e habilite os recursos desejados com seus respectivos escopos.
+
+A tela protegida `/integracoes/bling` inicia o fluxo OAuth e mostra as URLs
+necessarias para configurar o aplicativo no Bling.
+
 You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
