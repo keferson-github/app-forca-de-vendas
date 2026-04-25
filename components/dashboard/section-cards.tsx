@@ -14,16 +14,34 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { NumberTicker } from "@/components/ui/number-ticker";
 
 type SectionCardsProps = {
   customersCount: number;
   monthSales: number;
   ordersToday: number;
-  monthRevenue: string;
-  targetMonth: string;
-  balance: string;
+  monthRevenue: number;
+  targetMonth: number;
+  balance: number;
   balanceRaw: number;
   daysToMonthEnd: number;
+};
+
+type DashboardCard = {
+  label: string;
+  value: number;
+  badge: string;
+  icon: typeof IconUsers;
+  footer: string;
+  positive: boolean;
+  format?: "currency";
+};
+
+const CURRENCY_FORMAT_OPTIONS: Intl.NumberFormatOptions = {
+  style: "currency",
+  currency: "BRL",
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 2,
 };
 
 export function SectionCards({
@@ -38,7 +56,7 @@ export function SectionCards({
 }: SectionCardsProps) {
   const balanceReached = balanceRaw <= 0;
 
-  const cards = [
+  const cards: DashboardCard[] = [
     {
       label: "Clientes cadastrados",
       value: customersCount,
@@ -58,6 +76,7 @@ export function SectionCards({
     {
       label: "Vendas",
       value: monthRevenue,
+      format: "currency",
       badge: "Faturamento",
       icon: IconTrendingUp,
       footer: "Total de pedidos nao cancelados no mes.",
@@ -66,6 +85,7 @@ export function SectionCards({
     {
       label: "Meta mes",
       value: targetMonth,
+      format: "currency",
       badge: `${daysToMonthEnd} dias`,
       icon: IconTargetArrow,
       footer: `Falta(m) ${daysToMonthEnd} dias para completar o mes.`,
@@ -74,6 +94,7 @@ export function SectionCards({
     {
       label: "Saldo",
       value: balance,
+      format: "currency",
       badge: balanceReached ? "Meta batida" : "A realizar",
       icon: balanceReached ? IconTrendingUp : IconTrendingDown,
       footer: balanceReached
@@ -93,7 +114,7 @@ export function SectionCards({
 
   return (
     <div className="grid grid-cols-1 gap-4 px-4 *:data-[slot=card]:bg-gradient-to-t *:data-[slot=card]:from-primary/5 *:data-[slot=card]:to-card *:data-[slot=card]:shadow-xs lg:px-6 @xl/main:grid-cols-2 @5xl/main:grid-cols-3 dark:*:data-[slot=card]:bg-card">
-      {cards.map((card) => {
+      {cards.map((card, index) => {
         const Icon = card.icon;
 
         return (
@@ -101,7 +122,16 @@ export function SectionCards({
             <CardHeader>
               <CardDescription>{card.label}</CardDescription>
               <CardTitle className="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
-                {card.value}
+                <NumberTicker
+                  value={card.value}
+                  locale="pt-BR"
+                  decimalPlaces={card.format === "currency" ? 2 : 0}
+                  formatOptions={
+                    card.format === "currency" ? CURRENCY_FORMAT_OPTIONS : undefined
+                  }
+                  delay={index * 0.05}
+                  className="tracking-normal text-inherit"
+                />
               </CardTitle>
               <CardAction>
                 <Badge variant="outline" className="gap-1">

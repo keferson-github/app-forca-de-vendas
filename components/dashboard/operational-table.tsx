@@ -18,6 +18,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { NumberTicker } from "@/components/ui/number-ticker";
 
 export type OperationalRow = {
   href: string;
@@ -47,7 +48,7 @@ export function OperationalTable({ rows }: { rows: OperationalRow[] }) {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {rows.map((row) => {
+            {rows.map((row, index) => {
               const Icon = row.icon;
 
               return (
@@ -61,7 +62,12 @@ export function OperationalTable({ rows }: { rows: OperationalRow[] }) {
                     </div>
                   </TableCell>
                   <TableCell className="text-right font-mono text-sm">
-                    {row.value}
+                    <NumberTicker
+                      value={row.value}
+                      locale="pt-BR"
+                      delay={index * 0.04}
+                      className="font-mono text-sm tracking-normal text-inherit"
+                    />
                   </TableCell>
                   <TableCell className="hidden md:table-cell">
                     <Badge variant="secondary">{row.extra}</Badge>

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import {
   IconCalendar,
   IconClipboardList,
@@ -18,6 +19,7 @@ import {
   type OperationalRow,
 } from "@/components/dashboard/operational-table";
 import { SectionCards } from "@/components/dashboard/section-cards";
+import { NumberTicker } from "@/components/ui/number-ticker";
 import { Badge } from "@/components/ui/badge";
 import {
   Card,
@@ -71,6 +73,10 @@ async function getDashboardData(userId: string, year: number) {
   const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
   const yearStart = new Date(year, 0, 1);
   const yearEnd = new Date(year, 11, 31, 23, 59, 59, 999);
+  const nonCancelledOrdersWhere = {
+    userId,
+    status: { not: "CANCELLED" as const },
+  };
 
   const baseMonthly = MONTH_LABELS.map((month) => ({
     month,
@@ -78,15 +84,106 @@ async function getDashboardData(userId: string, year: number) {
     revenue: 0,
   }));
 
-  try {
-    const [
+  const [
+    customersCount,
+    prospectsCount,
+    carriersCount,
+    productsCount,
+    ordersCount,
+    ordersToday,
+    ordersMonthAgg,
+    crmNotesCount,
+    agendaEventsCount,
+    upcomingAgendaCount,
+    checkinsCount,
+    checkinsMonthCount,
+    contactsCount,
+    documentsCount,
+    dispatchSentCount,
+    dispatchFailedCount,
+    annualOrders,
+    salesTargetMonth,
+  ] = await prisma.$transaction([
+    prisma.customer.count({ where: { userId } }),
+    prisma.customer.count({ where: { userId, isProspect: true } }),
+    prisma.carrier.count({ where: { userId } }),
+    prisma.product.count({ where: { userId } }),
+    prisma.order.count({ where: nonCancelledOrdersWhere }),
+    prisma.order.count({
+      where: {
+        ...nonCancelledOrdersWhere,
+        createdAt: { gte: startOfDay(now), lte: endOfDay(now) },
+      },
+    }),
+    prisma.order.aggregate({
+      where: {
+        ...nonCancelledOrdersWhere,
+        createdAt: { gte: monthStart, lte: monthEnd },
+      },
+      _sum: { total: true },
+      _count: { id: true },
+    }),
+    prisma.crmNote.count({ where: { userId } }),
+    prisma.agendaEvent.count({ where: { userId } }),
+    prisma.agendaEvent.count({ where: { userId, startAt: { gte: now } } }),
+    prisma.checkin.count({ where: { userId } }),
+    prisma.checkin.count({ where: { userId, checkedAt: { gte: monthStart, lte: monthEnd } } }),
+    prisma.customerContact.count({ where: { userId } }),
+    prisma.orderDocument.count({ where: { userId } }),
+    prisma.whatsappDispatchLog.count({ where: { userId, status: "SENT" } }),
+    prisma.whatsappDispatchLog.count({ where: { userId, status: "FAILED" } }),
+    prisma.order.findMany({
+      where: {
+        ...nonCancelledOrdersWhere,
+        createdAt: { gte: yearStart, lte: yearEnd },
+      },
+      select: {
+        createdAt: true,
+        total: true,
+      },
+    }),
+    prisma.salesTarget.findUnique({
+      where: {
+        userId_year_month: {
+          userId,
+          year: now.getFullYear(),
+          month: now.getMonth() + 1,
+        },
+      },
+      select: {
+        targetAmount: true,
+        revenueAmount: true,
+        salesAmount: true,
+      },
+    }),
+  ]);
+
+  const annualComparison = [...baseMonthly];
+  for (const order of annualOrders) {
+    const idx = order.createdAt.getMonth();
+    annualComparison[idx].sales += 1;
+    annualComparison[idx].revenue += Number(order.total);
+  }
+
+  const monthRevenue = Number(ordersMonthAgg._sum.total ?? 0);
+  const monthSales = ordersMonthAgg._count.id;
+  const targetMonth = Number(salesTargetMonth?.targetAmount ?? 0);
+  const balance = targetMonth - monthRevenue;
+
+  return {
+    cards: {
       customersCount,
       prospectsCount,
       carriersCount,
       productsCount,
       ordersCount,
       ordersToday,
-      ordersMonthAgg,
+      monthSales,
+      monthRevenue,
+      targetMonth,
+      balance,
+    },
+    modules: {
       crmNotesCount,
       agendaEventsCount,
       upcomingAgendaCount,
@@ -96,136 +193,10 @@ async function getDashboardData(userId: string, year: number) {
       documentsCount,
       dispatchSentCount,
       dispatchFailedCount,
-      annualOrders,
-      salesTargetMonth,
-    ] = await prisma.$transaction([
-      prisma.customer.count({ where: { userId } }),
-      prisma.customer.count({ where: { userId, isProspect: true } }),
-      prisma.carrier.count({ where: { userId } }),
-      prisma.product.count({ where: { userId } }),
-      prisma.order.count({ where: { userId } }),
-      prisma.order.count({
-        where: { userId, createdAt: { gte: startOfDay(now), lte: endOfDay(now) } },
-      }),
-      prisma.order.aggregate({
-        where: { userId, createdAt: { gte: monthStart, lte: monthEnd }, status: { not: "CANCELLED" } },
-        _sum: { total: true },
-        _count: { id: true },
-      }),
-      prisma.crmNote.count({ where: { userId } }),
-      prisma.agendaEvent.count({ where: { userId } }),
-      prisma.agendaEvent.count({ where: { userId, startAt: { gte: now } } }),
-      prisma.checkin.count({ where: { userId } }),
-      prisma.checkin.count({ where: { userId, checkedAt: { gte: monthStart, lte: monthEnd } } }),
-      prisma.customerContact.count({ where: { userId } }),
-      prisma.orderDocument.count({ where: { userId } }),
-      prisma.whatsappDispatchLog.count({ where: { userId, status: "SENT" } }),
-      prisma.whatsappDispatchLog.count({ where: { userId, status: "FAILED" } }),
-      prisma.order.findMany({
-        where: {
-          userId,
-          createdAt: { gte: yearStart, lte: yearEnd },
-          status: { not: "CANCELLED" },
-        },
-        select: {
-          createdAt: true,
-          total: true,
-        },
-      }),
-      prisma.salesTarget.findUnique({
-        where: {
-          userId_year_month: {
-            userId,
-            year: now.getFullYear(),
-            month: now.getMonth() + 1,
-          },
-        },
-        select: {
-          targetAmount: true,
-          revenueAmount: true,
-          salesAmount: true,
-        },
-      }),
-    ]);
-
-    const annualComparison = [...baseMonthly];
-    for (const order of annualOrders) {
-      const idx = order.createdAt.getMonth();
-      annualComparison[idx].sales += 1;
-      annualComparison[idx].revenue += Number(order.total);
-    }
-
-    const monthRevenue = Number(ordersMonthAgg._sum.total ?? 0);
-    const monthSales = ordersMonthAgg._count.id;
-    const targetMonth = Number(salesTargetMonth?.targetAmount ?? 0);
-    const balance = targetMonth - monthRevenue;
-
-    return {
-      hasDataError: false,
-      cards: {
-        customersCount,
-        prospectsCount,
-        carriersCount,
-        productsCount,
-        ordersCount,
-        ordersToday,
-        monthSales,
-        monthRevenue,
-        targetMonth,
-        balance,
-      },
-      modules: {
-        crmNotesCount,
-        agendaEventsCount,
-        upcomingAgendaCount,
-        checkinsCount,
-        checkinsMonthCount,
-        contactsCount,
-        documentsCount,
-        dispatchSentCount,
-        dispatchFailedCount,
-      },
-      annualComparison,
-      daysToMonthEnd: daysUntilMonthEnd(now),
-    };
-  } catch {
-    return {
-      hasDataError: true,
-      cards: {
-        customersCount: 0,
-        prospectsCount: 0,
-        carriersCount: 0,
-        productsCount: 0,
-        ordersCount: 0,
-        ordersToday: 0,
-        monthSales: 0,
-        monthRevenue: 0,
-        targetMonth: 0,
-        balance: 0,
-      },
-      modules: {
-        crmNotesCount: 0,
-        agendaEventsCount: 0,
-        upcomingAgendaCount: 0,
-        checkinsCount: 0,
-        checkinsMonthCount: 0,
-        contactsCount: 0,
-        documentsCount: 0,
-        dispatchSentCount: 0,
-        dispatchFailedCount: 0,
-      },
-      annualComparison: baseMonthly,
-      daysToMonthEnd: 0,
-    };
-  }
-}
-
-function currency(value: number) {
-  return new Intl.NumberFormat("pt-BR", {
-    style: "currency",
-    currency: "BRL",
-    maximumFractionDigits: 2,
-  }).format(value);
+    },
+    annualComparison,
+    daysToMonthEnd: daysUntilMonthEnd(now),
+  };
 }
 
 export default async function DashboardPage(props: { searchParams: SearchParams }) {
@@ -244,10 +215,49 @@ export default async function DashboardPage(props: { searchParams: SearchParams 
   const userId = session?.user?.id;
 
   if (!userId) {
-    return null;
+    redirect("/login");
   }
 
-  const data = await getDashboardData(userId, year);
+  let data: Awaited<ReturnType<typeof getDashboardData>> | null = null;
+  try {
+    data = await getDashboardData(userId, year);
+  } catch (error) {
+    console.error("Falha ao carregar dashboard:", error);
+  }
+
+  if (!data) {
+    return (
+      <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
+        <div className="px-4 lg:px-6">
+          <div className="flex flex-col gap-2">
+            <Badge variant="outline" className="w-fit">
+              Ola, {userName}
+            </Badge>
+            <h2 className="text-2xl font-semibold tracking-tight md:text-3xl">
+              Visao comercial em tempo real
+            </h2>
+            <p className="text-sm text-muted-foreground">
+              Nao foi possivel carregar os indicadores agora. Tente novamente em alguns instantes.
+            </p>
+          </div>
+        </div>
+        <div className="px-4 lg:px-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Falha ao consultar o banco de dados</CardTitle>
+              <CardDescription>
+                Os indicadores nao foram substituidos por zero para evitar leitura incorreta.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="text-sm text-muted-foreground">
+              Atualize a pagina para tentar novamente. Se o problema continuar, verifique a conexao com o banco.
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  }
+
   const yearOptions = Array.from({ length: 6 }, (_, idx) => currentYear - idx);
 
   const sectionLinks = [
@@ -319,11 +329,6 @@ export default async function DashboardPage(props: { searchParams: SearchParams 
                 checkins e documentos em um unico painel.
               </p>
             </div>
-            {data.hasDataError ? (
-              <Badge variant="outline" className="border-amber-500/50 text-amber-700">
-                Nao foi possivel carregar os indicadores no momento
-              </Badge>
-            ) : null}
           </div>
         </div>
       </div>
@@ -332,9 +337,9 @@ export default async function DashboardPage(props: { searchParams: SearchParams 
         customersCount={data.cards.customersCount}
         monthSales={data.cards.monthSales}
         ordersToday={data.cards.ordersToday}
-        monthRevenue={currency(data.cards.monthRevenue)}
-        targetMonth={currency(data.cards.targetMonth)}
-        balance={currency(data.cards.balance)}
+        monthRevenue={data.cards.monthRevenue}
+        targetMonth={data.cards.targetMonth}
+        balance={data.cards.balance}
         balanceRaw={data.cards.balance}
         daysToMonthEnd={data.daysToMonthEnd}
       />
@@ -394,11 +399,28 @@ export default async function DashboardPage(props: { searchParams: SearchParams 
               CRM e contatos
             </CardDescription>
             <CardTitle className="text-2xl">
-              {data.modules.crmNotesCount + data.modules.contactsCount}
+              <NumberTicker
+                value={data.modules.crmNotesCount + data.modules.contactsCount}
+                locale="pt-BR"
+                className="tracking-normal text-inherit"
+              />
             </CardTitle>
           </CardHeader>
           <CardContent className="text-sm text-muted-foreground">
-            {data.modules.crmNotesCount} anotacoes e {data.modules.contactsCount} contatos cadastrados.
+            <NumberTicker
+              value={data.modules.crmNotesCount}
+              locale="pt-BR"
+              delay={0.05}
+              className="text-sm font-medium tracking-normal text-foreground"
+            />{" "}
+            anotacoes e{" "}
+            <NumberTicker
+              value={data.modules.contactsCount}
+              locale="pt-BR"
+              delay={0.1}
+              className="text-sm font-medium tracking-normal text-foreground"
+            />{" "}
+            contatos cadastrados.
           </CardContent>
         </Card>
         <Card>
@@ -407,7 +429,14 @@ export default async function DashboardPage(props: { searchParams: SearchParams 
               <IconFileDescription className="size-4" />
               Documentos
             </CardDescription>
-            <CardTitle className="text-2xl">{data.modules.documentsCount}</CardTitle>
+            <CardTitle className="text-2xl">
+              <NumberTicker
+                value={data.modules.documentsCount}
+                locale="pt-BR"
+                delay={0.1}
+                className="tracking-normal text-inherit"
+              />
+            </CardTitle>
           </CardHeader>
           <CardContent className="text-sm text-muted-foreground">
             Declaracoes e documentos gerados a partir de pedidos.
@@ -419,10 +448,23 @@ export default async function DashboardPage(props: { searchParams: SearchParams 
               <IconMessageCircle className="size-4" />
               WhatsApp
             </CardDescription>
-            <CardTitle className="text-2xl">{data.modules.dispatchSentCount}</CardTitle>
+            <CardTitle className="text-2xl">
+              <NumberTicker
+                value={data.modules.dispatchSentCount}
+                locale="pt-BR"
+                delay={0.15}
+                className="tracking-normal text-inherit"
+              />
+            </CardTitle>
           </CardHeader>
           <CardContent className="text-sm text-muted-foreground">
-            {data.modules.dispatchFailedCount} falha(s) registrada(s) no envio via Evolution API.
+            <NumberTicker
+              value={data.modules.dispatchFailedCount}
+              locale="pt-BR"
+              delay={0.2}
+              className="text-sm font-medium tracking-normal text-foreground"
+            />{" "}
+            falha(s) registrada(s) no envio via Evolution API.
           </CardContent>
         </Card>
       </div>
