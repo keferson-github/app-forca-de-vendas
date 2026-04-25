@@ -315,13 +315,13 @@ export default async function DashboardPage(props: { searchParams: SearchParams 
                 Visao comercial em tempo real
               </h2>
               <p className="text-sm text-muted-foreground">
-                Dashboard no padrao shadcn/ui com metricas reais de clientes,
-                pedidos, CRM, agenda, checkins e documentos.
+                Acompanhe indicadores de clientes, pedidos, CRM, agenda,
+                checkins e documentos em um unico painel.
               </p>
             </div>
             {data.hasDataError ? (
               <Badge variant="outline" className="border-amber-500/50 text-amber-700">
-                Verifique migrations/conexao
+                Nao foi possivel carregar os indicadores no momento
               </Badge>
             ) : null}
           </div>
