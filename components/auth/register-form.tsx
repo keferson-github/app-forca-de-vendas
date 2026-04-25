@@ -52,7 +52,7 @@ export function RegisterForm() {
         <SubmitButton>Cadastrar</SubmitButton>
       </form>
       <div className="mt-5 text-center text-sm text-muted-foreground">
-        Ja possui conta?{" "}
+        Já possui conta?{" "}
         <Link className="text-foreground underline underline-offset-4" href="/login">
           Fazer login
         </Link>

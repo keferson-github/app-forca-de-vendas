@@ -44,7 +44,7 @@ export function AuthShell({ children }: AuthShellProps) {
       <div className="absolute inset-y-0 left-0 hidden w-[58%] lg:block">
         <Image
           src={authImage}
-          alt="Conceito visual de CRM e gestao de relacionamento com clientes"
+          alt="Conceito visual de CRM e gestão de relacionamento com clientes"
           fill
           sizes="(max-width: 1024px) 100vw, 58vw"
           className="object-cover"
@@ -64,7 +64,7 @@ export function AuthShell({ children }: AuthShellProps) {
           <div className="relative h-full overflow-hidden rounded-[34px]">
             <Image
               src={authImage}
-              alt="Conceito visual de CRM e gestao de relacionamento com clientes"
+              alt="Conceito visual de CRM e gestão de relacionamento com clientes"
               fill
               sizes="(max-width: 1024px) 100vw, 50vw"
               className="object-cover"
@@ -80,10 +80,10 @@ export function AuthShell({ children }: AuthShellProps) {
             <div className="absolute inset-x-0 bottom-0 p-8 text-white">
               <p className="text-sm font-medium text-white/85">Ambiente corporativo</p>
               <h1 className="mt-3 max-w-lg text-4xl leading-tight font-semibold tracking-normal">
-                Gestao comercial conectada aos indicadores do dia.
+                Gestão comercial conectada aos indicadores do dia.
               </h1>
               <p className="mt-4 max-w-lg text-base text-white/85">
-                Acompanhe clientes, pedidos, agenda e CRM em uma operacao pensada para equipes
+                Acompanhe clientes, pedidos, agenda e CRM em uma operação pensada para equipes
                 comerciais.
               </p>
             </div>

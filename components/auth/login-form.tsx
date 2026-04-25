@@ -61,7 +61,7 @@ export function LoginForm({
         <SubmitButton>Entrar</SubmitButton>
       </form>
       <div className="mt-5 text-center text-sm text-muted-foreground">
-        Ainda nao tem conta?{" "}
+        Ainda não tem conta?{" "}
         <Link className="text-foreground underline underline-offset-4" href="/register">
           Cadastre-se
         </Link>
