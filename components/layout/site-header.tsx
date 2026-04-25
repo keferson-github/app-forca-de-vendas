@@ -12,8 +12,8 @@ const pageTitles: Record<string, string> = {
   "/produtos": "Produtos",
   "/pedidos": "Pedidos",
   "/crm": "CRM",
-  "/checkins": "Checkins",
-  "/anotacoes": "Anotacoes",
+  "/checkins": "Check-ins",
+  "/anotacoes": "Anotações",
   "/agenda": "Agenda",
 };
 
@@ -22,7 +22,7 @@ function resolveTitle(pathname: string) {
     .sort((a, b) => b.length - a.length)
     .find((path) => pathname === path || pathname.startsWith(`${path}/`));
 
-  return match ? pageTitles[match] : "Forca de Vendas";
+  return match ? pageTitles[match] : "Força de Vendas";
 }
 
 export function SiteHeader() {
@@ -39,7 +39,7 @@ export function SiteHeader() {
         <div className="grid">
           <h1 className="text-base font-medium">{resolveTitle(pathname)}</h1>
           <p className="hidden text-xs text-muted-foreground sm:block">
-            Indicadores, clientes e pedidos em uma visao comercial integrada.
+            Indicadores, clientes e pedidos em uma visão comercial integrada.
           </p>
         </div>
         <div className="ml-auto flex items-center gap-2">

@@ -129,7 +129,7 @@ const customerSchema = z.object({
       if (length !== 11 && length !== 14) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
-          message: "Informe um CPF (11 digitos) ou CNPJ (14 digitos) completo.",
+          message: "Informe um CPF (11 dígitos) ou CNPJ (14 dígitos) completo.",
         });
         return;
       }
@@ -137,7 +137,7 @@ const customerSchema = z.object({
       if (!isValidCpfCnpj(value)) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
-          message: "CPF/CNPJ invalido.",
+          message: "CPF/CNPJ inválido.",
         });
       }
     }),
@@ -168,7 +168,7 @@ async function requireUserId() {
   const session = await auth();
 
   if (!session?.user?.id) {
-    throw new Error("Sessao expirada. Faca login novamente.");
+    throw new Error("Sessão expirada. Faça login novamente.");
   }
 
   return session.user.id;
@@ -214,7 +214,7 @@ export async function createCustomerAction(
   const parsed = parseCustomerForm(formData);
 
   if (!parsed.success) {
-    return { error: parsed.error.issues[0]?.message ?? "Dados invalidos." };
+    return { error: parsed.error.issues[0]?.message ?? "Dados inválidos." };
   }
 
   await prisma.customer.create({
@@ -236,11 +236,11 @@ export async function updateCustomerAction(
   const parsed = parseCustomerForm(formData);
 
   if (!parsed.success) {
-    return { error: parsed.error.issues[0]?.message ?? "Dados invalidos." };
+    return { error: parsed.error.issues[0]?.message ?? "Dados inválidos." };
   }
 
   if (!parsed.data.id) {
-    return { error: "Cliente nao identificado." };
+    return { error: "Cliente não identificado." };
   }
 
   const updated = await prisma.customer.updateMany({
@@ -288,7 +288,7 @@ export async function deleteCustomerAction(
     ) {
       return {
         error:
-          "Nao foi possivel excluir: este cliente possui pedidos ou registros vinculados.",
+          "Não foi possível excluir: este cliente possui pedidos ou registros vinculados.",
       };
     }
 

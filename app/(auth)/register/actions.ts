@@ -21,7 +21,7 @@ const registerSchema = z
     confirmPassword: z.string(),
   })
   .refine((value) => value.password === value.confirmPassword, {
-    message: "As senhas nao conferem.",
+    message: "As senhas não conferem.",
     path: ["confirmPassword"],
   });
 
@@ -37,7 +37,7 @@ export async function registerAction(
   });
 
   if (!validated.success) {
-    return { error: validated.error.issues[0]?.message ?? "Dados invalidos." };
+    return { error: validated.error.issues[0]?.message ?? "Dados inválidos." };
   }
 
   const { name, email, password } = validated.data;

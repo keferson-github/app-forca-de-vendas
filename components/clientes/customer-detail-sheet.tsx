@@ -57,13 +57,13 @@ export function CustomerDetailSheet({ customer }: CustomerDetailSheetProps) {
         <dl className="grid gap-3 px-4 pb-6">
           <DetailRow label="Nome da empresa" value={customer.companyName} />
           <DetailRow label="CNPJ/CPF" value={customer.cnpjCpf} />
-          <DetailRow label="Numero do cliente" value={customer.customerCode} />
+          <DetailRow label="Número do cliente" value={customer.customerCode} />
           <DetailRow label="Contato" value={customer.phone} />
-          <DetailRow label="Endereco comercial" value={customer.commercialAddress} />
-          <DetailRow label="Endereco de entrega" value={customer.deliveryAddress} />
+          <DetailRow label="Endereço comercial" value={customer.commercialAddress} />
+          <DetailRow label="Endereço de entrega" value={customer.deliveryAddress} />
           <div className="grid gap-3 sm:grid-cols-3">
             <DetailRow label="Pedidos" value={String(customer.counts.orders)} />
-            <DetailRow label="Anotacoes CRM" value={String(customer.counts.crmNotes)} />
+            <DetailRow label="Anotações CRM" value={String(customer.counts.crmNotes)} />
             <DetailRow label="Contatos extras" value={String(customer.counts.contacts)} />
           </div>
         </dl>

@@ -15,7 +15,7 @@ export function RegisterForm() {
   const [state, action] = useActionState(registerAction, initialState);
 
   return (
-    <div className="mx-auto w-full max-w-[480px]">
+    <div className="mx-auto w-full max-w-[430px] lg:max-w-[480px]">
       <AuthFormHeader
         eyebrow="Novo acesso"
         title="Criar conta"
@@ -34,7 +34,7 @@ export function RegisterForm() {
               id="email"
               name="email"
               type="email"
-              placeholder="voce@empresa.com"
+              placeholder="nome@empresa.com"
               autoComplete="email"
               required
             />
@@ -51,8 +51,8 @@ export function RegisterForm() {
         {state.error ? <p className="text-sm text-red-600">{state.error}</p> : null}
         <SubmitButton>Cadastrar</SubmitButton>
       </form>
-      <div className="mt-5 text-center text-sm text-muted-foreground">
-        Ja possui conta?{" "}
+      <div className="mt-4 text-center text-sm text-muted-foreground">
+        Já possui conta?{" "}
         <Link className="text-foreground underline underline-offset-4" href="/login">
           Fazer login
         </Link>

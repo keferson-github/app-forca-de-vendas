@@ -14,7 +14,7 @@ export function SectionPlaceholder({ title, description }: SectionPlaceholderPro
       </CardHeader>
       <CardContent>
         <p className="text-sm text-muted-foreground">
-          Estrutura base pronta com rota protegida e layout padrao. CRUD completo sera entregue na proxima etapa.
+          Estrutura base pronta com rota protegida e layout padrão. CRUD completo será entregue na próxima etapa.
         </p>
       </CardContent>
     </Card>

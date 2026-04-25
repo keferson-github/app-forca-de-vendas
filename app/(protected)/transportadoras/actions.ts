@@ -27,7 +27,7 @@ async function requireUserId() {
   const session = await auth();
 
   if (!session?.user?.id) {
-    throw new Error("Sessao expirada. Faca login novamente.");
+    throw new Error("Sessão expirada. Faça login novamente.");
   }
 
   return session.user.id;
@@ -60,7 +60,7 @@ export async function createCarrierAction(
   const parsed = parseCarrierForm(formData);
 
   if (!parsed.success) {
-    return { error: parsed.error.issues[0]?.message ?? "Dados invalidos." };
+    return { error: parsed.error.issues[0]?.message ?? "Dados inválidos." };
   }
 
   await prisma.carrier.create({
@@ -82,11 +82,11 @@ export async function updateCarrierAction(
   const parsed = parseCarrierForm(formData);
 
   if (!parsed.success) {
-    return { error: parsed.error.issues[0]?.message ?? "Dados invalidos." };
+    return { error: parsed.error.issues[0]?.message ?? "Dados inválidos." };
   }
 
   if (!parsed.data.id) {
-    return { error: "Transportadora nao identificada." };
+    return { error: "Transportadora não identificada." };
   }
 
   const updated = await prisma.carrier.updateMany({
@@ -134,7 +134,7 @@ export async function deleteCarrierAction(
     ) {
       return {
         error:
-          "Nao foi possivel excluir: esta transportadora possui pedidos vinculados.",
+          "Não foi possível excluir: esta transportadora possui pedidos vinculados.",
       };
     }
 

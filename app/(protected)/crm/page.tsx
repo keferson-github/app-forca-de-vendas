@@ -4,7 +4,7 @@ export default function CrmPage() {
   return (
     <SectionPlaceholder
       title="CRM"
-      description="Area preparada para anotacoes, agenda e ultimas vendas."
+      description="Área preparada para anotações, agenda e últimas vendas."
     />
   );
 }

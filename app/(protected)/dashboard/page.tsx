@@ -231,13 +231,13 @@ export default async function DashboardPage(props: { searchParams: SearchParams 
         <div className="px-4 lg:px-6">
           <div className="flex flex-col gap-2">
             <Badge variant="outline" className="w-fit">
-              Ola, {userName}
+              Olá, {userName}
             </Badge>
             <h2 className="text-2xl font-semibold tracking-tight md:text-3xl">
-              Visao comercial em tempo real
+              Visão comercial em tempo real
             </h2>
             <p className="text-sm text-muted-foreground">
-              Nao foi possivel carregar os indicadores agora. Tente novamente em alguns instantes.
+              Não foi possível carregar os indicadores agora. Tente novamente em alguns instantes.
             </p>
           </div>
         </div>
@@ -246,11 +246,11 @@ export default async function DashboardPage(props: { searchParams: SearchParams 
             <CardHeader>
               <CardTitle>Falha ao consultar o banco de dados</CardTitle>
               <CardDescription>
-                Os indicadores nao foram substituidos por zero para evitar leitura incorreta.
+                Os indicadores não foram substituídos por zero para evitar leitura incorreta.
               </CardDescription>
             </CardHeader>
             <CardContent className="text-sm text-muted-foreground">
-              Atualize a pagina para tentar novamente. Se o problema continuar, verifique a conexao com o banco.
+              Atualize a página para tentar novamente. Se o problema continuar, verifique a conexão com o banco.
             </CardContent>
           </Card>
         </div>
@@ -279,7 +279,7 @@ export default async function DashboardPage(props: { searchParams: SearchParams 
       href: "/produtos",
       label: "Produtos",
       value: data.cards.productsCount,
-      extra: "Itens no catalogo",
+      extra: "Itens no catálogo",
       icon: IconPackage,
     },
     {
@@ -293,21 +293,21 @@ export default async function DashboardPage(props: { searchParams: SearchParams 
       href: "/crm",
       label: "CRM",
       value: data.modules.crmNotesCount,
-      extra: "Anotacoes registradas",
+      extra: "Anotações registradas",
       icon: IconUserPlus,
     },
     {
       href: "/agenda",
       label: "Agenda",
       value: data.modules.agendaEventsCount,
-      extra: `${data.modules.upcomingAgendaCount} proximos`,
+      extra: `${data.modules.upcomingAgendaCount} próximos`,
       icon: IconCalendar,
     },
     {
       href: "/checkins",
-      label: "Checkins",
+      label: "Check-ins",
       value: data.modules.checkinsCount,
-      extra: `${data.modules.checkinsMonthCount} no mes`,
+      extra: `${data.modules.checkinsMonthCount} no mês`,
       icon: IconMapPinCheck,
     },
   ] satisfies OperationalRow[];
@@ -317,16 +317,16 @@ export default async function DashboardPage(props: { searchParams: SearchParams 
       <div className="px-4 lg:px-6">
         <div className="flex flex-col gap-2">
           <Badge variant="outline" className="w-fit">
-            Ola, {userName}
+            Olá, {userName}
           </Badge>
           <div className="flex flex-col justify-between gap-3 md:flex-row md:items-end">
             <div>
               <h2 className="text-2xl font-semibold tracking-tight md:text-3xl">
-                Visao comercial em tempo real
+                Visão comercial em tempo real
               </h2>
               <p className="text-sm text-muted-foreground">
                 Acompanhe indicadores de clientes, pedidos, CRM, agenda,
-                checkins e documentos em um unico painel.
+                check-ins e documentos em um único painel.
               </p>
             </div>
           </div>
@@ -413,7 +413,7 @@ export default async function DashboardPage(props: { searchParams: SearchParams 
               delay={0.05}
               className="text-sm font-medium tracking-normal text-foreground"
             />{" "}
-            anotacoes e{" "}
+            anotações e{" "}
             <NumberTicker
               value={data.modules.contactsCount}
               locale="pt-BR"

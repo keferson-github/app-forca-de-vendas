@@ -15,9 +15,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Forca de Vendas",
-  description: "Web App e PWA para forca de vendas",
-  applicationName: "Forca de Vendas",
+  title: "Força de Vendas",
+  description: "Web App e PWA para força de vendas",
+  applicationName: "Força de Vendas",
   manifest: "/manifest.webmanifest",
   icons: {
     icon: "/favicon.ico",
@@ -26,7 +26,7 @@ export const metadata: Metadata = {
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "Forca de Vendas",
+    title: "Força de Vendas",
   },
 };
 

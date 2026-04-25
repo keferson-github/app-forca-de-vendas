@@ -38,7 +38,7 @@ export function LoginForm({
             id="email"
             name="email"
             type="email"
-            placeholder="voce@empresa.com"
+            placeholder="nome@empresa.com"
             autoComplete="email"
             defaultValue={rememberedEmail}
             required
@@ -60,8 +60,8 @@ export function LoginForm({
         {state.error ? <p className="text-sm text-red-600">{state.error}</p> : null}
         <SubmitButton>Entrar</SubmitButton>
       </form>
-      <div className="mt-5 text-center text-sm text-muted-foreground">
-        Ainda nao tem conta?{" "}
+      <div className="mt-4 text-center text-sm text-muted-foreground">
+        Ainda não tem conta?{" "}
         <Link className="text-foreground underline underline-offset-4" href="/register">
           Cadastre-se
         </Link>

@@ -2,9 +2,9 @@ import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "App Forca de Vendas",
-    short_name: "Forca Vendas",
-    description: "Web App e PWA para forca de vendas.",
+    name: "App Força de Vendas",
+    short_name: "Força Vendas",
+    description: "Web App e PWA para força de vendas.",
     start_url: "/",
     scope: "/",
     display: "standalone",
