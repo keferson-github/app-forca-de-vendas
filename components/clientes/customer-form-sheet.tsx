@@ -58,6 +58,7 @@ type CustomerFormSheetProps = {
   description: string;
   variant?: "default" | "outline" | "ghost";
   size?: "default" | "sm" | "icon-sm";
+  trigger?: React.ReactNode;
 };
 
 const initialState: CustomerFormState = {};
@@ -163,6 +164,7 @@ export function CustomerFormSheet({
   description,
   variant = "default",
   size = "default",
+  trigger,
 }: CustomerFormSheetProps) {
   const action = customer ? updateCustomerAction : createCustomerAction;
   const [state, formAction] = useActionState(action, initialState);
@@ -173,10 +175,12 @@ export function CustomerFormSheet({
   return (
     <Sheet>
       <SheetTrigger asChild>
-        <Button variant={variant} size={size}>
-          {defaultIsProspect ? <UserPlus /> : <Users />}
-          {triggerLabel}
-        </Button>
+        {trigger ?? (
+          <Button variant={variant} size={size}>
+            {defaultIsProspect ? <UserPlus /> : <Users />}
+            {triggerLabel}
+          </Button>
+        )}
       </SheetTrigger>
       <SheetContent className="w-full overflow-y-auto sm:max-w-xl">
         <form action={formAction} className="flex min-h-full flex-col">

@@ -12,6 +12,10 @@ import { SubmitButton } from "@/components/auth/submit-button";
 import { ConfirmActionDialog } from "@/components/shared/confirm-action-dialog";
 import { DataTable } from "@/components/shared/data-table";
 import { GlobalSearchForm } from "@/components/shared/global-search-form";
+import {
+  MobileFloatingAction,
+  MobileFloatingActionButton,
+} from "@/components/shared/mobile-floating-action";
 import { TablePagination } from "@/components/shared/table-pagination";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -826,22 +830,19 @@ export function ProductsPageClient({ products, query, pagination }: ProductsPage
         </CardContent>
       </Card>
 
-      <div className="fixed right-4 bottom-4 z-40 md:hidden">
+      <MobileFloatingAction>
         <ProductFormSheet
           triggerLabel="Novo produto"
           title="Novo produto"
           description="Cadastre os dados principais para disponibilizar o produto no catálogo."
           trigger={
-            <Button
-              type="button"
-              className="h-12 rounded-full px-4 shadow-lg shadow-primary/30"
-            >
+            <MobileFloatingActionButton>
               <Plus className="size-4" />
               Novo produto
-            </Button>
+            </MobileFloatingActionButton>
           }
         />
-      </div>
+      </MobileFloatingAction>
     </div>
   );
 }

@@ -11,6 +11,10 @@ import {
 import { SubmitButton } from "@/components/auth/submit-button";
 import { ConfirmActionDialog } from "@/components/shared/confirm-action-dialog";
 import { GlobalSearchForm } from "@/components/shared/global-search-form";
+import {
+  MobileFloatingAction,
+  MobileFloatingActionButton,
+} from "@/components/shared/mobile-floating-action";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -65,6 +69,7 @@ type CarrierFormSheetProps = {
   description: string;
   variant?: "default" | "outline" | "ghost";
   size?: "default" | "sm" | "icon-sm";
+  trigger?: React.ReactNode;
 };
 
 const initialState: CarrierFormState = {};
@@ -142,6 +147,7 @@ function CarrierFormSheet({
   description,
   variant = "default",
   size = "default",
+  trigger,
 }: CarrierFormSheetProps) {
   const action = carrier ? updateCarrierAction : createCarrierAction;
   const [state, formAction] = useActionState(action, initialState);
@@ -149,10 +155,12 @@ function CarrierFormSheet({
   return (
     <Sheet>
       <SheetTrigger asChild>
-        <Button variant={variant} size={size}>
-          <Truck />
-          {triggerLabel}
-        </Button>
+        {trigger ?? (
+          <Button variant={variant} size={size}>
+            <Truck />
+            {triggerLabel}
+          </Button>
+        )}
       </SheetTrigger>
       <SheetContent className="w-full overflow-y-auto sm:max-w-xl">
         <form action={formAction} className="flex min-h-full flex-col">
@@ -287,7 +295,7 @@ export function CarriersPageClient({ carriers, query }: CarriersPageClientProps)
   useNoticeToast(noticeMessages);
 
   return (
-    <div className="flex flex-col gap-4 p-4 lg:p-6">
+    <div className="flex flex-col gap-4 p-4 pb-24 md:pb-4 lg:p-6">
       <div className="flex flex-col justify-between gap-4 md:flex-row md:items-end">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Transportadoras</h1>
@@ -295,7 +303,7 @@ export function CarriersPageClient({ carriers, query }: CarriersPageClientProps)
             Mantenha a base de transportadoras atualizada para agilizar a emissao de pedidos.
           </p>
         </div>
-        <div className="flex flex-wrap gap-2">
+        <div className="hidden flex-wrap gap-2 md:flex">
           <CarrierFormSheet
             triggerLabel="Nova transportadora"
             title="Nova transportadora"
@@ -367,6 +375,20 @@ export function CarriersPageClient({ carriers, query }: CarriersPageClientProps)
           )}
         </CardContent>
       </Card>
+
+      <MobileFloatingAction>
+        <CarrierFormSheet
+          triggerLabel="Nova transportadora"
+          title="Nova transportadora"
+          description="Cadastre os dados basicos da transportadora para uso nos pedidos."
+          trigger={
+            <MobileFloatingActionButton>
+              <Truck className="size-4" />
+              Nova transportadora
+            </MobileFloatingActionButton>
+          }
+        />
+      </MobileFloatingAction>
     </div>
   );
 }

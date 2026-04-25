@@ -1,6 +1,6 @@
 "use client";
 
-import { MoreHorizontal, Search } from "lucide-react";
+import { MoreHorizontal, Search, Users } from "lucide-react";
 import { CustomerDeleteSheet } from "@/components/clientes/customer-delete-sheet";
 import { CustomerDetailSheet } from "@/components/clientes/customer-detail-sheet";
 import {
@@ -9,6 +9,10 @@ import {
 } from "@/components/clientes/customer-form-sheet";
 import { DataTable } from "@/components/shared/data-table";
 import { GlobalSearchForm } from "@/components/shared/global-search-form";
+import {
+  MobileFloatingAction,
+  MobileFloatingActionButton,
+} from "@/components/shared/mobile-floating-action";
 import { TablePagination } from "@/components/shared/table-pagination";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -91,7 +95,7 @@ export function CustomersPageClient({
   const queryParam = query ? `&q=${encodeURIComponent(query)}` : "";
 
   return (
-    <div className="flex flex-col gap-4 p-4 lg:p-6">
+    <div className="flex flex-col gap-4 p-4 pb-24 md:pb-4 lg:p-6">
       <div className="flex flex-col justify-between gap-4 md:flex-row md:items-end">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Clientes</h1>
@@ -100,7 +104,7 @@ export function CustomersPageClient({
             para pedidos e CRM.
           </p>
         </div>
-        <div className="flex flex-wrap gap-2">
+        <div className="hidden flex-wrap gap-2 md:flex">
           <CustomerFormSheet
             triggerLabel="Novo cliente"
             title="Novo cliente"
@@ -213,6 +217,20 @@ export function CustomersPageClient({
           )}
         </CardContent>
       </Card>
+
+      <MobileFloatingAction>
+        <CustomerFormSheet
+          triggerLabel="Novo cliente"
+          title="Novo cliente"
+          description="Cadastre uma empresa ou pessoa que ja faz parte da carteira."
+          trigger={
+            <MobileFloatingActionButton>
+              <Users className="size-4" />
+              Novo cliente
+            </MobileFloatingActionButton>
+          }
+        />
+      </MobileFloatingAction>
     </div>
   );
 }
