@@ -28,7 +28,7 @@ export async function loginAction(
   });
 
   if (!validated.success) {
-    return { error: validated.error.issues[0]?.message ?? "Dados inválidos." };
+    return { error: validated.error.issues[0]?.message ?? "Dados invalidos." };
   }
 
   const cookieStore = await cookies();
@@ -53,7 +53,7 @@ export async function loginAction(
     return {};
   } catch (error) {
     if (error instanceof AuthError) {
-      return { error: "E-mail ou senha inválidos." };
+      return { error: "E-mail ou senha invalidos." };
     }
     throw error;
   }

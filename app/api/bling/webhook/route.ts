@@ -25,7 +25,7 @@ export async function POST(request: Request) {
   try {
     payload = JSON.parse(rawBody) as BlingWebhookPayload;
   } catch {
-    return NextResponse.json({ error: "JSON inválido." }, { status: 400 });
+    return NextResponse.json({ error: "JSON invalido." }, { status: 400 });
   }
 
   let event;
@@ -33,7 +33,7 @@ export async function POST(request: Request) {
     event = parseBlingWebhookPayload(payload);
   } catch (error) {
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Payload inválido." },
+      { error: error instanceof Error ? error.message : "Payload invalido." },
       { status: 400 }
     );
   }

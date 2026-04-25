@@ -32,9 +32,9 @@ export function OperationalTable({ rows }: { rows: OperationalRow[] }) {
   return (
     <Card className="mx-4 lg:mx-6">
       <CardHeader>
-        <CardTitle>Operação do Web App</CardTitle>
+        <CardTitle>Operacao do Web App</CardTitle>
         <CardDescription>
-          Leitura consolidada das seções conectadas ao PostgreSQL.
+          Leitura consolidada das secoes conectadas ao PostgreSQL.
         </CardDescription>
       </CardHeader>
       <CardContent className="overflow-hidden px-0">

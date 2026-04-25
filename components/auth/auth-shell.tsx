@@ -40,21 +40,11 @@ export function AuthShell({ children }: AuthShellProps) {
   }, [pathname]);
 
   return (
-    <main className="relative flex min-h-screen flex-col justify-end overflow-hidden bg-[radial-gradient(circle_at_top,_rgba(255,255,255,0.98),_rgba(240,243,248,0.95)_34%,_rgba(228,233,241,0.92)_100%)] px-4 pb-0 pt-0 sm:px-6 sm:pt-6 lg:grid lg:place-items-center lg:bg-[#f3f5f9] lg:p-10">
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-[6vh] bg-[radial-gradient(circle_at_top,_rgba(255,255,255,0.98),_rgba(255,255,255,0))] lg:hidden" />
-      <div className="pointer-events-none absolute -top-20 right-[-14%] h-48 w-48 rounded-full bg-black/6 blur-3xl lg:hidden" />
-      <div className="pointer-events-none absolute top-18 left-[-14%] h-36 w-36 rounded-full bg-white/75 blur-3xl lg:hidden" />
-      <div className="pointer-events-none absolute inset-x-0 top-1.5 z-10 flex justify-center px-4 lg:hidden">
-        <div className="inline-flex items-center gap-2 rounded-full bg-white/74 px-3 py-1.5 text-[11px] font-medium tracking-[0.18em] text-foreground/72 uppercase shadow-[0_16px_34px_-24px_rgba(15,23,42,0.28)] backdrop-blur-md">
-          <span className="size-1.5 rounded-full bg-foreground" />
-          <span>Força de Vendas</span>
-        </div>
-      </div>
-
+    <main className="relative min-h-screen overflow-hidden bg-[#f3f5f9] p-4 sm:p-6 lg:grid lg:place-items-center lg:p-10">
       <div className="absolute inset-y-0 left-0 hidden w-[58%] lg:block">
         <Image
           src={authImage}
-          alt="Conceito visual de CRM e gestão de relacionamento com clientes"
+          alt="Conceito visual de CRM e gestao de relacionamento com clientes"
           fill
           sizes="(max-width: 1024px) 100vw, 58vw"
           className="object-cover"
@@ -63,7 +53,7 @@ export function AuthShell({ children }: AuthShellProps) {
         <div className="absolute inset-0 bg-black/50" />
       </div>
 
-      <div className="relative z-10 mx-auto flex w-full max-w-[1240px] flex-1 flex-col justify-end overflow-hidden lg:min-h-[720px] lg:flex-none lg:rounded-[44px] lg:bg-card lg:shadow-[0_24px_70px_-36px_rgba(15,23,42,0.4)]">
+      <div className="relative z-10 mx-auto min-h-[calc(100vh-2rem)] w-full max-w-[1240px] overflow-hidden rounded-[28px] bg-card shadow-[0_24px_70px_-36px_rgba(15,23,42,0.4)] sm:min-h-[calc(100vh-3rem)] lg:min-h-[720px] lg:rounded-[44px]">
         <section
           className={[
             "relative hidden h-full p-3 transition-transform duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] lg:absolute lg:inset-y-0 lg:left-0 lg:z-20 lg:block lg:w-1/2",
@@ -74,7 +64,7 @@ export function AuthShell({ children }: AuthShellProps) {
           <div className="relative h-full overflow-hidden rounded-[34px]">
             <Image
               src={authImage}
-              alt="Conceito visual de CRM e gestão de relacionamento com clientes"
+              alt="Conceito visual de CRM e gestao de relacionamento com clientes"
               fill
               sizes="(max-width: 1024px) 100vw, 50vw"
               className="object-cover"
@@ -90,10 +80,10 @@ export function AuthShell({ children }: AuthShellProps) {
             <div className="absolute inset-x-0 bottom-0 p-8 text-white">
               <p className="text-sm font-medium text-white/85">Ambiente corporativo</p>
               <h1 className="mt-3 max-w-lg text-4xl leading-tight font-semibold tracking-normal">
-                Gestão comercial conectada aos indicadores do dia.
+                Gestao comercial conectada aos indicadores do dia.
               </h1>
               <p className="mt-4 max-w-lg text-base text-white/85">
-                Acompanhe clientes, pedidos, agenda e CRM em uma operação pensada para equipes
+                Acompanhe clientes, pedidos, agenda e CRM em uma operacao pensada para equipes
                 comerciais.
               </p>
             </div>
@@ -102,7 +92,7 @@ export function AuthShell({ children }: AuthShellProps) {
 
         <section
           className={[
-            "flex min-h-0 min-w-0 flex-1 items-end justify-center px-0 pb-0 pt-0 transition-transform duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] sm:pt-2 lg:absolute lg:inset-y-0 lg:right-0 lg:w-1/2 lg:items-center lg:px-14 lg:py-12",
+            "flex min-h-[calc(100vh-2rem)] min-w-0 items-center justify-center px-5 py-10 transition-transform duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] sm:min-h-[calc(100vh-3rem)] sm:px-8 lg:absolute lg:inset-y-0 lg:right-0 lg:w-1/2 lg:px-14 lg:py-12",
             isRegister ? "lg:-translate-x-full" : "lg:translate-x-0",
             isSwapping ? "auth-swap-fade" : "",
           ].join(" ")}

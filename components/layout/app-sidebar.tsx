@@ -59,10 +59,10 @@ const primaryItems: NavItem[] = [
 const operationItems: NavItem[] = [
   { title: "Transportadoras", url: "/transportadoras", icon: IconTruck },
   { title: "CRM", url: "/crm", icon: IconUserPlus },
-  { title: "Check-ins", url: "/checkins", icon: IconMapPinCheck },
-  { title: "Anotações", url: "/anotacoes", icon: IconNotes },
+  { title: "Checkins", url: "/checkins", icon: IconMapPinCheck },
+  { title: "Anotacoes", url: "/anotacoes", icon: IconNotes },
   { title: "Agenda", url: "/agenda", icon: IconCalendar },
-  { title: "Integrações", url: "/integracoes/bling", icon: IconPlugConnected },
+  { title: "Integracoes", url: "/integracoes/bling", icon: IconPlugConnected },
 ];
 
 function isActivePath(pathname: string, url: string) {
@@ -134,7 +134,7 @@ export function AppSidebar({ user, ...props }: AppSidebarProps) {
                   <IconInnerShadowTop className="size-4" />
                 </div>
                 <div className="grid flex-1 text-left text-sm leading-tight">
-                  <span className="truncate font-semibold">Força de Vendas</span>
+                  <span className="truncate font-semibold">Forca de Vendas</span>
                   <span className="truncate text-xs">Representante Comercial</span>
                 </div>
               </Link>
@@ -164,7 +164,7 @@ export function AppSidebar({ user, ...props }: AppSidebarProps) {
         </SidebarGroup>
 
         <NavGroup label="Principal" items={primaryItems} />
-        <NavGroup label="Operação" items={operationItems} />
+        <NavGroup label="Operacao" items={operationItems} />
       </SidebarContent>
 
       <SidebarFooter>
@@ -178,7 +178,7 @@ export function AppSidebar({ user, ...props }: AppSidebarProps) {
               <div className="grid flex-1 text-left text-sm leading-tight">
                 <span className="truncate font-medium">{user.name}</span>
                 <span className="truncate text-xs text-muted-foreground">
-                  {user.email ?? "Sessão ativa"}
+                  {user.email ?? "Sessao ativa"}
                 </span>
               </div>
             </SidebarMenuButton>
