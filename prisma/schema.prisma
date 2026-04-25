@@ -150,6 +150,7 @@ model Product {
   code        String
   name        String
   category    ProductCategory @default(ACESSORIOS)
+  subcategory String      @default("GERAL")
   price       Decimal     @db.Decimal(10, 2)
   imageUrl    String?
   description String?

@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState, useEffect, useRef, useState } from "react";
-import { Eye, ImageIcon, Package, Pencil, RefreshCw, Search, Trash2, UploadCloud } from "lucide-react";
+import { Eye, ImageIcon, Package, Pencil, Plus, RefreshCw, Search, Trash2, UploadCloud } from "lucide-react";
 import {
   createProductAction,
   deleteProductAction,
@@ -23,6 +23,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -45,7 +46,10 @@ import { TableCell, TableRow } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
 import { useNoticeToast } from "@/hooks/use-notice-toast";
 import {
+  getDefaultProductSubcategory,
   getProductCategoryLabel,
+  getProductSubcategoryLabel,
+  getProductSubcategoryOptions,
   productCategoryLabels,
   productCategoryValues,
   type ProductCategoryValue,
@@ -56,6 +60,7 @@ export type ProductListItem = {
   code: string;
   name: string;
   category: ProductCategoryValue;
+  subcategory: string;
   price: number;
   imageUrl: string | null;
   description: string | null;
@@ -257,6 +262,17 @@ function ProductFormSheet({
   const codeInputRef = useRef<HTMLInputElement | null>(null);
   const generateAnimationTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [isGeneratingCode, setIsGeneratingCode] = useState(false);
+  const initialCategory = product?.category ?? "ACESSORIOS";
+  const [selectedCategory, setSelectedCategory] = useState<ProductCategoryValue>(initialCategory);
+  const [selectedSubcategory, setSelectedSubcategory] = useState(
+    product?.subcategory ?? getDefaultProductSubcategory(initialCategory)
+  );
+  const subcategoryOptions = getProductSubcategoryOptions(selectedCategory);
+  const effectiveSubcategory = subcategoryOptions.some(
+    (option) => option.value === selectedSubcategory
+  )
+    ? selectedSubcategory
+    : getDefaultProductSubcategory(selectedCategory);
 
   useEffect(() => {
     return () => {
@@ -362,7 +378,12 @@ function ProductFormSheet({
               <Label htmlFor={`${product?.id ?? "new"}-category`}>Categoria</Label>
               <Select
                 name="category"
-                defaultValue={product?.category ?? "ACESSORIOS"}
+                value={selectedCategory}
+                onValueChange={(value) => {
+                  const nextCategory = value as ProductCategoryValue;
+                  setSelectedCategory(nextCategory);
+                  setSelectedSubcategory(getDefaultProductSubcategory(nextCategory));
+                }}
               >
                 <SelectTrigger id={`${product?.id ?? "new"}-category`} className="w-full">
                   <SelectValue placeholder="Selecione a categoria" />
@@ -371,6 +392,26 @@ function ProductFormSheet({
                   {productCategoryValues.map((value) => (
                     <SelectItem key={value} value={value}>
                       {productCategoryLabels[value]}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="grid gap-2">
+              <Label htmlFor={`${product?.id ?? "new"}-subcategory`}>Subcategoria</Label>
+              <Select
+                name="subcategory"
+                value={effectiveSubcategory}
+                onValueChange={setSelectedSubcategory}
+              >
+                <SelectTrigger id={`${product?.id ?? "new"}-subcategory`} className="w-full">
+                  <SelectValue placeholder="Selecione a subcategoria" />
+                </SelectTrigger>
+                <SelectContent>
+                  {subcategoryOptions.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -398,6 +439,18 @@ function ProductFormSheet({
                 <p className="text-xs text-muted-foreground">
                   Se nenhum arquivo for selecionado, a imagem atual será mantida.
                 </p>
+              ) : null}
+              {product?.imageUrl ? (
+                <div className="flex items-center gap-2 rounded-md border border-border/60 bg-muted/30 px-3 py-2">
+                  <Checkbox
+                    id={`${product.id}-removeImage`}
+                    name="removeImage"
+                    defaultChecked={false}
+                  />
+                  <Label htmlFor={`${product.id}-removeImage`} className="cursor-pointer text-sm font-normal">
+                    Remover imagem atual
+                  </Label>
+                </div>
               ) : null}
             </div>
 
@@ -475,9 +528,14 @@ function ProductMobileCard({ product }: { product: ProductListItem }) {
           <h3 className="line-clamp-2 min-h-10 break-words text-sm font-semibold leading-5">
             {product.name}
           </h3>
-          <p className="line-clamp-1 min-h-4 text-xs text-muted-foreground">
-            {getProductCategoryLabel(product.category)}
-          </p>
+          <div className="grid gap-0.5">
+            <p className="line-clamp-1 min-h-4 text-xs text-muted-foreground">
+              {getProductCategoryLabel(product.category)}
+            </p>
+            <p className="line-clamp-1 min-h-4 text-xs text-muted-foreground/90">
+              {getProductSubcategoryLabel(product.category, product.subcategory)}
+            </p>
+          </div>
           <div className="flex min-h-5 items-center gap-1">
             <Badge variant="secondary" className="max-w-[55%] truncate text-[10px]">
               {product.code}
@@ -556,7 +614,7 @@ function ProductDetailSheet({
                   </div>
                   <h3 className="line-clamp-2 text-sm font-semibold">{product.name}</h3>
                   <p className="line-clamp-1 text-xs text-muted-foreground">
-                    {getProductCategoryLabel(product.category)}
+                    {getProductCategoryLabel(product.category)} - {getProductSubcategoryLabel(product.category, product.subcategory)}
                   </p>
                   <p className="text-sm text-primary">{formatCurrency(product.price)}</p>
                 </div>
@@ -567,26 +625,50 @@ function ProductDetailSheet({
       </SheetTrigger>
       <SheetContent className="w-full overflow-y-auto sm:max-w-xl">
         <SheetHeader>
-          <div className="flex flex-wrap items-center gap-2">
-            <Badge variant="secondary">{product.code}</Badge>
-            <Badge variant="outline">{product.itemsCount} item(ns) em pedidos</Badge>
-          </div>
-          <SheetTitle>{product.name}</SheetTitle>
-          <SheetDescription>
-            {getProductCategoryLabel(product.category)}
-          </SheetDescription>
+          <SheetTitle>Visualizar produto</SheetTitle>
+          <SheetDescription>Confira os dados cadastrados do produto.</SheetDescription>
         </SheetHeader>
 
         <div className="grid gap-4 px-4 pb-4">
-          <ProductImage src={product.imageUrl} alt={product.name} />
+          <ProductImage src={product.imageUrl} alt={product.name} className="aspect-square" />
           <div className="grid gap-1 rounded-lg bg-muted/45 p-3">
-            <p className="text-xs font-medium text-muted-foreground">Preço</p>
+            <p className="text-xs font-medium text-muted-foreground">Código do produto</p>
+            <p className="text-sm font-medium text-foreground">{product.code}</p>
+          </div>
+          <div className="grid gap-1 rounded-lg bg-muted/45 p-3">
+            <p className="text-xs font-medium text-muted-foreground">Título do produto</p>
+            <p className="text-sm font-medium text-foreground">{product.name}</p>
+          </div>
+          <div className="grid gap-1 rounded-lg bg-muted/45 p-3">
+            <p className="text-xs font-medium text-muted-foreground">Categoria do produto</p>
+            <p className="text-sm font-medium text-foreground">
+              {getProductCategoryLabel(product.category)}
+            </p>
+          </div>
+          <div className="grid gap-1 rounded-lg bg-muted/45 p-3">
+            <p className="text-xs font-medium text-muted-foreground">Subcategoria do produto</p>
+            <p className="text-sm font-medium text-foreground">
+              {getProductSubcategoryLabel(product.category, product.subcategory)}
+            </p>
+          </div>
+          <div className="grid gap-1 rounded-lg bg-muted/45 p-3">
+            <p className="text-xs font-medium text-muted-foreground">Preço do produto</p>
             <p className="text-lg font-semibold text-foreground">{formatCurrency(product.price)}</p>
           </div>
           <div className="grid gap-1 rounded-lg bg-muted/45 p-3">
-            <p className="text-xs font-medium text-muted-foreground">Descrição</p>
+            <p className="text-xs font-medium text-muted-foreground">Descrição do produto</p>
             <p className="text-sm text-foreground">
               {product.description || "Sem descrição cadastrada."}
+            </p>
+          </div>
+          <div className="grid gap-1 rounded-lg bg-muted/45 p-3">
+            <p className="text-xs font-medium text-muted-foreground">Quantidade de item(ns)</p>
+            <p className="text-sm font-medium text-foreground">{product.itemsCount} item(ns)</p>
+          </div>
+          <div className="grid gap-1 rounded-lg bg-muted/45 p-3">
+            <p className="text-xs font-medium text-muted-foreground">Data de criação do produto</p>
+            <p className="text-sm text-foreground">
+              {new Date(product.createdAt).toLocaleString("pt-BR")}
             </p>
           </div>
           <div className="grid gap-1 rounded-lg bg-muted/45 p-3">
@@ -607,7 +689,7 @@ export function ProductsPageClient({ products, query, pagination }: ProductsPage
   const totalLinkedItems = products.reduce((total, product) => total + product.itemsCount, 0);
 
   return (
-    <div className="flex flex-col gap-4 p-4 lg:p-6">
+    <div className="flex flex-col gap-4 p-4 pb-24 md:pb-4 lg:p-6">
       <div className="flex flex-col justify-between gap-4 md:flex-row md:items-end">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Produtos</h1>
@@ -615,7 +697,7 @@ export function ProductsPageClient({ products, query, pagination }: ProductsPage
             Gerencie seu catálogo de produtos com preços, imagem e descrição para uso nos pedidos.
           </p>
         </div>
-        <div className="flex flex-wrap gap-2">
+        <div className="hidden flex-wrap gap-2 md:flex">
           <ProductFormSheet
             triggerLabel="Novo produto"
             title="Novo produto"
@@ -680,7 +762,7 @@ export function ProductsPageClient({ products, query, pagination }: ProductsPage
                         <div className="grid gap-0.5">
                           <span className="font-medium">{product.name}</span>
                           <span className="text-xs text-muted-foreground">
-                            {getProductCategoryLabel(product.category)}
+                            {getProductCategoryLabel(product.category)} - {getProductSubcategoryLabel(product.category, product.subcategory)}
                           </span>
                           <span className="text-xs text-muted-foreground">
                             Atualizado em {new Date(product.updatedAt).toLocaleDateString("pt-BR")}
@@ -743,6 +825,23 @@ export function ProductsPageClient({ products, query, pagination }: ProductsPage
           )}
         </CardContent>
       </Card>
+
+      <div className="fixed right-4 bottom-4 z-40 md:hidden">
+        <ProductFormSheet
+          triggerLabel="Novo produto"
+          title="Novo produto"
+          description="Cadastre os dados principais para disponibilizar o produto no catálogo."
+          trigger={
+            <Button
+              type="button"
+              className="h-12 rounded-full px-4 shadow-lg shadow-primary/30"
+            >
+              <Plus className="size-4" />
+              Novo produto
+            </Button>
+          }
+        />
+      </div>
     </div>
   );
 }

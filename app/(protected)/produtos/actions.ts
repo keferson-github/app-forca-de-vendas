@@ -8,7 +8,10 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { auth } from "@/auth";
-import { productCategoryValues } from "@/lib/product-categories";
+import {
+  isValidProductSubcategory,
+  productCategoryValues,
+} from "@/lib/product-categories";
 import { prisma } from "@/lib/prisma";
 
 export type ProductFormState = {
@@ -57,12 +60,22 @@ const productSchema = z.object({
   category: z.enum(productCategoryValues, {
     message: "Selecione a categoria do produto.",
   }),
+  subcategory: z.string().trim().min(1, "Selecione a subcategoria do produto."),
+  removeImage: z.boolean().optional().default(false),
   price: z
     .string()
     .trim()
     .min(1, "Informe o preço do produto.")
     .refine((value) => Boolean(parsePrice(value)), "Informe um preço válido maior que zero."),
   description: z.string().trim().optional(),
+}).superRefine((data, ctx) => {
+  if (!isValidProductSubcategory(data.category, data.subcategory)) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["subcategory"],
+      message: "Selecione uma subcategoria válida para a categoria escolhida.",
+    });
+  }
 });
 
 function nullable(value?: string) {
@@ -164,6 +177,8 @@ function parseProductForm(formData: FormData) {
     code: formData.get("code"),
     name: formData.get("name"),
     category: formData.get("category"),
+    subcategory: formData.get("subcategory"),
+    removeImage: formData.get("removeImage") === "on" || formData.get("removeImage") === "true",
     price: formData.get("price"),
     description: formData.get("description"),
   });
@@ -180,6 +195,7 @@ function productPayload(data: z.infer<typeof productSchema>, imageUrl: string | 
     code: data.code,
     name: data.name,
     category: data.category,
+    subcategory: data.subcategory,
     price: new Prisma.Decimal(parsedPrice.toFixed(2)),
     imageUrl,
     description: nullable(data.description),
@@ -265,7 +281,12 @@ export async function updateProductAction(
     return { error: "Produto não encontrado ou sem permissão para editar." };
   }
 
-  const nextImageUrl = imageFile ? await saveImageFile(imageFile) : currentProduct.imageUrl;
+  const shouldRemoveCurrentImage = parsed.data.removeImage && !imageFile;
+  const nextImageUrl = shouldRemoveCurrentImage
+    ? null
+    : imageFile
+      ? await saveImageFile(imageFile)
+      : currentProduct.imageUrl;
 
   try {
     const updated = await prisma.product.updateMany({
@@ -280,7 +301,11 @@ export async function updateProductAction(
       return { error: "Produto não encontrado ou sem permissão para editar." };
     }
 
-    if (imageFile && currentProduct.imageUrl && currentProduct.imageUrl !== nextImageUrl) {
+    if (
+      (imageFile || shouldRemoveCurrentImage)
+      && currentProduct.imageUrl
+      && currentProduct.imageUrl !== nextImageUrl
+    ) {
       await removeImageFile(currentProduct.imageUrl);
     }
   } catch (error) {

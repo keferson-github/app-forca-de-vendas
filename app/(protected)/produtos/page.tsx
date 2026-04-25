@@ -84,6 +84,7 @@ export default async function ProdutosPage(props: { searchParams: SearchParams }
         code: product.code,
         name: product.name,
         category: product.category,
+        subcategory: product.subcategory,
         price: Number(product.price),
         imageUrl: product.imageUrl,
         description: product.description,

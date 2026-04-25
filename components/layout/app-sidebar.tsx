@@ -33,6 +33,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarSeparator,
+  useSidebar,
 } from "@/components/ui/sidebar";
 
 type NavItem = {
@@ -70,6 +71,13 @@ function isActivePath(pathname: string, url: string) {
 
 function NavGroup({ label, items }: { label: string; items: NavItem[] }) {
   const pathname = usePathname();
+  const { isMobile, setOpenMobile } = useSidebar();
+
+  function handleNavigate() {
+    if (isMobile) {
+      setOpenMobile(false);
+    }
+  }
 
   return (
     <SidebarGroup>
@@ -83,7 +91,7 @@ function NavGroup({ label, items }: { label: string; items: NavItem[] }) {
                 tooltip={item.title}
                 isActive={isActivePath(pathname, item.url)}
               >
-                <Link href={item.url}>
+                <Link href={item.url} onClick={handleNavigate}>
                   <item.icon />
                   <span>{item.title}</span>
                 </Link>
@@ -97,12 +105,19 @@ function NavGroup({ label, items }: { label: string; items: NavItem[] }) {
 }
 
 export function AppSidebar({ user, ...props }: AppSidebarProps) {
+  const { isMobile, setOpenMobile } = useSidebar();
   const initials = user.name
     .split(" ")
     .filter(Boolean)
     .slice(0, 2)
     .map((part) => part[0]?.toUpperCase())
     .join("");
+
+  function handleNavigate() {
+    if (isMobile) {
+      setOpenMobile(false);
+    }
+  }
 
   return (
     <Sidebar collapsible="icon" className="dark" {...props}>
@@ -114,7 +129,7 @@ export function AppSidebar({ user, ...props }: AppSidebarProps) {
               size="lg"
               className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
             >
-              <Link href="/dashboard">
+              <Link href="/dashboard" onClick={handleNavigate}>
                 <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
                   <IconInnerShadowTop className="size-4" />
                 </div>
@@ -138,7 +153,7 @@ export function AppSidebar({ user, ...props }: AppSidebarProps) {
                   tooltip="Novo pedido"
                   className="min-w-8 bg-primary text-primary-foreground duration-200 ease-linear hover:bg-primary/90 hover:text-primary-foreground active:bg-primary/90 active:text-primary-foreground"
                 >
-                  <Link href="/pedidos">
+                  <Link href="/pedidos" onClick={handleNavigate}>
                     <IconCirclePlusFilled />
                     <span>Novo pedido</span>
                   </Link>

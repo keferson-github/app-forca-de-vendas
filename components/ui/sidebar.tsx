@@ -187,7 +187,10 @@ function Sidebar({
           data-sidebar="sidebar"
           data-slot="sidebar"
           data-mobile="true"
-          className={cn("w-(--sidebar-width) bg-sidebar p-0 text-sidebar-foreground [&>button]:hidden", className)}
+          className={cn(
+            "w-(--sidebar-width) bg-sidebar p-0 text-sidebar-foreground will-change-transform data-[state=open]:duration-500 data-[state=closed]:duration-320 data-[state=open]:ease-[cubic-bezier(0.2,0.9,0.2,1)] data-[state=closed]:ease-[cubic-bezier(0.4,0,0.25,1)] [&>button]:hidden",
+            className
+          )}
           style={
             {
               "--sidebar-width": SIDEBAR_WIDTH_MOBILE,
@@ -258,7 +261,7 @@ function SidebarTrigger({
   onClick,
   ...props
 }: React.ComponentProps<typeof Button>) {
-  const { toggleSidebar } = useSidebar()
+  const { toggleSidebar, isMobile, openMobile } = useSidebar()
 
   return (
     <Button
@@ -266,14 +269,43 @@ function SidebarTrigger({
       data-slot="sidebar-trigger"
       variant="ghost"
       size="icon"
-      className={cn("size-7", className)}
+      className={cn(
+        "size-7",
+        isMobile
+          ? "size-9 rounded-none border-0 bg-transparent p-0 shadow-none transition-none hover:bg-transparent focus-visible:border-transparent focus-visible:ring-0"
+          : "",
+        className
+      )}
       onClick={(event) => {
         onClick?.(event)
         toggleSidebar()
       }}
       {...props}
     >
-      <PanelLeftIcon />
+      {isMobile ? (
+        <span className="relative block h-4 w-5">
+          <span
+            className={cn(
+              "absolute left-0 top-0 block h-0.5 w-5 origin-center rounded-full bg-foreground transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]",
+              openMobile ? "translate-y-[7px] rotate-45" : ""
+            )}
+          />
+          <span
+            className={cn(
+              "absolute left-0 top-[7px] block h-0.5 w-5 origin-center rounded-full bg-foreground transition-[transform,opacity] duration-250 ease-[cubic-bezier(0.22,1,0.36,1)]",
+              openMobile ? "scale-x-0 opacity-0" : "scale-x-100 opacity-100"
+            )}
+          />
+          <span
+            className={cn(
+              "absolute left-0 top-[14px] block h-0.5 w-5 origin-center rounded-full bg-foreground transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]",
+              openMobile ? "-translate-y-[7px] -rotate-45" : ""
+            )}
+          />
+        </span>
+      ) : (
+        <PanelLeftIcon />
+      )}
       <span className="sr-only">Toggle Sidebar</span>
     </Button>
   )
