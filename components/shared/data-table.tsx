@@ -22,6 +22,7 @@ type DataTableProps<T> = {
   footer?: React.ReactNode;
   className?: string;
   tableClassName?: string;
+  hideOnMobile?: boolean;
 };
 
 export function DataTable<T>({
@@ -32,9 +33,10 @@ export function DataTable<T>({
   footer,
   className,
   tableClassName,
+  hideOnMobile = true,
 }: DataTableProps<T>) {
   return (
-    <div className={cn("hidden md:block", className)}>
+    <div className={cn(hideOnMobile ? "hidden md:block" : "block", className)}>
       <Table className={tableClassName}>
         <TableHeader>
           <TableRow>

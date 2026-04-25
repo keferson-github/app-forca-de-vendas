@@ -153,6 +153,7 @@ export function CustomersPageClient({
           ) : (
             <>
               <DataTable
+                hideOnMobile={false}
                 columns={[
                   { id: "customer", label: "Cliente" },
                   { id: "number", label: "Numero" },
