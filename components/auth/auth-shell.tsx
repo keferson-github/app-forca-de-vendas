@@ -58,12 +58,12 @@ export function AuthShell({ children }: AuthShellProps) {
         <motion.div
           layout="position"
           transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
-          className="relative z-10 mt-20 flex w-full flex-col overflow-hidden rounded-t-[32px] bg-card/95 backdrop-blur-xl"
+          className="relative z-10 mt-28 flex w-full flex-col overflow-hidden rounded-t-[32px] bg-card/95 backdrop-blur-xl"
         >
           <div className="mb-6 w-full">
             <div className="mx-auto h-1.5 w-12 rounded-full bg-muted-foreground/20" />
           </div>
-          <section className="flex min-w-0 items-center justify-center px-5 pb-10">
+          <section className="flex min-w-0 items-center justify-center px-5 pb-14">
             <AuthTransition>{children}</AuthTransition>
           </section>
         </motion.div>
