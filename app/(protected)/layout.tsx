@@ -17,6 +17,7 @@ export default async function ProtectedLayout({
 
   return (
     <SidebarProvider
+      className="protected-sidebar-shell"
       style={
         {
           "--sidebar-width": "calc(var(--spacing) * 72)",

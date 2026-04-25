@@ -82,6 +82,10 @@ body {
   color: var(--foreground);
 }
 
+.protected-sidebar-shell {
+  background: hsl(240 5.9% 10%);
+}
+
 * {
   border-color: var(--border);
 }

@@ -20,7 +20,7 @@ type SearchParams = Promise<{
 
 function formatDate(date?: Date | null) {
   if (!date) {
-    return "Nao informado";
+    return "Não informado";
   }
 
   return new Intl.DateTimeFormat("pt-BR", {
@@ -71,13 +71,13 @@ export default async function BlingIntegrationPage(props: {
     <div className="flex flex-col gap-4 p-4 lg:p-6">
       <div className="flex flex-col justify-between gap-3 md:flex-row md:items-end">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Integracao Bling</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">Integração Bling</h1>
           <p className="max-w-2xl text-sm text-muted-foreground">
-            Conexao OAuth 2.0 com API v3 e recebimento de webhooks assinados.
+            Conexão OAuth 2.0 com API v3 e recebimento de webhooks assinados.
           </p>
         </div>
         <Badge variant={isConnected ? "default" : "outline"} className="w-fit">
-          {isConnected ? "Conectado" : "Nao conectado"}
+          {isConnected ? "Conectado" : "Não conectado"}
         </Badge>
       </div>
 
@@ -89,7 +89,7 @@ export default async function BlingIntegrationPage(props: {
 
       {searchParams.bling === "error" ? (
         <div className="rounded-md border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
-          Nao foi possivel concluir a autorizacao do Bling. Gere um novo acesso e tente novamente.
+          Não foi possível concluir a autorização do Bling. Gere um novo acesso e tente novamente.
         </div>
       ) : null}
 
@@ -101,7 +101,7 @@ export default async function BlingIntegrationPage(props: {
               API OAuth
             </CardTitle>
             <CardDescription>
-              Use o botao para autorizar este sistema na conta Bling.
+              Use o botão para autorizar este sistema na conta Bling.
             </CardDescription>
             <CardAction>
               <Button asChild size="sm">
@@ -121,7 +121,7 @@ export default async function BlingIntegrationPage(props: {
             </div>
             <div className="grid gap-1 text-muted-foreground">
               <div>Conectado em: {formatDate(connection?.connectedAt)}</div>
-              <div>Empresa Bling: {connection?.companyId ?? "Nao identificada"}</div>
+              <div>Empresa Bling: {connection?.companyId ?? "Não identificada"}</div>
               <div>Atualizado em: {formatDate(connection?.updatedAt)}</div>
               <div>Expira em: {formatDate(connection?.expiresAt)}</div>
             </div>
@@ -148,7 +148,7 @@ export default async function BlingIntegrationPage(props: {
             <div className="grid gap-1 text-muted-foreground">
               <div>Eventos recebidos: {eventCount}</div>
               <div>
-                Ultimo evento:{" "}
+                Último evento:{" "}
                 {lastEvent
                   ? `${lastEvent.event} em ${formatDate(lastEvent.receivedAt)}`
                   : "Nenhum evento recebido"}
@@ -160,7 +160,7 @@ export default async function BlingIntegrationPage(props: {
 
       <Card>
         <CardHeader>
-          <CardTitle>Configuracao no Bling</CardTitle>
+          <CardTitle>Configuração no Bling</CardTitle>
           <CardDescription>
             O aplicativo cadastrado no Bling deve ter os escopos dos recursos usados pelo sistema.
           </CardDescription>
@@ -169,11 +169,11 @@ export default async function BlingIntegrationPage(props: {
           <p>
             No Bling, informe a URL de redirecionamento acima no cadastro do aplicativo.
             Depois, na aba Webhooks, adicione a URL do servidor e marque os recursos e
-            acoes que este sistema deve receber.
+            ações que este sistema deve receber.
           </p>
           <p>
-            O endpoint de webhook valida o cabecalho X-Bling-Signature-256 e grava cada
-            eventId uma unica vez para suportar retentativas.
+            O endpoint de webhook valida o cabeçalho X-Bling-Signature-256 e grava cada
+            eventId uma única vez para suportar retentativas.
           </p>
         </CardContent>
       </Card>

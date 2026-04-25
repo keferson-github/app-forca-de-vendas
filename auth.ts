@@ -18,9 +18,35 @@ const authSecrets = [
   process.env.NEXTAUTH_SECRET,
 ].filter((value): value is string => Boolean(value));
 
+function isJwtSessionError(error: unknown): error is AuthError & { type: "JWTSessionError" } {
+  return error instanceof AuthError && error.type === "JWTSessionError";
+}
+
+function isJwtSessionErrorLike(error: unknown) {
+  if (isJwtSessionError(error)) {
+    return true;
+  }
+
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "type" in error &&
+    error.type === "JWTSessionError"
+  );
+}
+
 const { handlers, auth: baseAuth, signIn, signOut } = NextAuth({
   trustHost: true,
   secret: authSecrets.length === 1 ? authSecrets[0] : authSecrets,
+  logger: {
+    error(error) {
+      if (isJwtSessionErrorLike(error)) {
+        return;
+      }
+
+      console.error(error);
+    },
+  },
   session: {
     strategy: "jwt",
   },
@@ -79,10 +105,6 @@ const { handlers, auth: baseAuth, signIn, signOut } = NextAuth({
     },
   },
 });
-
-function isJwtSessionError(error: unknown): error is AuthError & { type: "JWTSessionError" } {
-  return error instanceof AuthError && error.type === "JWTSessionError";
-}
 
 export const auth = (async (...args: Parameters<typeof baseAuth>) => {
   if (args.length > 0) {
