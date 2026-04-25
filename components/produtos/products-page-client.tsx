@@ -1,7 +1,6 @@
 "use client";
 
 import { useActionState, useEffect, useRef, useState } from "react";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Eye, ImageIcon, Package, Pencil, RefreshCw, Search, Trash2, UploadCloud } from "lucide-react";
 import {
   createProductAction,
@@ -12,6 +11,7 @@ import {
 import { SubmitButton } from "@/components/auth/submit-button";
 import { ConfirmActionDialog } from "@/components/shared/confirm-action-dialog";
 import { DataTable } from "@/components/shared/data-table";
+import { GlobalSearchForm } from "@/components/shared/global-search-form";
 import { TablePagination } from "@/components/shared/table-pagination";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -77,6 +77,38 @@ type ProductAutocompleteItem = {
   name: string;
   price: number;
 };
+
+function parseProductAutocompletePayload(payload: unknown): ProductAutocompleteItem[] {
+  if (!payload || typeof payload !== "object") {
+    return [];
+  }
+
+  const { items } = payload as { items?: unknown };
+
+  if (!Array.isArray(items)) {
+    return [];
+  }
+
+  return items.filter((item): item is ProductAutocompleteItem => {
+    if (!item || typeof item !== "object") {
+      return false;
+    }
+
+    const typedItem = item as {
+      id?: unknown;
+      code?: unknown;
+      name?: unknown;
+      price?: unknown;
+    };
+
+    return (
+      typeof typedItem.id === "string"
+      && typeof typedItem.code === "string"
+      && typeof typedItem.name === "string"
+      && typeof typedItem.price === "number"
+    );
+  });
+}
 
 const initialState: ProductFormState = {};
 
@@ -406,21 +438,23 @@ function ProductMobileCard({ product }: { product: ProductListItem }) {
     <Card className="h-full min-h-[17.5rem] overflow-hidden rounded-2xl border-border/70 bg-card/95 py-0 shadow-sm">
       <CardContent className="flex h-full flex-col gap-3 p-3">
         <ProductImage src={product.imageUrl} alt={product.name} className="aspect-square" />
-        <div className="grid min-h-[4.5rem] grid-rows-[auto_1fr_auto] gap-2">
-          <div className="flex min-h-5 items-center justify-between gap-1">
+        <div className="mt-auto grid min-h-[5.25rem] grid-rows-[auto_1fr_auto_auto] gap-1.5">
+          <h3 className="line-clamp-2 min-h-10 break-words text-sm font-semibold leading-5">
+            {product.name}
+          </h3>
+          <div className="flex min-h-5 items-center gap-1">
             <Badge variant="secondary" className="max-w-[55%] truncate text-[10px]">
               {product.code}
             </Badge>
+          </div>
+          <p className="min-h-5 truncate text-sm font-medium text-primary">
+            {formatCurrency(product.price)}
+          </p>
+          <div className="flex justify-end">
             <Badge variant="outline" className="shrink-0 text-[10px]">
               {product.itemsCount} item(ns)
             </Badge>
           </div>
-          <h3 className="line-clamp-2 min-h-10 break-words text-sm font-semibold leading-5">
-            {product.name}
-          </h3>
-          <p className="min-h-5 truncate text-sm font-medium text-primary">
-            {formatCurrency(product.price)}
-          </p>
         </div>
       </CardContent>
 
@@ -528,172 +562,8 @@ function ProductDetailSheet({
 
 export function ProductsPageClient({ products, query, pagination }: ProductsPageClientProps) {
   useNoticeToast(noticeMessages);
-  const router = useRouter();
-  const pathname = usePathname();
-  const searchParams = useSearchParams();
-  const searchInputRef = useRef<HTMLInputElement | null>(null);
-  const searchDebounceTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const autocompleteDebounceTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const autocompleteAbortControllerRef = useRef<AbortController | null>(null);
-  const autocompleteRequestIdRef = useRef(0);
-  const autocompleteCacheRef = useRef<Map<string, ProductAutocompleteItem[]>>(new Map());
-  const [autocompleteItems, setAutocompleteItems] = useState<ProductAutocompleteItem[]>([]);
-  const [isAutocompleteLoading, setIsAutocompleteLoading] = useState(false);
-  const [isAutocompleteVisible, setIsAutocompleteVisible] = useState(false);
-  const [autocompleteTerm, setAutocompleteTerm] = useState(query);
   const totalCatalogValue = products.reduce((total, product) => total + product.price, 0);
   const totalLinkedItems = products.reduce((total, product) => total + product.itemsCount, 0);
-
-  useEffect(() => {
-    return () => {
-      if (searchDebounceTimeoutRef.current) {
-        clearTimeout(searchDebounceTimeoutRef.current);
-      }
-
-      if (autocompleteDebounceTimeoutRef.current) {
-        clearTimeout(autocompleteDebounceTimeoutRef.current);
-      }
-
-      if (autocompleteAbortControllerRef.current) {
-        autocompleteAbortControllerRef.current.abort();
-      }
-    };
-  }, []);
-
-  function buildSearchUrl(rawValue: string) {
-    const normalized = rawValue.trim();
-    const currentParams = new URLSearchParams(searchParams.toString());
-    const nextParams = new URLSearchParams(searchParams.toString());
-
-    if (normalized.length >= 3) {
-      nextParams.set("q", normalized);
-    } else {
-      nextParams.delete("q");
-    }
-
-    nextParams.delete("page");
-
-    const currentUrl = currentParams.toString() ? `${pathname}?${currentParams.toString()}` : pathname;
-    const nextUrl = nextParams.toString() ? `${pathname}?${nextParams.toString()}` : pathname;
-
-    return { currentUrl, nextUrl };
-  }
-
-  function scheduleSearch(rawValue: string) {
-    if (searchDebounceTimeoutRef.current) {
-      clearTimeout(searchDebounceTimeoutRef.current);
-    }
-
-    searchDebounceTimeoutRef.current = setTimeout(() => {
-      const { currentUrl, nextUrl } = buildSearchUrl(rawValue);
-
-      if (nextUrl !== currentUrl) {
-        router.replace(nextUrl, { scroll: false });
-      }
-    }, 300);
-  }
-
-  function applySearchImmediately(rawValue: string) {
-    const { currentUrl, nextUrl } = buildSearchUrl(rawValue);
-
-    if (nextUrl !== currentUrl) {
-      router.replace(nextUrl, { scroll: false });
-    }
-  }
-
-  function scheduleAutocomplete(rawValue: string) {
-    const normalized = rawValue.trim();
-    setAutocompleteTerm(rawValue);
-
-    if (autocompleteDebounceTimeoutRef.current) {
-      clearTimeout(autocompleteDebounceTimeoutRef.current);
-    }
-
-    if (autocompleteAbortControllerRef.current) {
-      autocompleteAbortControllerRef.current.abort();
-      autocompleteAbortControllerRef.current = null;
-    }
-
-    if (normalized.length < 3) {
-      autocompleteRequestIdRef.current += 1;
-      setIsAutocompleteLoading(false);
-      setAutocompleteItems([]);
-      return;
-    }
-
-    const cacheKey = normalized.toLocaleLowerCase("pt-BR");
-    const cachedItems = autocompleteCacheRef.current.get(cacheKey);
-
-    if (cachedItems) {
-      setAutocompleteItems(cachedItems);
-      setIsAutocompleteLoading(false);
-      return;
-    }
-
-    setIsAutocompleteLoading(true);
-
-    autocompleteDebounceTimeoutRef.current = setTimeout(async () => {
-      const requestId = autocompleteRequestIdRef.current + 1;
-      autocompleteRequestIdRef.current = requestId;
-      const controller = new AbortController();
-      autocompleteAbortControllerRef.current = controller;
-
-      try {
-        const response = await fetch(
-          `/api/produtos/autocomplete?q=${encodeURIComponent(normalized)}`,
-          {
-            signal: controller.signal,
-            cache: "no-store",
-          }
-        );
-
-        if (!response.ok) {
-          throw new Error(`Autocomplete request failed with status ${response.status}`);
-        }
-
-        const payload = (await response.json()) as {
-          items?: ProductAutocompleteItem[];
-        };
-
-        const items = payload.items ?? [];
-
-        autocompleteCacheRef.current.set(cacheKey, items);
-
-        if (autocompleteRequestIdRef.current === requestId) {
-          setAutocompleteItems(items);
-          setIsAutocompleteLoading(false);
-        }
-      } catch (error) {
-        if (
-          error instanceof DOMException &&
-          error.name === "AbortError"
-        ) {
-          return;
-        }
-
-        if (autocompleteRequestIdRef.current === requestId) {
-          setAutocompleteItems([]);
-          setIsAutocompleteLoading(false);
-        }
-      }
-    }, 180);
-  }
-
-  function handleAutocompleteSelect(item: ProductAutocompleteItem) {
-    const nextValue = item.code;
-
-    if (searchInputRef.current) {
-      searchInputRef.current.value = nextValue;
-    }
-
-    setAutocompleteTerm(nextValue);
-    setIsAutocompleteVisible(false);
-    setAutocompleteItems([]);
-    setIsAutocompleteLoading(false);
-    applySearchImmediately(nextValue);
-  }
-
-  const shouldShowAutocomplete = isAutocompleteVisible && autocompleteTerm.trim().length >= 3;
 
   return (
     <div className="flex flex-col gap-4 p-4 lg:p-6">
@@ -720,70 +590,24 @@ export function ProductsPageClient({ products, query, pagination }: ProductsPage
             <CardDescription>Busque por código, nome ou descrição.</CardDescription>
           </div>
 
-          <form action="/produtos" className="flex flex-col gap-2 sm:flex-row">
-            <div className="relative flex-1">
-              <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                ref={searchInputRef}
-                name="q"
-                defaultValue={query}
-                onChange={(event) => {
-                  const nextValue = event.currentTarget.value;
-                  scheduleSearch(nextValue);
-                  scheduleAutocomplete(nextValue);
-                  setIsAutocompleteVisible(true);
-                }}
-                onFocus={(event) => {
-                  setIsAutocompleteVisible(true);
-                  scheduleAutocomplete(event.currentTarget.value);
-                }}
-                onBlur={() => {
-                  setTimeout(() => {
-                    setIsAutocompleteVisible(false);
-                  }, 100);
-                }}
-                placeholder="Buscar produto"
-                className="pl-9"
-              />
-
-              {shouldShowAutocomplete ? (
-                <div className="absolute top-full z-30 mt-2 w-full rounded-xl border bg-popover p-1 shadow-xl">
-                  {isAutocompleteLoading ? (
-                    <p className="px-3 py-2 text-xs text-muted-foreground">Buscando sugestões...</p>
-                  ) : autocompleteItems.length > 0 ? (
-                    <ul className="grid gap-0.5">
-                      {autocompleteItems.map((item) => (
-                        <li key={item.id}>
-                          <button
-                            type="button"
-                            className="grid w-full gap-0.5 rounded-lg px-3 py-2 text-left transition hover:bg-accent"
-                            onMouseDown={(event) => {
-                              event.preventDefault();
-                              handleAutocompleteSelect(item);
-                            }}
-                          >
-                            <span className="text-xs text-muted-foreground">{item.code}</span>
-                            <span className="line-clamp-1 text-sm font-medium">{item.name}</span>
-                            <span className="text-xs text-muted-foreground">
-                              {formatCurrency(item.price)}
-                            </span>
-                          </button>
-                        </li>
-                      ))}
-                    </ul>
-                  ) : (
-                    <p className="px-3 py-2 text-xs text-muted-foreground">
-                      Nenhuma sugestão encontrada.
-                    </p>
-                  )}
-                </div>
-              ) : null}
-            </div>
-            <Button type="submit" variant="outline">
-              Buscar
-            </Button>
-          </form>
-          <p className="text-xs text-muted-foreground">A busca automática inicia com 3 caracteres.</p>
+          <GlobalSearchForm<ProductAutocompleteItem>
+            actionPath="/produtos"
+            query={query}
+            placeholder="Buscar produto"
+            autocomplete={{
+              endpoint: "/api/produtos/autocomplete",
+              getItemsFromPayload: parseProductAutocompletePayload,
+              getItemId: (item) => item.id,
+              getItemValue: (item) => item.code,
+              renderItem: (item) => (
+                <>
+                  <span className="text-xs text-muted-foreground">{item.code}</span>
+                  <span className="line-clamp-1 text-sm font-medium">{item.name}</span>
+                  <span className="text-xs text-muted-foreground">{formatCurrency(item.price)}</span>
+                </>
+              ),
+            }}
+          />
         </CardHeader>
 
         <CardContent>

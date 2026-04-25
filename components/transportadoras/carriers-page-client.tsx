@@ -10,6 +10,7 @@ import {
 } from "@/app/(protected)/transportadoras/actions";
 import { SubmitButton } from "@/components/auth/submit-button";
 import { ConfirmActionDialog } from "@/components/shared/confirm-action-dialog";
+import { GlobalSearchForm } from "@/components/shared/global-search-form";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -310,20 +311,11 @@ export function CarriersPageClient({ carriers, query }: CarriersPageClientProps)
             <CardDescription>Busque por nome, contato ou telefone.</CardDescription>
           </div>
 
-          <form action="/transportadoras" className="flex flex-col gap-2 sm:flex-row">
-            <div className="relative flex-1">
-              <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                name="q"
-                defaultValue={query}
-                placeholder="Buscar transportadora"
-                className="pl-9"
-              />
-            </div>
-            <Button type="submit" variant="outline">
-              Buscar
-            </Button>
-          </form>
+          <GlobalSearchForm
+            actionPath="/transportadoras"
+            query={query}
+            placeholder="Buscar transportadora"
+          />
         </CardHeader>
 
         <CardContent>

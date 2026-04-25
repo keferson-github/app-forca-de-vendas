@@ -2,9 +2,9 @@
 
 import { Search } from "lucide-react";
 import { DataTable } from "@/components/shared/data-table";
+import { GlobalSearchForm } from "@/components/shared/global-search-form";
 import { TablePagination } from "@/components/shared/table-pagination";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -12,7 +12,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import { TableCell } from "@/components/ui/table";
 
 export type OrderListItem = {
@@ -92,15 +91,11 @@ export function OrdersPageClient({ orders, query, pagination }: OrdersPageClient
             <CardDescription>Busque por numero, cliente, empresa recebedora e observacoes.</CardDescription>
           </div>
 
-          <form action="/pedidos" className="flex flex-col gap-2 sm:flex-row">
-            <div className="relative flex-1">
-              <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
-              <Input name="q" defaultValue={query} placeholder="Buscar pedido" className="pl-9" />
-            </div>
-            <Button type="submit" variant="outline">
-              Buscar
-            </Button>
-          </form>
+          <GlobalSearchForm
+            actionPath="/pedidos"
+            query={query}
+            placeholder="Buscar pedido"
+          />
         </CardHeader>
 
         <CardContent>
