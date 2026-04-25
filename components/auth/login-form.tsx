@@ -74,7 +74,7 @@ export function LoginForm({
           Entrar
         </SubmitButton>
       </form>
-      <div className="mt-10 text-left text-sm text-muted-foreground sm:mt-5 sm:text-center">
+      <div className="mt-10 text-center text-sm text-muted-foreground sm:mt-5">
         Ainda não tem conta?{" "}
         <Link
           className="font-bold text-primary sm:font-normal sm:text-foreground sm:underline sm:underline-offset-4"
