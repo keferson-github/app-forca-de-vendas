@@ -34,6 +34,16 @@ e habilite os recursos desejados com seus respectivos escopos.
 A tela protegida `/integracoes/bling` inicia o fluxo OAuth e mostra as URLs
 necessarias para configurar o aplicativo no Bling.
 
+## Padrao de notificacoes toast
+
+Para manter consistencia visual e de comportamento, o projeto usa um unico padrao para toast:
+
+- Disparo de notificacao: `appToast` em `lib/toast.ts`
+- Toaster global: `AppToaster` em `components/shared/app-toaster.tsx`
+- Notices por query param (`?notice=`): `useNoticeToast` em `hooks/use-notice-toast.ts`
+
+Regras de lint foram adicionadas para impedir novos imports diretos de `sonner` e de `components/ui/sonner` fora dos wrappers oficiais.
+
 You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.

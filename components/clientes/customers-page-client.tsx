@@ -1,15 +1,14 @@
 "use client";
 
-import { useEffect, useRef } from "react";
-import { useSearchParams } from "next/navigation";
 import { Building2, MoreHorizontal, Search, UserRoundCheck, Users } from "lucide-react";
-import { toast } from "sonner";
 import { CustomerDeleteSheet } from "@/components/clientes/customer-delete-sheet";
 import { CustomerDetailSheet } from "@/components/clientes/customer-detail-sheet";
 import {
   CustomerFormSheet,
   type CustomerListItem,
 } from "@/components/clientes/customer-form-sheet";
+import { DataTable } from "@/components/shared/data-table";
+import { TablePagination } from "@/components/shared/table-pagination";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -20,14 +19,8 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { TableCell } from "@/components/ui/table";
+import { useNoticeToast } from "@/hooks/use-notice-toast";
 
 type CustomersPageClientProps = {
   customers: CustomerListItem[];
@@ -38,6 +31,12 @@ type CustomersPageClientProps = {
   };
   query: string;
   segment: "all" | "customers" | "prospects";
+  pagination: {
+    currentPage: number;
+    pageSize: number;
+    totalItems: number;
+    totalPages: number;
+  };
 };
 
 const noticeMessages: Record<string, string> = {
@@ -91,23 +90,9 @@ export function CustomersPageClient({
   stats,
   query,
   segment,
+  pagination,
 }: CustomersPageClientProps) {
-  const searchParams = useSearchParams();
-  const lastNotice = useRef<string | null>(null);
-
-  useEffect(() => {
-    const notice = searchParams.get("notice");
-
-    if (!notice || lastNotice.current === notice) {
-      return;
-    }
-
-    lastNotice.current = notice;
-    const message = noticeMessages[notice];
-    if (message) {
-      toast.success(message);
-    }
-  }, [searchParams]);
+  useNoticeToast(noticeMessages);
 
   const queryParam = query ? `&q=${encodeURIComponent(query)}` : "";
 
@@ -126,13 +111,6 @@ export function CustomersPageClient({
             triggerLabel="Novo cliente"
             title="Novo cliente"
             description="Cadastre uma empresa ou pessoa que ja faz parte da carteira."
-          />
-          <CustomerFormSheet
-            defaultIsProspect
-            triggerLabel="Novo prospect"
-            title="Novo prospect"
-            description="Registre uma oportunidade antes da conversao em cliente."
-            variant="outline"
           />
         </div>
       </div>
@@ -209,19 +187,19 @@ export function CustomersPageClient({
           {customers.length === 0 ? (
             <EmptyState />
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Cliente</TableHead>
-                  <TableHead>Numero</TableHead>
-                  <TableHead>Contato</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Acoes</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {customers.map((customer) => (
-                  <TableRow key={customer.id}>
+            <>
+              <DataTable
+                columns={[
+                  { id: "customer", label: "Cliente" },
+                  { id: "number", label: "Numero" },
+                  { id: "contact", label: "Contato" },
+                  { id: "status", label: "Status" },
+                  { id: "actions", label: "Acoes", className: "text-right" },
+                ]}
+                data={customers}
+                getRowKey={(customer) => customer.id}
+                renderRow={(customer) => (
+                  <>
                     <TableCell>
                       <div className="grid gap-1">
                         <span className="font-medium">{customer.name}</span>
@@ -238,9 +216,7 @@ export function CustomersPageClient({
                           {customer.isProspect ? "Prospect" : "Cliente"}
                         </Badge>
                         {customer.isProspect ? (
-                          <Badge variant="secondary">
-                            {statusLabels[customer.prospectStatus]}
-                          </Badge>
+                          <Badge variant="secondary">{statusLabels[customer.prospectStatus]}</Badge>
                         ) : null}
                       </div>
                     </TableCell>
@@ -261,10 +237,23 @@ export function CustomersPageClient({
                         </Button>
                       </div>
                     </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                  </>
+                )}
+              />
+
+              <TablePagination
+                basePath="/clientes"
+                pageSize={pagination.pageSize}
+                currentPage={pagination.currentPage}
+                totalPages={pagination.totalPages}
+                totalItems={pagination.totalItems}
+                currentItemsCount={customers.length}
+                params={{
+                  q: query || undefined,
+                  segment: segment === "all" ? undefined : segment,
+                }}
+              />
+            </>
           )}
         </CardContent>
       </Card>

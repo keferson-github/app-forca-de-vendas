@@ -6,7 +6,20 @@ import { prisma } from "@/lib/prisma";
 type SearchParams = Promise<{
   q?: string;
   segment?: string;
+  page?: string;
 }>;
+
+const PAGE_SIZE = 12;
+
+function parsePage(value?: string) {
+  const parsed = Number(value ?? "1");
+
+  if (!Number.isFinite(parsed) || parsed < 1) {
+    return 1;
+  }
+
+  return Math.floor(parsed);
+}
 
 function getSegment(segment?: string): "all" | "customers" | "prospects" {
   if (segment === "customers" || segment === "prospects") {
@@ -52,27 +65,34 @@ export default async function ClientesPage(props: { searchParams: SearchParams }
 
   const query = (searchParams.q ?? "").trim();
   const segment = getSegment(searchParams.segment);
+  const requestedPage = parsePage(searchParams.page);
   const where = buildWhere(session.user.id, query, segment);
 
-  const [customers, total, customersCount, prospectsCount] = await prisma.$transaction([
-    prisma.customer.findMany({
-      where,
-      orderBy: [{ updatedAt: "desc" }, { createdAt: "desc" }],
-      take: 100,
-      include: {
-        _count: {
-          select: {
-            orders: true,
-            crmNotes: true,
-            contacts: true,
-          },
-        },
-      },
-    }),
+  const [total, customersCount, prospectsCount, totalFiltered] = await prisma.$transaction([
     prisma.customer.count({ where: { userId: session.user.id } }),
     prisma.customer.count({ where: { userId: session.user.id, isProspect: false } }),
     prisma.customer.count({ where: { userId: session.user.id, isProspect: true } }),
+    prisma.customer.count({ where }),
   ]);
+
+  const totalPages = Math.max(1, Math.ceil(totalFiltered / PAGE_SIZE));
+  const currentPage = Math.min(requestedPage, totalPages);
+
+  const customers = await prisma.customer.findMany({
+    where,
+    orderBy: [{ updatedAt: "desc" }, { createdAt: "desc" }, { id: "desc" }],
+    skip: (currentPage - 1) * PAGE_SIZE,
+    take: PAGE_SIZE,
+    include: {
+      _count: {
+        select: {
+          orders: true,
+          crmNotes: true,
+          contacts: true,
+        },
+      },
+    },
+  });
 
   return (
     <CustomersPageClient
@@ -102,6 +122,12 @@ export default async function ClientesPage(props: { searchParams: SearchParams }
       }}
       query={query}
       segment={segment}
+      pagination={{
+        currentPage,
+        pageSize: PAGE_SIZE,
+        totalItems: totalFiltered,
+        totalPages,
+      }}
     />
   );
 }
