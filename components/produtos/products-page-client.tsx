@@ -34,14 +34,28 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { TableCell, TableRow } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
 import { useNoticeToast } from "@/hooks/use-notice-toast";
+import {
+  getProductCategoryLabel,
+  productCategoryLabels,
+  productCategoryValues,
+  type ProductCategoryValue,
+} from "@/lib/product-categories";
 
 export type ProductListItem = {
   id: string;
   code: string;
   name: string;
+  category: ProductCategoryValue;
   price: number;
   imageUrl: string | null;
   description: string | null;
@@ -345,6 +359,25 @@ function ProductFormSheet({
             </div>
 
             <div className="grid gap-2">
+              <Label htmlFor={`${product?.id ?? "new"}-category`}>Categoria</Label>
+              <Select
+                name="category"
+                defaultValue={product?.category ?? "ACESSORIOS"}
+              >
+                <SelectTrigger id={`${product?.id ?? "new"}-category`} className="w-full">
+                  <SelectValue placeholder="Selecione a categoria" />
+                </SelectTrigger>
+                <SelectContent>
+                  {productCategoryValues.map((value) => (
+                    <SelectItem key={value} value={value}>
+                      {productCategoryLabels[value]}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="grid gap-2">
               <Label
                 htmlFor={`${product?.id ?? "new"}-imageFile`}
                 className="flex items-center gap-2"
@@ -438,10 +471,13 @@ function ProductMobileCard({ product }: { product: ProductListItem }) {
     <Card className="h-full min-h-[17.5rem] overflow-hidden rounded-2xl border-border/70 bg-card/95 py-0 shadow-sm">
       <CardContent className="flex h-full flex-col gap-3 p-3">
         <ProductImage src={product.imageUrl} alt={product.name} className="aspect-square" />
-        <div className="mt-auto grid min-h-[5.25rem] grid-rows-[auto_1fr_auto_auto] gap-1.5">
+        <div className="mt-auto grid min-h-[5.25rem] grid-rows-[auto_auto_auto_auto_auto] gap-1.5">
           <h3 className="line-clamp-2 min-h-10 break-words text-sm font-semibold leading-5">
             {product.name}
           </h3>
+          <p className="line-clamp-1 min-h-4 text-xs text-muted-foreground">
+            {getProductCategoryLabel(product.category)}
+          </p>
           <div className="flex min-h-5 items-center gap-1">
             <Badge variant="secondary" className="max-w-[55%] truncate text-[10px]">
               {product.code}
@@ -519,6 +555,9 @@ function ProductDetailSheet({
                     </Badge>
                   </div>
                   <h3 className="line-clamp-2 text-sm font-semibold">{product.name}</h3>
+                  <p className="line-clamp-1 text-xs text-muted-foreground">
+                    {getProductCategoryLabel(product.category)}
+                  </p>
                   <p className="text-sm text-primary">{formatCurrency(product.price)}</p>
                 </div>
               </CardContent>
@@ -533,7 +572,9 @@ function ProductDetailSheet({
             <Badge variant="outline">{product.itemsCount} item(ns) em pedidos</Badge>
           </div>
           <SheetTitle>{product.name}</SheetTitle>
-          <SheetDescription>Informações comerciais e detalhamento do produto.</SheetDescription>
+          <SheetDescription>
+            {getProductCategoryLabel(product.category)}
+          </SheetDescription>
         </SheetHeader>
 
         <div className="grid gap-4 px-4 pb-4">
@@ -638,6 +679,9 @@ export function ProductsPageClient({ products, query, pagination }: ProductsPage
                         <ProductListThumbnail src={product.imageUrl} alt={product.name} />
                         <div className="grid gap-0.5">
                           <span className="font-medium">{product.name}</span>
+                          <span className="text-xs text-muted-foreground">
+                            {getProductCategoryLabel(product.category)}
+                          </span>
                           <span className="text-xs text-muted-foreground">
                             Atualizado em {new Date(product.updatedAt).toLocaleDateString("pt-BR")}
                           </span>

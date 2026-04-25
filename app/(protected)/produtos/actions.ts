@@ -8,6 +8,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { auth } from "@/auth";
+import { productCategoryValues } from "@/lib/product-categories";
 import { prisma } from "@/lib/prisma";
 
 export type ProductFormState = {
@@ -53,6 +54,9 @@ const productSchema = z.object({
   id: z.string().optional(),
   code: z.string().trim().min(1, "Informe o código do produto."),
   name: z.string().trim().min(2, "Informe o nome do produto."),
+  category: z.enum(productCategoryValues, {
+    message: "Selecione a categoria do produto.",
+  }),
   price: z
     .string()
     .trim()
@@ -159,6 +163,7 @@ function parseProductForm(formData: FormData) {
     id: String(formData.get("id") ?? "") || undefined,
     code: formData.get("code"),
     name: formData.get("name"),
+    category: formData.get("category"),
     price: formData.get("price"),
     description: formData.get("description"),
   });
@@ -174,6 +179,7 @@ function productPayload(data: z.infer<typeof productSchema>, imageUrl: string | 
   return {
     code: data.code,
     name: data.name,
+    category: data.category,
     price: new Prisma.Decimal(parsedPrice.toFixed(2)),
     imageUrl,
     description: nullable(data.description),

@@ -1,0 +1,8 @@
+-- CreateEnum
+CREATE TYPE "ProductCategory" AS ENUM ('RACAO_SECA', 'RACAO_UMIDA', 'PETISCOS', 'SUPLEMENTOS', 'HIGIENE', 'AREIA_HIGIENICA', 'TAPETES_HIGIENICOS', 'ANTIPULGAS_ANTICARRAPATOS', 'ACESSORIOS', 'BRINQUEDOS');
+
+-- DropIndex
+DROP INDEX "Customer_userId_isProspect_prospectStatus_idx";
+
+-- AlterTable
+ALTER TABLE "Product" ADD COLUMN     "category" "ProductCategory" NOT NULL DEFAULT 'ACESSORIOS';

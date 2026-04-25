@@ -68,6 +68,19 @@ enum DispatchStatus {
   FAILED
 }
 
+enum ProductCategory {
+  RACAO_SECA
+  RACAO_UMIDA
+  PETISCOS
+  SUPLEMENTOS
+  HIGIENE
+  AREIA_HIGIENICA
+  TAPETES_HIGIENICOS
+  ANTIPULGAS_ANTICARRAPATOS
+  ACESSORIOS
+  BRINQUEDOS
+}
+
 model User {
   id                 String                @id @default(cuid())
   name               String
@@ -136,6 +149,7 @@ model Product {
   userId      String
   code        String
   name        String
+  category    ProductCategory @default(ACESSORIOS)
   price       Decimal     @db.Decimal(10, 2)
   imageUrl    String?
   description String?
