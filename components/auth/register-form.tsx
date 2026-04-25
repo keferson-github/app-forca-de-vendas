@@ -26,11 +26,18 @@ export function RegisterForm() {
         <div className="grid gap-4 lg:grid-cols-2">
           <div className="space-y-2 lg:col-span-2">
             <Label htmlFor="name">Nome</Label>
-            <Input id="name" name="name" placeholder="Seu nome" required />
+            <Input id="name" name="name" placeholder="Seu nome" autoComplete="name" required />
           </div>
           <div className="space-y-2 lg:col-span-2">
             <Label htmlFor="email">E-mail</Label>
-            <Input id="email" name="email" type="email" placeholder="voce@empresa.com" required />
+            <Input
+              id="email"
+              name="email"
+              type="email"
+              placeholder="voce@empresa.com"
+              autoComplete="email"
+              required
+            />
           </div>
           <div className="space-y-2">
             <Label htmlFor="password">Senha</Label>

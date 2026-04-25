@@ -11,8 +11,8 @@ export type RegisterState = {
 
 const registerSchema = z
   .object({
-    name: z.string().min(2, "O nome deve ter pelo menos 2 caracteres."),
-    email: z.string().email("Informe um e-mail valido."),
+    name: z.string().trim().min(2, "O nome deve ter pelo menos 2 caracteres."),
+    email: z.string().trim().toLowerCase().email("Informe um e-mail valido."),
     password: z
       .string()
       .min(8, "A senha deve ter pelo menos 8 caracteres.")
@@ -41,10 +41,9 @@ export async function registerAction(
   }
 
   const { name, email, password } = validated.data;
-  const normalizedEmail = email.toLowerCase();
 
   const existingUser = await prisma.user.findUnique({
-    where: { email: normalizedEmail },
+    where: { email },
     select: { id: true },
   });
 
@@ -56,13 +55,13 @@ export async function registerAction(
   await prisma.user.create({
     data: {
       name,
-      email: normalizedEmail,
+      email,
       passwordHash,
     },
   });
 
   await signIn("credentials", {
-    email: normalizedEmail,
+    email,
     password,
     redirectTo: "/dashboard",
   });
