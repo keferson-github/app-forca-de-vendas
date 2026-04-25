@@ -22,38 +22,73 @@ export function RegisterForm() {
         description="Cadastre seus dados para organizar clientes, pedidos e CRM."
       />
 
-      <form action={action} className="space-y-4">
+      <form action={action} className="space-y-5 sm:space-y-4">
         <div className="grid gap-4 lg:grid-cols-2">
           <div className="space-y-2 lg:col-span-2">
-            <Label htmlFor="name">Nome</Label>
-            <Input id="name" name="name" placeholder="Digite seu nome" autoComplete="name" required />
+            <Label htmlFor="name" className="text-sm font-medium">
+              Nome
+            </Label>
+            <Input
+              id="name"
+              name="name"
+              placeholder="Digite seu nome"
+              autoComplete="name"
+              className="h-12 rounded-xl border-transparent bg-muted/50 text-base shadow-none sm:h-9 sm:rounded-md sm:border-input sm:bg-transparent"
+              required
+            />
           </div>
           <div className="space-y-2 lg:col-span-2">
-            <Label htmlFor="email">E-mail</Label>
+            <Label htmlFor="email" className="text-sm font-medium">
+              E-mail
+            </Label>
             <Input
               id="email"
               name="email"
               type="email"
               placeholder="Digite seu e-mail"
               autoComplete="email"
+              className="h-12 rounded-xl border-transparent bg-muted/50 text-base shadow-none sm:h-9 sm:rounded-md sm:border-input sm:bg-transparent"
               required
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="password">Senha</Label>
-            <PasswordField id="password" name="password" required autoComplete="new-password" />
+            <Label htmlFor="password" className="text-sm font-medium">
+              Senha
+            </Label>
+            <PasswordField
+              id="password"
+              name="password"
+              required
+              autoComplete="new-password"
+              inputClassName="h-12 rounded-xl border-transparent bg-muted/50 text-base shadow-none sm:h-9 sm:rounded-md sm:border-input sm:bg-transparent"
+              toggleClassName="h-10 w-10 rounded-xl sm:h-8 sm:w-8 sm:rounded-md"
+            />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="confirmPassword">Confirmar senha</Label>
-            <PasswordField id="confirmPassword" name="confirmPassword" required autoComplete="new-password" />
+            <Label htmlFor="confirmPassword" className="text-sm font-medium">
+              Confirmar senha
+            </Label>
+            <PasswordField
+              id="confirmPassword"
+              name="confirmPassword"
+              required
+              autoComplete="new-password"
+              inputClassName="h-12 rounded-xl border-transparent bg-muted/50 text-base shadow-none sm:h-9 sm:rounded-md sm:border-input sm:bg-transparent"
+              toggleClassName="h-10 w-10 rounded-xl sm:h-8 sm:w-8 sm:rounded-md"
+            />
           </div>
         </div>
         {state.error ? <p className="text-sm text-red-600">{state.error}</p> : null}
-        <SubmitButton>Cadastrar</SubmitButton>
+        <SubmitButton className="h-12 w-full rounded-xl text-base font-medium sm:h-9 sm:rounded-md sm:text-sm">
+          Cadastrar
+        </SubmitButton>
       </form>
-      <div className="mt-5 text-center text-sm text-muted-foreground">
+      <div className="mt-10 text-left text-sm text-muted-foreground sm:mt-5 sm:text-center">
         Já possui conta?{" "}
-        <Link className="text-foreground underline underline-offset-4" href="/login">
+        <Link
+          className="font-bold text-primary sm:font-normal sm:text-foreground sm:underline sm:underline-offset-4"
+          href="/login"
+        >
           Fazer login
         </Link>
       </div>

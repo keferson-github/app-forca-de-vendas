@@ -5,12 +5,13 @@ import { Button } from "@/components/ui/button";
 
 type SubmitButtonProps = {
   children: React.ReactNode;
+  className?: string;
 };
 
-export function SubmitButton({ children }: SubmitButtonProps) {
+export function SubmitButton({ children, className }: SubmitButtonProps) {
   const { pending } = useFormStatus();
   return (
-    <Button type="submit" disabled={pending} className="w-full">
+    <Button type="submit" disabled={pending} className={`w-full ${className ?? ""}`}>
       {pending ? "Aguarde..." : children}
     </Button>
   );

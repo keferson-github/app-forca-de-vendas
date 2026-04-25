@@ -11,6 +11,8 @@ type PasswordFieldProps = {
   placeholder?: string;
   required?: boolean;
   autoComplete?: string;
+  inputClassName?: string;
+  toggleClassName?: string;
 };
 
 export function PasswordField({
@@ -19,6 +21,8 @@ export function PasswordField({
   placeholder,
   required,
   autoComplete,
+  inputClassName,
+  toggleClassName,
 }: PasswordFieldProps) {
   const [showPassword, setShowPassword] = useState(false);
 
@@ -31,7 +35,7 @@ export function PasswordField({
         placeholder={placeholder}
         required={required}
         autoComplete={autoComplete}
-        className="pr-10"
+        className={`pr-10 ${inputClassName ?? ""}`}
       />
       <Button
         type="button"
@@ -39,7 +43,7 @@ export function PasswordField({
         size="icon"
         aria-label={showPassword ? "Ocultar senha" : "Revelar senha"}
         onClick={() => setShowPassword((value) => !value)}
-        className="absolute top-1/2 right-1 h-8 w-8 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+        className={`absolute top-1/2 right-1 h-8 w-8 -translate-y-1/2 text-muted-foreground hover:text-foreground ${toggleClassName ?? ""}`}
       >
         {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
       </Button>
