@@ -10,8 +10,17 @@ const credentialsSchema = z.object({
   password: z.string().min(8),
 });
 
-export const { handlers, auth, signIn, signOut } = NextAuth({
+const authSecrets = [
+  process.env.AUTH_SECRET,
+  process.env.AUTH_SECRET_1,
+  process.env.AUTH_SECRET_2,
+  process.env.AUTH_SECRET_3,
+  process.env.NEXTAUTH_SECRET,
+].filter((value): value is string => Boolean(value));
+
+const { handlers, auth: baseAuth, signIn, signOut } = NextAuth({
   trustHost: true,
+  secret: authSecrets.length === 1 ? authSecrets[0] : authSecrets,
   session: {
     strategy: "jwt",
   },
@@ -70,5 +79,26 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     },
   },
 });
+
+function isJwtSessionError(error: unknown): error is AuthError & { type: "JWTSessionError" } {
+  return error instanceof AuthError && error.type === "JWTSessionError";
+}
+
+export const auth = (async (...args: Parameters<typeof baseAuth>) => {
+  if (args.length > 0) {
+    return baseAuth(...args);
+  }
+
+  try {
+    return await baseAuth();
+  } catch (error) {
+    if (isJwtSessionError(error)) {
+      return null;
+    }
+    throw error;
+  }
+}) as typeof baseAuth;
+
+export { handlers, signIn, signOut };
 
 export { AuthError };
