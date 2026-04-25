@@ -312,7 +312,7 @@ export function CarriersPageClient({ carriers, query }: CarriersPageClientProps)
         </div>
       </div>
 
-      <Card className="border-transparent shadow-sm">
+      <Card>
         <CardHeader className="gap-4">
           <div>
             <CardTitle>Base de transportadoras</CardTitle>

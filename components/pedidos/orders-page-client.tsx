@@ -84,7 +84,7 @@ export function OrdersPageClient({ orders, query, pagination }: OrdersPageClient
         </div>
       </div>
 
-      <Card className="border-transparent shadow-sm">
+      <Card>
         <CardHeader className="gap-4">
           <div>
             <CardTitle>Lista de pedidos</CardTitle>

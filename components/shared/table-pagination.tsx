@@ -83,7 +83,7 @@ export function TablePagination({
   const lastVisibleItem = totalItems === 0 ? 0 : firstVisibleItem + currentItemsCount - 1;
 
   return (
-    <div className="mt-6 grid gap-3 border-t pt-4">
+    <div className="mt-6 grid gap-3 rounded-2xl bg-muted/30 px-4 py-4 shadow-[var(--shadow-soft)]">
       <p className="text-center text-sm text-muted-foreground">
         Mostrando {firstVisibleItem}-{lastVisibleItem} de {totalItems} item(ns)
       </p>

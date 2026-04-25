@@ -82,13 +82,13 @@ export default async function BlingIntegrationPage(props: {
       </div>
 
       {searchParams.bling === "success" ? (
-        <div className="rounded-md border border-green-600/30 bg-green-600/10 px-4 py-3 text-sm text-green-700 dark:text-green-300">
+        <div className="rounded-md bg-green-600/10 px-4 py-3 text-sm text-green-700 shadow-[var(--shadow-soft)] dark:text-green-300">
           Bling conectado com sucesso.
         </div>
       ) : null}
 
       {searchParams.bling === "error" ? (
-        <div className="rounded-md border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+        <div className="rounded-md bg-destructive/10 px-4 py-3 text-sm text-destructive shadow-[var(--shadow-soft)]">
           Não foi possível concluir a autorização do Bling. Gere um novo acesso e tente novamente.
         </div>
       ) : null}

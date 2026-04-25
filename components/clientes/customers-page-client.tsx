@@ -113,7 +113,7 @@ export function CustomersPageClient({
         </div>
       </div>
 
-      <Card className="border-transparent shadow-sm">
+      <Card>
         <CardHeader className="gap-4">
           <div className="flex flex-col justify-between gap-3 md:flex-row md:items-center">
             <div>

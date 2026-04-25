@@ -231,7 +231,7 @@ function ProductImage({
 
 function ProductListThumbnail({ src, alt }: { src?: string | null; alt: string }) {
   return (
-    <div className="relative h-16 w-24 shrink-0 overflow-hidden rounded-xl border border-border/60 bg-gradient-to-br from-muted to-muted/50 shadow-sm ring-1 ring-black/5 dark:ring-white/10 md:h-14 md:w-20">
+    <div className="relative h-16 w-24 shrink-0 overflow-hidden rounded-xl bg-gradient-to-br from-muted to-muted/55 shadow-[var(--shadow-soft)] md:h-14 md:w-20">
       {src ? (
         // Dynamic external image URLs are user-provided and may not be present in Next image allowlists.
         // eslint-disable-next-line @next/next/no-img-element
@@ -445,7 +445,7 @@ function ProductFormSheet({
                 </p>
               ) : null}
               {product?.imageUrl ? (
-                <div className="flex items-center gap-2 rounded-md border border-border/60 bg-muted/30 px-3 py-2">
+                <div className="flex items-center gap-2 rounded-md bg-muted/35 px-3 py-2 shadow-[var(--shadow-soft)]">
                   <Checkbox
                     id={`${product.id}-removeImage`}
                     name="removeImage"
@@ -525,7 +525,7 @@ function ProductDeleteDialog({
 
 function ProductMobileCard({ product }: { product: ProductListItem }) {
   return (
-    <Card className="h-full min-h-[17.5rem] overflow-hidden rounded-2xl border-border/70 bg-card/95 py-0 shadow-sm">
+    <Card className="h-full min-h-[17.5rem] overflow-hidden rounded-2xl bg-card/95 py-0 shadow-[var(--shadow-surface-strong)]">
       <CardContent className="flex h-full flex-col gap-3 p-3">
         <ProductImage src={product.imageUrl} alt={product.name} className="aspect-square" />
         <div className="mt-auto grid min-h-[5.25rem] grid-rows-[auto_auto_auto_auto_auto] gap-1.5">
@@ -556,7 +556,7 @@ function ProductMobileCard({ product }: { product: ProductListItem }) {
         </div>
       </CardContent>
 
-      <CardFooter className="mt-auto border-t border-border/60 px-2 py-2">
+      <CardFooter className="mt-auto bg-muted/25 px-2 py-2 shadow-[inset_0_1px_0_rgba(15,23,42,0.08)] dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]">
         <div className="grid w-full grid-cols-3 gap-1">
           <ProductDetailSheet
             product={product}
@@ -604,7 +604,7 @@ function ProductDetailSheet({
       <SheetTrigger asChild>
         {trigger ?? (
           <button type="button" className="text-left">
-            <Card className="overflow-hidden border-transparent shadow-sm transition hover:bg-accent/30">
+            <Card className="overflow-hidden transition hover:bg-accent/20 hover:shadow-[var(--shadow-surface-strong)]">
               <CardContent className="grid gap-3 p-4">
                 <ProductImage src={product.imageUrl} alt={product.name} />
                 <div className="grid gap-1">
@@ -710,7 +710,7 @@ export function ProductsPageClient({ products, query, pagination }: ProductsPage
         </div>
       </div>
 
-      <Card className="border-transparent shadow-sm">
+      <Card>
         <CardHeader className="gap-4">
           <div>
             <CardTitle>Catálogo de produtos</CardTitle>

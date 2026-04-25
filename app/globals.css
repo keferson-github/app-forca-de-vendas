@@ -35,6 +35,10 @@
   --sidebar-accent-foreground: hsl(240 5.9% 10%);
   --sidebar-border: hsl(220 13% 91%);
   --sidebar-ring: hsl(217.2 91.2% 59.8%);
+  --shadow-surface: 0 24px 48px -32px rgba(15, 23, 42, 0.22), 0 14px 24px -20px rgba(15, 23, 42, 0.16), 0 1px 0 rgba(255, 255, 255, 0.88) inset;
+  --shadow-surface-strong: 0 30px 60px -34px rgba(15, 23, 42, 0.28), 0 18px 30px -22px rgba(15, 23, 42, 0.2), 0 1px 0 rgba(255, 255, 255, 0.92) inset;
+  --shadow-soft: 0 18px 32px -28px rgba(15, 23, 42, 0.18), 0 10px 18px -16px rgba(15, 23, 42, 0.12), 0 1px 0 rgba(255, 255, 255, 0.7) inset;
+  --shadow-header: 0 14px 28px -26px rgba(15, 23, 42, 0.28), 0 1px 0 rgba(255, 255, 255, 0.72) inset;
 }
 
 @theme inline {
@@ -174,4 +178,8 @@ body {
   --sidebar-accent-foreground: hsl(240 4.8% 95.9%);
   --sidebar-border: hsl(240 3.7% 15.9%);
   --sidebar-ring: hsl(217.2 91.2% 59.8%);
+  --shadow-surface: 0 28px 56px -34px rgba(0, 0, 0, 0.6), 0 18px 28px -22px rgba(0, 0, 0, 0.42), 0 1px 0 rgba(255, 255, 255, 0.05) inset;
+  --shadow-surface-strong: 0 34px 68px -36px rgba(0, 0, 0, 0.68), 0 22px 34px -24px rgba(0, 0, 0, 0.48), 0 1px 0 rgba(255, 255, 255, 0.07) inset;
+  --shadow-soft: 0 20px 34px -28px rgba(0, 0, 0, 0.44), 0 12px 20px -16px rgba(0, 0, 0, 0.32), 0 1px 0 rgba(255, 255, 255, 0.04) inset;
+  --shadow-header: 0 18px 30px -28px rgba(0, 0, 0, 0.58), 0 1px 0 rgba(255, 255, 255, 0.05) inset;
 }

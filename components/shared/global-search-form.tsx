@@ -294,7 +294,7 @@ export function GlobalSearchForm<TItem = never>({
           />
 
           {shouldShowAutocomplete ? (
-            <div className="absolute top-full z-30 mt-2 w-full rounded-xl border bg-popover p-1 shadow-xl">
+            <div className="absolute top-full z-30 mt-2 w-full rounded-xl bg-popover/98 p-1 shadow-[var(--shadow-surface-strong)] backdrop-blur-sm">
               {isAutocompleteLoading ? (
                 <p className="px-3 py-2 text-xs text-muted-foreground">
                   {autocomplete?.loadingLabel ?? "Buscando sugestões..."}
