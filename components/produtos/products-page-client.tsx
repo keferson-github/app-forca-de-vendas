@@ -1,7 +1,8 @@
 "use client";
 
-import { useActionState, useRef } from "react";
-import { Eye, ImageIcon, Package, RefreshCw, Search, Trash2, UploadCloud } from "lucide-react";
+import { useActionState, useEffect, useRef, useState } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { Eye, ImageIcon, Package, Pencil, RefreshCw, Search, Trash2, UploadCloud } from "lucide-react";
 import {
   createProductAction,
   deleteProductAction,
@@ -18,6 +19,7 @@ import {
   Card,
   CardContent,
   CardDescription,
+  CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
@@ -66,6 +68,14 @@ type ProductFormSheetProps = {
   description: string;
   variant?: "default" | "outline" | "ghost";
   size?: "default" | "sm" | "icon-sm";
+  trigger?: React.ReactNode;
+};
+
+type ProductAutocompleteItem = {
+  id: string;
+  code: string;
+  name: string;
+  price: number;
 };
 
 const initialState: ProductFormState = {};
@@ -132,10 +142,20 @@ function EmptyState() {
   );
 }
 
-function ProductImage({ src, alt }: { src?: string | null; alt: string }) {
+function ProductImage({
+  src,
+  alt,
+  className,
+}: {
+  src?: string | null;
+  alt: string;
+  className?: string;
+}) {
+  const ratioClassName = className ?? "aspect-video";
+
   if (!src) {
     return (
-      <div className="flex aspect-video w-full items-center justify-center rounded-md bg-muted">
+      <div className={`flex ${ratioClassName} w-full items-center justify-center rounded-md bg-muted`}>
         <ImageIcon className="size-6 text-muted-foreground" />
       </div>
     );
@@ -147,7 +167,7 @@ function ProductImage({ src, alt }: { src?: string | null; alt: string }) {
     <img
       src={src}
       alt={alt}
-      className="aspect-video w-full rounded-md bg-muted object-cover"
+      className={`${ratioClassName} w-full rounded-md bg-muted object-cover`}
       loading="lazy"
       referrerPolicy="no-referrer"
     />
@@ -184,18 +204,31 @@ function ProductFormSheet({
   description,
   variant = "default",
   size = "default",
+  trigger,
 }: ProductFormSheetProps) {
   const action = product ? updateProductAction : createProductAction;
   const [state, formAction] = useActionState(action, initialState);
   const codeInputRef = useRef<HTMLInputElement | null>(null);
+  const generateAnimationTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [isGeneratingCode, setIsGeneratingCode] = useState(false);
+
+  useEffect(() => {
+    return () => {
+      if (generateAnimationTimeoutRef.current) {
+        clearTimeout(generateAnimationTimeoutRef.current);
+      }
+    };
+  }, []);
 
   return (
     <Sheet>
       <SheetTrigger asChild>
-        <Button variant={variant} size={size}>
-          <Package />
-          {triggerLabel}
-        </Button>
+        {trigger ?? (
+          <Button variant={variant} size={size}>
+            <Package />
+            {triggerLabel}
+          </Button>
+        )}
       </SheetTrigger>
       <SheetContent className="w-full overflow-y-auto sm:max-w-xl">
         <form action={formAction} className="flex min-h-full flex-col">
@@ -220,9 +253,19 @@ function ProductFormSheet({
                       if (codeInputRef.current) {
                         codeInputRef.current.value = generateProductCode();
                       }
+
+                      setIsGeneratingCode(true);
+
+                      if (generateAnimationTimeoutRef.current) {
+                        clearTimeout(generateAnimationTimeoutRef.current);
+                      }
+
+                      generateAnimationTimeoutRef.current = setTimeout(() => {
+                        setIsGeneratingCode(false);
+                      }, 500);
                     }}
                   >
-                    <RefreshCw className="size-3.5" />
+                    <RefreshCw className={`size-3.5 ${isGeneratingCode ? "animate-spin" : ""}`} />
                     Gerar
                   </Button>
                 </div>
@@ -324,7 +367,15 @@ function ProductFormSheet({
   );
 }
 
-function ProductDeleteDialog({ id, name }: { id: string; name: string }) {
+function ProductDeleteDialog({
+  id,
+  name,
+  trigger,
+}: {
+  id: string;
+  name: string;
+  trigger?: React.ReactNode;
+}) {
   return (
     <ConfirmActionDialog
       action={deleteProductAction}
@@ -340,11 +391,68 @@ function ProductDeleteDialog({ id, name }: { id: string; name: string }) {
       pendingLabel="Excluindo..."
       confirmVariant="destructive"
       trigger={
-        <Button variant="ghost" size="icon-sm" aria-label={`Excluir ${name}`}>
-          <Trash2 />
-        </Button>
+        trigger ?? (
+          <Button variant="ghost" size="icon-sm" aria-label={`Excluir ${name}`}>
+            <Trash2 />
+          </Button>
+        )
       }
     />
+  );
+}
+
+function ProductMobileCard({ product }: { product: ProductListItem }) {
+  return (
+    <Card className="h-full gap-3 overflow-hidden rounded-2xl border-border/70 bg-card/95 py-0 shadow-sm">
+      <CardContent className="grid gap-3 p-3">
+        <ProductImage src={product.imageUrl} alt={product.name} className="aspect-square" />
+        <div className="grid gap-2">
+          <div className="flex items-center justify-between gap-1">
+            <Badge variant="secondary" className="max-w-[55%] truncate text-[10px]">
+              {product.code}
+            </Badge>
+            <Badge variant="outline" className="text-[10px]">
+              {product.itemsCount} item(ns)
+            </Badge>
+          </div>
+          <h3 className="line-clamp-2 text-sm font-semibold leading-tight">{product.name}</h3>
+          <p className="text-sm font-medium text-primary">{formatCurrency(product.price)}</p>
+        </div>
+      </CardContent>
+
+      <CardFooter className="border-t border-border/60 px-2 py-2">
+        <div className="grid w-full grid-cols-3 gap-1">
+          <ProductDetailSheet
+            product={product}
+            trigger={
+              <Button variant="ghost" size="icon-sm" aria-label={`Ver ${product.name}`}>
+                <Eye />
+              </Button>
+            }
+          />
+          <ProductFormSheet
+            product={product}
+            triggerLabel="Editar"
+            title="Editar produto"
+            description="Atualize dados comerciais, preço e imagem do produto."
+            trigger={
+              <Button variant="ghost" size="icon-sm" aria-label={`Editar ${product.name}`}>
+                <Pencil />
+              </Button>
+            }
+          />
+          <ProductDeleteDialog
+            id={product.id}
+            name={product.name}
+            trigger={
+              <Button variant="ghost" size="icon-sm" aria-label={`Excluir ${product.name}`}>
+                <Trash2 />
+              </Button>
+            }
+          />
+        </div>
+      </CardFooter>
+    </Card>
   );
 }
 
@@ -416,8 +524,172 @@ function ProductDetailSheet({
 
 export function ProductsPageClient({ products, query, pagination }: ProductsPageClientProps) {
   useNoticeToast(noticeMessages);
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const searchInputRef = useRef<HTMLInputElement | null>(null);
+  const searchDebounceTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const autocompleteDebounceTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const autocompleteAbortControllerRef = useRef<AbortController | null>(null);
+  const autocompleteRequestIdRef = useRef(0);
+  const autocompleteCacheRef = useRef<Map<string, ProductAutocompleteItem[]>>(new Map());
+  const [autocompleteItems, setAutocompleteItems] = useState<ProductAutocompleteItem[]>([]);
+  const [isAutocompleteLoading, setIsAutocompleteLoading] = useState(false);
+  const [isAutocompleteVisible, setIsAutocompleteVisible] = useState(false);
+  const [autocompleteTerm, setAutocompleteTerm] = useState(query);
   const totalCatalogValue = products.reduce((total, product) => total + product.price, 0);
   const totalLinkedItems = products.reduce((total, product) => total + product.itemsCount, 0);
+
+  useEffect(() => {
+    return () => {
+      if (searchDebounceTimeoutRef.current) {
+        clearTimeout(searchDebounceTimeoutRef.current);
+      }
+
+      if (autocompleteDebounceTimeoutRef.current) {
+        clearTimeout(autocompleteDebounceTimeoutRef.current);
+      }
+
+      if (autocompleteAbortControllerRef.current) {
+        autocompleteAbortControllerRef.current.abort();
+      }
+    };
+  }, []);
+
+  function buildSearchUrl(rawValue: string) {
+    const normalized = rawValue.trim();
+    const currentParams = new URLSearchParams(searchParams.toString());
+    const nextParams = new URLSearchParams(searchParams.toString());
+
+    if (normalized.length >= 3) {
+      nextParams.set("q", normalized);
+    } else {
+      nextParams.delete("q");
+    }
+
+    nextParams.delete("page");
+
+    const currentUrl = currentParams.toString() ? `${pathname}?${currentParams.toString()}` : pathname;
+    const nextUrl = nextParams.toString() ? `${pathname}?${nextParams.toString()}` : pathname;
+
+    return { currentUrl, nextUrl };
+  }
+
+  function scheduleSearch(rawValue: string) {
+    if (searchDebounceTimeoutRef.current) {
+      clearTimeout(searchDebounceTimeoutRef.current);
+    }
+
+    searchDebounceTimeoutRef.current = setTimeout(() => {
+      const { currentUrl, nextUrl } = buildSearchUrl(rawValue);
+
+      if (nextUrl !== currentUrl) {
+        router.replace(nextUrl, { scroll: false });
+      }
+    }, 300);
+  }
+
+  function applySearchImmediately(rawValue: string) {
+    const { currentUrl, nextUrl } = buildSearchUrl(rawValue);
+
+    if (nextUrl !== currentUrl) {
+      router.replace(nextUrl, { scroll: false });
+    }
+  }
+
+  function scheduleAutocomplete(rawValue: string) {
+    const normalized = rawValue.trim();
+    setAutocompleteTerm(rawValue);
+
+    if (autocompleteDebounceTimeoutRef.current) {
+      clearTimeout(autocompleteDebounceTimeoutRef.current);
+    }
+
+    if (autocompleteAbortControllerRef.current) {
+      autocompleteAbortControllerRef.current.abort();
+      autocompleteAbortControllerRef.current = null;
+    }
+
+    if (normalized.length < 3) {
+      autocompleteRequestIdRef.current += 1;
+      setIsAutocompleteLoading(false);
+      setAutocompleteItems([]);
+      return;
+    }
+
+    const cacheKey = normalized.toLocaleLowerCase("pt-BR");
+    const cachedItems = autocompleteCacheRef.current.get(cacheKey);
+
+    if (cachedItems) {
+      setAutocompleteItems(cachedItems);
+      setIsAutocompleteLoading(false);
+      return;
+    }
+
+    setIsAutocompleteLoading(true);
+
+    autocompleteDebounceTimeoutRef.current = setTimeout(async () => {
+      const requestId = autocompleteRequestIdRef.current + 1;
+      autocompleteRequestIdRef.current = requestId;
+      const controller = new AbortController();
+      autocompleteAbortControllerRef.current = controller;
+
+      try {
+        const response = await fetch(
+          `/api/produtos/autocomplete?q=${encodeURIComponent(normalized)}`,
+          {
+            signal: controller.signal,
+            cache: "no-store",
+          }
+        );
+
+        if (!response.ok) {
+          throw new Error(`Autocomplete request failed with status ${response.status}`);
+        }
+
+        const payload = (await response.json()) as {
+          items?: ProductAutocompleteItem[];
+        };
+
+        const items = payload.items ?? [];
+
+        autocompleteCacheRef.current.set(cacheKey, items);
+
+        if (autocompleteRequestIdRef.current === requestId) {
+          setAutocompleteItems(items);
+          setIsAutocompleteLoading(false);
+        }
+      } catch (error) {
+        if (
+          error instanceof DOMException &&
+          error.name === "AbortError"
+        ) {
+          return;
+        }
+
+        if (autocompleteRequestIdRef.current === requestId) {
+          setAutocompleteItems([]);
+          setIsAutocompleteLoading(false);
+        }
+      }
+    }, 180);
+  }
+
+  function handleAutocompleteSelect(item: ProductAutocompleteItem) {
+    const nextValue = item.code;
+
+    if (searchInputRef.current) {
+      searchInputRef.current.value = nextValue;
+    }
+
+    setAutocompleteTerm(nextValue);
+    setIsAutocompleteVisible(false);
+    setAutocompleteItems([]);
+    setIsAutocompleteLoading(false);
+    applySearchImmediately(nextValue);
+  }
+
+  const shouldShowAutocomplete = isAutocompleteVisible && autocompleteTerm.trim().length >= 3;
 
   return (
     <div className="flex flex-col gap-4 p-4 lg:p-6">
@@ -447,12 +719,67 @@ export function ProductsPageClient({ products, query, pagination }: ProductsPage
           <form action="/produtos" className="flex flex-col gap-2 sm:flex-row">
             <div className="relative flex-1">
               <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
-              <Input name="q" defaultValue={query} placeholder="Buscar produto" className="pl-9" />
+              <Input
+                ref={searchInputRef}
+                name="q"
+                defaultValue={query}
+                onChange={(event) => {
+                  const nextValue = event.currentTarget.value;
+                  scheduleSearch(nextValue);
+                  scheduleAutocomplete(nextValue);
+                  setIsAutocompleteVisible(true);
+                }}
+                onFocus={(event) => {
+                  setIsAutocompleteVisible(true);
+                  scheduleAutocomplete(event.currentTarget.value);
+                }}
+                onBlur={() => {
+                  setTimeout(() => {
+                    setIsAutocompleteVisible(false);
+                  }, 100);
+                }}
+                placeholder="Buscar produto"
+                className="pl-9"
+              />
+
+              {shouldShowAutocomplete ? (
+                <div className="absolute top-full z-30 mt-2 w-full rounded-xl border bg-popover p-1 shadow-xl">
+                  {isAutocompleteLoading ? (
+                    <p className="px-3 py-2 text-xs text-muted-foreground">Buscando sugestões...</p>
+                  ) : autocompleteItems.length > 0 ? (
+                    <ul className="grid gap-0.5">
+                      {autocompleteItems.map((item) => (
+                        <li key={item.id}>
+                          <button
+                            type="button"
+                            className="grid w-full gap-0.5 rounded-lg px-3 py-2 text-left transition hover:bg-accent"
+                            onMouseDown={(event) => {
+                              event.preventDefault();
+                              handleAutocompleteSelect(item);
+                            }}
+                          >
+                            <span className="text-xs text-muted-foreground">{item.code}</span>
+                            <span className="line-clamp-1 text-sm font-medium">{item.name}</span>
+                            <span className="text-xs text-muted-foreground">
+                              {formatCurrency(item.price)}
+                            </span>
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="px-3 py-2 text-xs text-muted-foreground">
+                      Nenhuma sugestão encontrada.
+                    </p>
+                  )}
+                </div>
+              ) : null}
             </div>
             <Button type="submit" variant="outline">
               Buscar
             </Button>
           </form>
+          <p className="text-xs text-muted-foreground">A busca automática inicia com 3 caracteres.</p>
         </CardHeader>
 
         <CardContent>
@@ -460,22 +787,9 @@ export function ProductsPageClient({ products, query, pagination }: ProductsPage
             <EmptyState />
           ) : (
             <>
-              <div className="grid gap-3 sm:grid-cols-2 md:hidden xl:grid-cols-3">
+              <div className="grid grid-cols-2 gap-3 md:hidden">
                 {products.map((product) => (
-                  <div key={product.id} className="grid gap-2">
-                    <ProductDetailSheet product={product} />
-                    <div className="flex justify-end gap-1">
-                      <ProductFormSheet
-                        product={product}
-                        triggerLabel="Editar"
-                        title="Editar produto"
-                        description="Atualize dados comerciais, preço e imagem do produto."
-                        variant="ghost"
-                        size="sm"
-                      />
-                      <ProductDeleteDialog id={product.id} name={product.name} />
-                    </div>
-                  </div>
+                  <ProductMobileCard key={product.id} product={product} />
                 ))}
               </div>
 

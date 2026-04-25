@@ -26,11 +26,21 @@ function buildWhere(userId: string, query: string) {
   };
 
   if (query) {
-    where.OR = [
-      { code: { contains: query, mode: "insensitive" } },
-      { name: { contains: query, mode: "insensitive" } },
-      { description: { contains: query, mode: "insensitive" } },
+    const normalized = query.trim();
+    const or: Prisma.ProductWhereInput[] = [
+      { code: { startsWith: normalized, mode: "insensitive" } },
+      { name: { startsWith: normalized, mode: "insensitive" } },
     ];
+
+    if (normalized.length >= 3) {
+      or.push(
+        { code: { contains: normalized, mode: "insensitive" } },
+        { name: { contains: normalized, mode: "insensitive" } },
+        { description: { contains: normalized, mode: "insensitive" } }
+      );
+    }
+
+    where.OR = or;
   }
 
   return where;
