@@ -1,6 +1,6 @@
 "use client";
 
-import { Building2, MoreHorizontal, Search, UserRoundCheck, Users } from "lucide-react";
+import { MoreHorizontal, Search } from "lucide-react";
 import { CustomerDeleteSheet } from "@/components/clientes/customer-delete-sheet";
 import { CustomerDetailSheet } from "@/components/clientes/customer-detail-sheet";
 import {
@@ -24,11 +24,6 @@ import { useNoticeToast } from "@/hooks/use-notice-toast";
 
 type CustomersPageClientProps = {
   customers: CustomerListItem[];
-  stats: {
-    total: number;
-    customers: number;
-    prospects: number;
-  };
   query: string;
   segment: "all" | "customers" | "prospects";
   pagination: {
@@ -87,7 +82,6 @@ function SegmentLink({
 
 export function CustomersPageClient({
   customers,
-  stats,
   query,
   segment,
   pagination,
@@ -113,36 +107,6 @@ export function CustomersPageClient({
             description="Cadastre uma empresa ou pessoa que ja faz parte da carteira."
           />
         </div>
-      </div>
-
-      <div className="grid gap-3 md:grid-cols-3">
-        <Card className="border-transparent shadow-sm">
-          <CardHeader className="pb-2">
-            <CardDescription className="flex items-center gap-2">
-              <Users className="size-4" />
-              Total cadastrado
-            </CardDescription>
-            <CardTitle className="text-3xl">{stats.total}</CardTitle>
-          </CardHeader>
-        </Card>
-        <Card className="border-transparent shadow-sm">
-          <CardHeader className="pb-2">
-            <CardDescription className="flex items-center gap-2">
-              <Building2 className="size-4" />
-              Clientes
-            </CardDescription>
-            <CardTitle className="text-3xl">{stats.customers}</CardTitle>
-          </CardHeader>
-        </Card>
-        <Card className="border-transparent shadow-sm">
-          <CardHeader className="pb-2">
-            <CardDescription className="flex items-center gap-2">
-              <UserRoundCheck className="size-4" />
-              Prospects
-            </CardDescription>
-            <CardTitle className="text-3xl">{stats.prospects}</CardTitle>
-          </CardHeader>
-        </Card>
       </div>
 
       <Card className="border-transparent shadow-sm">

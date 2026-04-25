@@ -50,11 +50,6 @@ export type ProductListItem = {
 
 type ProductsPageClientProps = {
   products: ProductListItem[];
-  stats: {
-    total: number;
-    withImage: number;
-    linkedItems: number;
-  };
   query: string;
   pagination: {
     currentPage: number;
@@ -161,7 +156,7 @@ function ProductImage({ src, alt }: { src?: string | null; alt: string }) {
 
 function ProductListThumbnail({ src, alt }: { src?: string | null; alt: string }) {
   return (
-    <div className="relative h-16 w-24 shrink-0 overflow-hidden rounded-xl border border-border/60 bg-gradient-to-br from-muted to-muted/50 shadow-sm ring-1 ring-black/5 dark:ring-white/10">
+    <div className="relative h-16 w-24 shrink-0 overflow-hidden rounded-xl border border-border/60 bg-gradient-to-br from-muted to-muted/50 shadow-sm ring-1 ring-black/5 dark:ring-white/10 md:h-14 md:w-20">
       {src ? (
         // Dynamic external image URLs are user-provided and may not be present in Next image allowlists.
         // eslint-disable-next-line @next/next/no-img-element
@@ -419,9 +414,10 @@ function ProductDetailSheet({
   );
 }
 
-export function ProductsPageClient({ products, stats, query, pagination }: ProductsPageClientProps) {
+export function ProductsPageClient({ products, query, pagination }: ProductsPageClientProps) {
   useNoticeToast(noticeMessages);
   const totalCatalogValue = products.reduce((total, product) => total + product.price, 0);
+  const totalLinkedItems = products.reduce((total, product) => total + product.itemsCount, 0);
 
   return (
     <div className="flex flex-col gap-4 p-4 lg:p-6">
@@ -439,36 +435,6 @@ export function ProductsPageClient({ products, stats, query, pagination }: Produ
             description="Cadastre os dados principais para disponibilizar o produto no catálogo."
           />
         </div>
-      </div>
-
-      <div className="grid gap-3 md:grid-cols-3">
-        <Card className="border-transparent shadow-sm">
-          <CardHeader className="pb-2">
-            <CardDescription className="flex items-center gap-2">
-              <Package className="size-4" />
-              Total cadastrado
-            </CardDescription>
-            <CardTitle className="text-3xl">{stats.total}</CardTitle>
-          </CardHeader>
-        </Card>
-        <Card className="border-transparent shadow-sm">
-          <CardHeader className="pb-2">
-            <CardDescription className="flex items-center gap-2">
-              <ImageIcon className="size-4" />
-              Com imagem
-            </CardDescription>
-            <CardTitle className="text-3xl">{stats.withImage}</CardTitle>
-          </CardHeader>
-        </Card>
-        <Card className="border-transparent shadow-sm">
-          <CardHeader className="pb-2">
-            <CardDescription className="flex items-center gap-2">
-              <Eye className="size-4" />
-              Itens vinculados
-            </CardDescription>
-            <CardTitle className="text-3xl">{stats.linkedItems}</CardTitle>
-          </CardHeader>
-        </Card>
       </div>
 
       <Card className="border-transparent shadow-sm">
@@ -570,7 +536,7 @@ export function ProductsPageClient({ products, stats, query, pagination }: Produ
                   products.length > 1 ? (
                     <TableRow>
                       <TableCell colSpan={2}>Totais</TableCell>
-                      <TableCell className="text-center">{stats.linkedItems} item(ns)</TableCell>
+                      <TableCell className="text-center">{totalLinkedItems} item(ns)</TableCell>
                       <TableCell className="text-right">{formatCurrency(totalCatalogValue)}</TableCell>
                       <TableCell />
                     </TableRow>

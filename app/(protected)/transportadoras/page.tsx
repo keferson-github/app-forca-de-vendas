@@ -34,33 +34,18 @@ export default async function TransportadorasPage(props: { searchParams: SearchP
   const query = (searchParams.q ?? "").trim();
   const where = buildWhere(session.user.id, query);
 
-  const [carriers, total, withContact, withPhone] = await prisma.$transaction([
-    prisma.carrier.findMany({
-      where,
-      orderBy: [{ updatedAt: "desc" }, { createdAt: "desc" }],
-      take: 100,
-      include: {
-        _count: {
-          select: {
-            orders: true,
-          },
+  const carriers = await prisma.carrier.findMany({
+    where,
+    orderBy: [{ updatedAt: "desc" }, { createdAt: "desc" }],
+    take: 100,
+    include: {
+      _count: {
+        select: {
+          orders: true,
         },
       },
-    }),
-    prisma.carrier.count({ where: { userId: session.user.id } }),
-    prisma.carrier.count({
-      where: {
-        userId: session.user.id,
-        contact: { not: null },
-      },
-    }),
-    prisma.carrier.count({
-      where: {
-        userId: session.user.id,
-        phone: { not: null },
-      },
-    }),
-  ]);
+    },
+  });
 
   return (
     <CarriersPageClient
@@ -74,11 +59,6 @@ export default async function TransportadorasPage(props: { searchParams: SearchP
         updatedAt: carrier.updatedAt.toISOString(),
         ordersCount: carrier._count.orders,
       }))}
-      stats={{
-        total,
-        withContact,
-        withPhone,
-      }}
       query={query}
     />
   );

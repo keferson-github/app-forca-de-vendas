@@ -48,16 +48,7 @@ export default async function ProdutosPage(props: { searchParams: SearchParams }
   const query = (searchParams.q ?? "").trim();
   const where = buildWhere(session.user.id, query);
 
-  const [total, withImage, totalFiltered] = await prisma.$transaction([
-    prisma.product.count({ where: { userId: session.user.id } }),
-    prisma.product.count({
-      where: {
-        userId: session.user.id,
-        imageUrl: { not: null },
-      },
-    }),
-    prisma.product.count({ where }),
-  ]);
+  const totalFiltered = await prisma.product.count({ where });
 
   const totalPages = Math.max(1, Math.ceil(totalFiltered / PAGE_SIZE));
   const currentPage = Math.min(requestedPage, totalPages);
@@ -89,11 +80,6 @@ export default async function ProdutosPage(props: { searchParams: SearchParams }
         updatedAt: product.updatedAt.toISOString(),
         itemsCount: product._count.orderItems,
       }))}
-      stats={{
-        total,
-        withImage,
-        linkedItems: products.reduce((acc, product) => acc + product._count.orderItems, 0),
-      }}
       query={query}
       pagination={{
         currentPage,

@@ -44,6 +44,22 @@ Para manter consistencia visual e de comportamento, o projeto usa um unico padra
 
 Regras de lint foram adicionadas para impedir novos imports diretos de `sonner` e de `components/ui/sonner` fora dos wrappers oficiais.
 
+## Padrao de layout (sem cards de analytics no topo)
+
+Os cards de analytics rapidos no topo das paginas de listagem foram removidos (ex.: bloco com 3 cards de KPI).
+
+Para manter esse padrao no futuro:
+
+- Nao criar grid de KPI no formato de 3 cards no topo da tela.
+- Priorizar cabecalho da pagina + filtros + conteudo principal (tabela/lista).
+- O lint bloqueia esse padrao e os rotulos antigos de KPI rapido para evitar reintroducao.
+
+## Documentacao tecnica para novas features
+
+Para desenvolvimento de novas paginas e evolucoes de UI, use como referencia oficial:
+
+- `docs/guia-ui-e-componentes-reutilizaveis.md`
+
 You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.

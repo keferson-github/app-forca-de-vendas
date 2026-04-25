@@ -1,6 +1,6 @@
 "use client";
 
-import { ClipboardList, Search, ShoppingCart, XCircle } from "lucide-react";
+import { Search } from "lucide-react";
 import { DataTable } from "@/components/shared/data-table";
 import { TablePagination } from "@/components/shared/table-pagination";
 import { Badge } from "@/components/ui/badge";
@@ -28,11 +28,6 @@ export type OrderListItem = {
 
 type OrdersPageClientProps = {
   orders: OrderListItem[];
-  stats: {
-    total: number;
-    confirmed: number;
-    cancelled: number;
-  };
   query: string;
   pagination: {
     currentPage: number;
@@ -78,7 +73,7 @@ function EmptyState() {
   );
 }
 
-export function OrdersPageClient({ orders, stats, query, pagination }: OrdersPageClientProps) {
+export function OrdersPageClient({ orders, query, pagination }: OrdersPageClientProps) {
   return (
     <div className="flex flex-col gap-4 p-4 lg:p-6">
       <div className="flex flex-col justify-between gap-4 md:flex-row md:items-end">
@@ -88,38 +83,6 @@ export function OrdersPageClient({ orders, stats, query, pagination }: OrdersPag
             Consulte pedidos confirmados, cancelados e rascunhos com filtros comerciais.
           </p>
         </div>
-      </div>
-
-      <div className="grid gap-3 md:grid-cols-3">
-        <Card className="border-transparent shadow-sm">
-          <CardHeader className="pb-2">
-            <CardDescription className="flex items-center gap-2">
-              <ClipboardList className="size-4" />
-              Total cadastrado
-            </CardDescription>
-            <CardTitle className="text-3xl">{stats.total}</CardTitle>
-          </CardHeader>
-        </Card>
-
-        <Card className="border-transparent shadow-sm">
-          <CardHeader className="pb-2">
-            <CardDescription className="flex items-center gap-2">
-              <ShoppingCart className="size-4" />
-              Confirmados
-            </CardDescription>
-            <CardTitle className="text-3xl">{stats.confirmed}</CardTitle>
-          </CardHeader>
-        </Card>
-
-        <Card className="border-transparent shadow-sm">
-          <CardHeader className="pb-2">
-            <CardDescription className="flex items-center gap-2">
-              <XCircle className="size-4" />
-              Cancelados
-            </CardDescription>
-            <CardTitle className="text-3xl">{stats.cancelled}</CardTitle>
-          </CardHeader>
-        </Card>
       </div>
 
       <Card className="border-transparent shadow-sm">

@@ -68,12 +68,7 @@ export default async function ClientesPage(props: { searchParams: SearchParams }
   const requestedPage = parsePage(searchParams.page);
   const where = buildWhere(session.user.id, query, segment);
 
-  const [total, customersCount, prospectsCount, totalFiltered] = await prisma.$transaction([
-    prisma.customer.count({ where: { userId: session.user.id } }),
-    prisma.customer.count({ where: { userId: session.user.id, isProspect: false } }),
-    prisma.customer.count({ where: { userId: session.user.id, isProspect: true } }),
-    prisma.customer.count({ where }),
-  ]);
+  const totalFiltered = await prisma.customer.count({ where });
 
   const totalPages = Math.max(1, Math.ceil(totalFiltered / PAGE_SIZE));
   const currentPage = Math.min(requestedPage, totalPages);
@@ -115,11 +110,6 @@ export default async function ClientesPage(props: { searchParams: SearchParams }
           contacts: customer._count.contacts,
         },
       }))}
-      stats={{
-        total,
-        customers: customersCount,
-        prospects: prospectsCount,
-      }}
       query={query}
       segment={segment}
       pagination={{

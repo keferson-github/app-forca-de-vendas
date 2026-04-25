@@ -30,6 +30,50 @@ const eslintConfig = defineConfig([
           ],
         },
       ],
+      "no-restricted-syntax": [
+        "error",
+        {
+          selector:
+            "JSXAttribute[name.name='className'][value.type='Literal'][value.value='grid gap-3 md:grid-cols-3']",
+          message:
+            "Nao use o grid de analytics de tres cards no topo. Prefira cabecalho + conteudo principal da pagina.",
+        },
+        {
+          selector: "Literal[value='Total cadastrado']",
+          message:
+            "Este rotulo de KPI rapido foi descontinuado. Nao adicione cards de analytics nesse formato.",
+        },
+        {
+          selector: "Literal[value='Com imagem']",
+          message:
+            "Este rotulo de KPI rapido foi descontinuado. Nao adicione cards de analytics nesse formato.",
+        },
+        {
+          selector: "Literal[value='Itens vinculados']",
+          message:
+            "Este rotulo de KPI rapido foi descontinuado. Nao adicione cards de analytics nesse formato.",
+        },
+        {
+          selector: "Literal[value='Confirmados']",
+          message:
+            "Este rotulo de KPI rapido foi descontinuado. Nao adicione cards de analytics nesse formato.",
+        },
+        {
+          selector: "Literal[value='Cancelados']",
+          message:
+            "Este rotulo de KPI rapido foi descontinuado. Nao adicione cards de analytics nesse formato.",
+        },
+        {
+          selector: "Literal[value='Com contato']",
+          message:
+            "Este rotulo de KPI rapido foi descontinuado. Nao adicione cards de analytics nesse formato.",
+        },
+        {
+          selector: "Literal[value='Com telefone']",
+          message:
+            "Este rotulo de KPI rapido foi descontinuado. Nao adicione cards de analytics nesse formato.",
+        },
+      ],
     },
   },
   {

@@ -58,12 +58,7 @@ export default async function PedidosPage(props: { searchParams: SearchParams })
   const requestedPage = parsePage(searchParams.page);
   const where = buildWhere(session.user.id, query);
 
-  const [total, confirmed, cancelled, totalFiltered] = await prisma.$transaction([
-    prisma.order.count({ where: { userId: session.user.id } }),
-    prisma.order.count({ where: { userId: session.user.id, status: "CONFIRMED" } }),
-    prisma.order.count({ where: { userId: session.user.id, status: "CANCELLED" } }),
-    prisma.order.count({ where }),
-  ]);
+  const totalFiltered = await prisma.order.count({ where });
 
   const totalPages = Math.max(1, Math.ceil(totalFiltered / PAGE_SIZE));
   const currentPage = Math.min(requestedPage, totalPages);
@@ -99,11 +94,6 @@ export default async function PedidosPage(props: { searchParams: SearchParams })
         updatedAt: order.updatedAt.toISOString(),
         itemsCount: order._count.items,
       }))}
-      stats={{
-        total,
-        confirmed,
-        cancelled,
-      }}
       query={query}
       pagination={{
         currentPage,

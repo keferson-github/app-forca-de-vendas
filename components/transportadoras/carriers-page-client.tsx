@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
-import { Eye, Search, Trash2, Truck, UserRound, Phone } from "lucide-react";
+import { Eye, Search, Trash2, Truck } from "lucide-react";
 import {
   createCarrierAction,
   deleteCarrierAction,
@@ -54,11 +54,6 @@ export type CarrierListItem = {
 
 type CarriersPageClientProps = {
   carriers: CarrierListItem[];
-  stats: {
-    total: number;
-    withContact: number;
-    withPhone: number;
-  };
   query: string;
 };
 
@@ -287,7 +282,7 @@ function CarrierDeleteSheet({ id, name }: { id: string; name: string }) {
   );
 }
 
-export function CarriersPageClient({ carriers, stats, query }: CarriersPageClientProps) {
+export function CarriersPageClient({ carriers, query }: CarriersPageClientProps) {
   useNoticeToast(noticeMessages);
 
   return (
@@ -306,36 +301,6 @@ export function CarriersPageClient({ carriers, stats, query }: CarriersPageClien
             description="Cadastre os dados basicos da transportadora para uso nos pedidos."
           />
         </div>
-      </div>
-
-      <div className="grid gap-3 md:grid-cols-3">
-        <Card className="border-transparent shadow-sm">
-          <CardHeader className="pb-2">
-            <CardDescription className="flex items-center gap-2">
-              <Truck className="size-4" />
-              Total cadastrado
-            </CardDescription>
-            <CardTitle className="text-3xl">{stats.total}</CardTitle>
-          </CardHeader>
-        </Card>
-        <Card className="border-transparent shadow-sm">
-          <CardHeader className="pb-2">
-            <CardDescription className="flex items-center gap-2">
-              <UserRound className="size-4" />
-              Com contato
-            </CardDescription>
-            <CardTitle className="text-3xl">{stats.withContact}</CardTitle>
-          </CardHeader>
-        </Card>
-        <Card className="border-transparent shadow-sm">
-          <CardHeader className="pb-2">
-            <CardDescription className="flex items-center gap-2">
-              <Phone className="size-4" />
-              Com telefone
-            </CardDescription>
-            <CardTitle className="text-3xl">{stats.withPhone}</CardTitle>
-          </CardHeader>
-        </Card>
       </div>
 
       <Card className="border-transparent shadow-sm">
