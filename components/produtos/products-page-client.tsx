@@ -403,24 +403,28 @@ function ProductDeleteDialog({
 
 function ProductMobileCard({ product }: { product: ProductListItem }) {
   return (
-    <Card className="h-full gap-3 overflow-hidden rounded-2xl border-border/70 bg-card/95 py-0 shadow-sm">
-      <CardContent className="grid gap-3 p-3">
+    <Card className="h-full min-h-[17.5rem] overflow-hidden rounded-2xl border-border/70 bg-card/95 py-0 shadow-sm">
+      <CardContent className="flex h-full flex-col gap-3 p-3">
         <ProductImage src={product.imageUrl} alt={product.name} className="aspect-square" />
-        <div className="grid gap-2">
-          <div className="flex items-center justify-between gap-1">
+        <div className="grid min-h-[4.5rem] grid-rows-[auto_1fr_auto] gap-2">
+          <div className="flex min-h-5 items-center justify-between gap-1">
             <Badge variant="secondary" className="max-w-[55%] truncate text-[10px]">
               {product.code}
             </Badge>
-            <Badge variant="outline" className="text-[10px]">
+            <Badge variant="outline" className="shrink-0 text-[10px]">
               {product.itemsCount} item(ns)
             </Badge>
           </div>
-          <h3 className="line-clamp-2 text-sm font-semibold leading-tight">{product.name}</h3>
-          <p className="text-sm font-medium text-primary">{formatCurrency(product.price)}</p>
+          <h3 className="line-clamp-2 min-h-10 break-words text-sm font-semibold leading-5">
+            {product.name}
+          </h3>
+          <p className="min-h-5 truncate text-sm font-medium text-primary">
+            {formatCurrency(product.price)}
+          </p>
         </div>
       </CardContent>
 
-      <CardFooter className="border-t border-border/60 px-2 py-2">
+      <CardFooter className="mt-auto border-t border-border/60 px-2 py-2">
         <div className="grid w-full grid-cols-3 gap-1">
           <ProductDetailSheet
             product={product}
@@ -787,7 +791,7 @@ export function ProductsPageClient({ products, query, pagination }: ProductsPage
             <EmptyState />
           ) : (
             <>
-              <div className="grid grid-cols-2 gap-3 md:hidden">
+              <div className="grid grid-cols-2 items-stretch gap-3 md:hidden">
                 {products.map((product) => (
                   <ProductMobileCard key={product.id} product={product} />
                 ))}
