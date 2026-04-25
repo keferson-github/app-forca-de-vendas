@@ -26,7 +26,7 @@ export function RegisterForm() {
         <div className="grid gap-4 lg:grid-cols-2">
           <div className="space-y-2 lg:col-span-2">
             <Label htmlFor="name">Nome</Label>
-            <Input id="name" name="name" placeholder="Seu nome" autoComplete="name" required />
+            <Input id="name" name="name" placeholder="Digite seu nome" autoComplete="name" required />
           </div>
           <div className="space-y-2 lg:col-span-2">
             <Label htmlFor="email">E-mail</Label>
@@ -34,7 +34,7 @@ export function RegisterForm() {
               id="email"
               name="email"
               type="email"
-              placeholder="voce@empresa.com"
+              placeholder="Digite seu e-mail"
               autoComplete="email"
               required
             />

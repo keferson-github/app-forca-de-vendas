@@ -38,7 +38,7 @@ export function LoginForm({
             id="email"
             name="email"
             type="email"
-            placeholder="voce@empresa.com"
+            placeholder="Digite seu e-mail"
             autoComplete="email"
             defaultValue={rememberedEmail}
             required
