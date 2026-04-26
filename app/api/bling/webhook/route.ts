@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { processBlingWebhookEventRealtime } from "@/lib/bling-sync";
 import {
   parseBlingWebhookPayload,
   verifyBlingWebhookSignature,
@@ -58,6 +59,27 @@ export async function POST(request: Request) {
     },
     update: {},
   });
+
+  if (connection?.userId) {
+    try {
+      await processBlingWebhookEventRealtime({
+        eventId: event.eventId,
+        event: event.event,
+        userId: connection.userId,
+        payload: event.payload,
+      });
+    } catch (error) {
+      await prisma.blingWebhookEvent.updateMany({
+        where: { eventId: event.eventId },
+        data: {
+          payload: {
+            ...(event.payload as Record<string, unknown>),
+            processingError: error instanceof Error ? error.message : "Falha no processamento.",
+          },
+        },
+      });
+    }
+  }
 
   return NextResponse.json({ received: true });
 }

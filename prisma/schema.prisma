@@ -145,54 +145,63 @@ model Carrier {
 }
 
 model Product {
-  id          String      @id @default(cuid())
-  userId      String
-  code        String
-  name        String
-  category    ProductCategory @default(ACESSORIOS)
-  subcategory String      @default("GERAL")
-  price       Decimal     @db.Decimal(10, 2)
-  imageUrl    String?
-  description String?
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
-  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
-  orderItems  OrderItem[]
+  id               String          @id @default(cuid())
+  userId           String
+  code             String
+  name             String
+  category         ProductCategory @default(ACESSORIOS)
+  subcategory      String          @default("GERAL")
+  price            Decimal         @db.Decimal(10, 2)
+  imageUrl         String?
+  description      String?
+  stockQuantity    Decimal         @default(0) @db.Decimal(12, 3)
+  blingProductId   String?
+  lastBlingSyncAt  DateTime?
+  lastBlingError   String?
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+  user             User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  orderItems       OrderItem[]
 
   @@unique([userId, code])
+  @@unique([userId, blingProductId])
   @@index([userId, name])
 }
 
 model Order {
-  id                  String                @id @default(cuid())
+  id                  String           @id @default(cuid())
   userId              String
   customerId          String
   carrierId           String?
-  orderNumber         Int                   @unique
-  operation           OrderOperation        @default(VENDA)
-  status              OrderStatus           @default(CONFIRMED)
+  orderNumber         Int              @unique
+  operation           OrderOperation   @default(VENDA)
+  status              OrderStatus      @default(CONFIRMED)
   paymentTerm         PaymentTerm
   receivingCompany    String?
-  freightType         FreightType           @default(CIF)
-  deliveryType        DeliveryType          @default(ENTREGA)
+  freightType         FreightType      @default(CIF)
+  deliveryType        DeliveryType     @default(ENTREGA)
   notes               String?
   customerOrderNumber String?
-  total               Decimal               @default(0) @db.Decimal(12, 2)
+  total               Decimal          @default(0) @db.Decimal(12, 2)
   approvedAt          DateTime?
   billedAt            DateTime?
   cancelledAt         DateTime?
   cancelledReason     String?
-  createdAt           DateTime              @default(now())
-  updatedAt           DateTime              @updatedAt
-  user                User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
-  customer            Customer              @relation(fields: [customerId], references: [id], onDelete: Restrict)
-  carrier             Carrier?              @relation(fields: [carrierId], references: [id], onDelete: SetNull)
+  blingOrderId        String?
+  lastBlingSyncAt     DateTime?
+  lastBlingError      String?
+  createdAt           DateTime         @default(now())
+  updatedAt           DateTime         @updatedAt
+  user                User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  customer            Customer         @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  carrier             Carrier?         @relation(fields: [carrierId], references: [id], onDelete: SetNull)
   items               OrderItem[]
   crmNotes            CrmNote[]
   documents           OrderDocument[]
   whatsappDispatches  WhatsappDispatchLog[]
 
   @@index([userId, createdAt])
+  @@index([userId, blingOrderId])
   @@index([userId, customerId])
   @@index([userId, status, createdAt])
   @@index([userId, billedAt])

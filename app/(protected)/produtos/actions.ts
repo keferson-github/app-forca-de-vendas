@@ -8,6 +8,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { auth } from "@/auth";
+import { syncProductToBlingById } from "@/lib/bling-sync";
 import {
   isValidProductSubcategory,
   productCategoryValues,
@@ -222,12 +223,14 @@ export async function createProductAction(
   const imageUrl = imageFile ? await saveImageFile(imageFile) : null;
 
   try {
-    await prisma.product.create({
+    const createdProduct = await prisma.product.create({
       data: {
         userId,
         ...productPayload(parsed.data, imageUrl),
       },
     });
+
+    await syncProductToBlingById(userId, createdProduct.id);
   } catch (error) {
     if (
       error instanceof Prisma.PrismaClientKnownRequestError &&
@@ -308,6 +311,8 @@ export async function updateProductAction(
     ) {
       await removeImageFile(currentProduct.imageUrl);
     }
+
+    await syncProductToBlingById(userId, currentProduct.id);
   } catch (error) {
     if (
       error instanceof Prisma.PrismaClientKnownRequestError &&
