@@ -83,7 +83,7 @@ export function RegisterForm() {
           Cadastrar
         </SubmitButton>
       </form>
-      <div className="mt-10 text-center text-sm text-muted-foreground sm:mt-5">
+      <div className="mt-8 text-center text-sm text-muted-foreground sm:mt-5">
         Já possui conta?{" "}
         <Link
           className="font-bold text-primary sm:font-normal sm:text-foreground sm:underline sm:underline-offset-4"

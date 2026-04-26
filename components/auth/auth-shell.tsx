@@ -19,7 +19,7 @@ const authImage =
 export function AuthShell({ children }: AuthShellProps) {
   const pathname = usePathname();
   const isRegister = pathname === "/register";
-  
+
   const desktopCardRef = useRef<HTMLDivElement>(null);
   const imagePanelRef = useRef<HTMLDivElement>(null);
   const formPanelRef = useRef<HTMLDivElement>(null);
@@ -53,7 +53,7 @@ export function AuthShell({ children }: AuthShellProps) {
       duration: 0.42,
       ease: "power2.in",
     }, "<");
-    
+
     tl.to(desktopCardRef.current, {
       scale: 1,
       duration: 0.43,
@@ -65,7 +65,7 @@ export function AuthShell({ children }: AuthShellProps) {
   return (
     <LayoutGroup>
       {/* Mobile Version */}
-      <main className="relative flex min-h-screen flex-col justify-end overflow-hidden bg-black sm:hidden">
+      <main className="relative flex min-h-screen flex-col justify-center overflow-hidden bg-black sm:hidden">
         <div className="absolute inset-0 z-0">
           <Image
             src={authImage}
@@ -83,7 +83,7 @@ export function AuthShell({ children }: AuthShellProps) {
           transition={{
             layout: { type: "spring", stiffness: 200, damping: 28 },
           }}
-          className="relative z-10 mt-20 flex w-full flex-col overflow-hidden rounded-t-[32px] bg-card/95 pb-10 backdrop-blur-xl"
+          className="relative z-10 mt-12 flex w-full flex-col overflow-hidden rounded-t-[32px] bg-card/95 pb-6 backdrop-blur-xl"
         >
           <div className="mb-4 w-full pt-4">
             <div className="mx-auto h-1.5 w-12 rounded-full bg-muted-foreground/20" />
@@ -93,9 +93,8 @@ export function AuthShell({ children }: AuthShellProps) {
           <div className="mx-auto mb-8 flex w-full max-w-[280px] rounded-2xl bg-muted/30 p-1">
             <Link
               href="/login"
-              className={`relative flex-1 rounded-xl py-2.5 text-center text-sm font-medium transition-colors ${
-                !isRegister ? "text-primary" : "text-muted-foreground"
-              }`}
+              className={`relative flex-1 rounded-xl py-2.5 text-center text-sm font-medium transition-colors ${!isRegister ? "text-primary" : "text-muted-foreground"
+                }`}
             >
               {!isRegister && (
                 <motion.div
@@ -108,9 +107,8 @@ export function AuthShell({ children }: AuthShellProps) {
             </Link>
             <Link
               href="/register"
-              className={`relative flex-1 rounded-xl py-2.5 text-center text-sm font-medium transition-colors ${
-                isRegister ? "text-primary" : "text-muted-foreground"
-              }`}
+              className={`relative flex-1 rounded-xl py-2.5 text-center text-sm font-medium transition-colors ${isRegister ? "text-primary" : "text-muted-foreground"
+                }`}
             >
               {isRegister && (
                 <motion.div
