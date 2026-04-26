@@ -1,9 +1,10 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import { motion } from "motion/react";
+import { motion, LayoutGroup } from "motion/react";
 import { AuthTransition } from "@/components/auth/auth-transition";
 
 type AuthShellProps = {
@@ -32,7 +33,7 @@ export function AuthShell({ children }: AuthShellProps) {
     });
     const timeout = window.setTimeout(() => {
       setIsSwapping(false);
-    }, 760);
+    }, 400);
 
     return () => {
       window.cancelAnimationFrame(frame);
@@ -41,7 +42,8 @@ export function AuthShell({ children }: AuthShellProps) {
   }, [pathname]);
 
   return (
-    <>
+    <LayoutGroup>
+      {/* Mobile Version */}
       <main className="relative flex min-h-screen flex-col justify-end overflow-hidden bg-black sm:hidden">
         <div className="absolute inset-0 z-0">
           <Image
@@ -56,19 +58,57 @@ export function AuthShell({ children }: AuthShellProps) {
         </div>
 
         <motion.div
-          layout="position"
-          transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
-          className="relative z-10 mt-20 flex w-full flex-col overflow-hidden rounded-t-[32px] bg-card/95 backdrop-blur-xl"
+          layout
+          transition={{
+            layout: { type: "spring", stiffness: 200, damping: 28 },
+          }}
+          className="relative z-10 mt-20 flex w-full flex-col overflow-hidden rounded-t-[32px] bg-card/95 pb-10 backdrop-blur-xl"
         >
-          <div className="mb-6 w-full">
+          <div className="mb-4 w-full pt-4">
             <div className="mx-auto h-1.5 w-12 rounded-full bg-muted-foreground/20" />
           </div>
-          <section className="flex min-w-0 items-center justify-center px-5 pb-26">
+
+          {/* Segmented Control (Tabs) */}
+          <div className="mx-auto mb-8 flex w-full max-w-[280px] rounded-2xl bg-muted/30 p-1">
+            <Link
+              href="/login"
+              className={`relative flex-1 rounded-xl py-2.5 text-center text-sm font-medium transition-colors ${
+                !isRegister ? "text-primary" : "text-muted-foreground"
+              }`}
+            >
+              {!isRegister && (
+                <motion.div
+                  layoutId="active-tab"
+                  className="absolute inset-0 rounded-xl bg-card shadow-sm"
+                  transition={{ type: "spring", stiffness: 200, damping: 25 }}
+                />
+              )}
+              <span className="relative z-10">Entrar</span>
+            </Link>
+            <Link
+              href="/register"
+              className={`relative flex-1 rounded-xl py-2.5 text-center text-sm font-medium transition-colors ${
+                isRegister ? "text-primary" : "text-muted-foreground"
+              }`}
+            >
+              {isRegister && (
+                <motion.div
+                  layoutId="active-tab"
+                  className="absolute inset-0 rounded-xl bg-card shadow-sm"
+                  transition={{ type: "spring", stiffness: 200, damping: 25 }}
+                />
+              )}
+              <span className="relative z-10">Criar conta</span>
+            </Link>
+          </div>
+
+          <section className="flex min-w-0 items-center justify-center px-5 pb-10">
             <AuthTransition>{children}</AuthTransition>
           </section>
         </motion.div>
       </main>
 
+      {/* Desktop Version */}
       <main className="relative hidden min-h-screen overflow-hidden bg-[#f3f5f9] p-4 sm:block sm:p-6 lg:grid lg:place-items-center lg:p-10">
         <div className="absolute inset-y-0 left-0 hidden w-[58%] lg:block">
           <Image
@@ -82,10 +122,16 @@ export function AuthShell({ children }: AuthShellProps) {
           <div className="absolute inset-0 bg-black/50" />
         </div>
 
-        <div className="relative z-10 mx-auto min-h-[calc(100vh-2rem)] w-full max-w-[1240px] overflow-hidden rounded-[28px] bg-card shadow-[0_24px_70px_-36px_rgba(15,23,42,0.4)] sm:min-h-[calc(100vh-3rem)] lg:min-h-[720px] lg:rounded-[44px]">
+        <motion.div
+          layout
+          transition={{
+            layout: { type: "spring", stiffness: 200, damping: 28 },
+          }}
+          className="relative z-10 mx-auto min-h-[calc(100vh-2rem)] w-full max-w-[1240px] overflow-hidden rounded-[28px] bg-card shadow-[0_24px_70px_-36px_rgba(15,23,42,0.4)] sm:min-h-[calc(100vh-3rem)] lg:min-h-[720px] lg:rounded-[44px]"
+        >
           <section
             className={[
-              "relative hidden h-full p-3 transition-transform duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] lg:absolute lg:inset-y-0 lg:left-0 lg:z-20 lg:block lg:w-1/2",
+              "relative hidden h-full p-3 transition-transform duration-400 ease-[cubic-bezier(0.22,1,0.36,1)] lg:absolute lg:inset-y-0 lg:left-0 lg:z-20 lg:block lg:w-1/2",
               isRegister ? "lg:translate-x-full" : "lg:translate-x-0",
               isSwapping ? "auth-swap-fade" : "",
             ].join(" ")}
@@ -121,15 +167,15 @@ export function AuthShell({ children }: AuthShellProps) {
 
           <section
             className={[
-              "flex min-h-[calc(100vh-2rem)] min-w-0 items-center justify-center px-5 py-10 transition-transform duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] sm:min-h-[calc(100vh-3rem)] sm:px-8 lg:absolute lg:inset-y-0 lg:right-0 lg:w-1/2 lg:px-14 lg:py-12",
+              "flex min-h-[calc(100vh-2rem)] min-w-0 items-center justify-center px-5 py-10 transition-transform duration-400 ease-[cubic-bezier(0.22,1,0.36,1)] sm:min-h-[calc(100vh-3rem)] sm:px-8 lg:absolute lg:inset-y-0 lg:right-0 lg:w-1/2 lg:px-14 lg:py-12",
               isRegister ? "lg:-translate-x-full" : "lg:translate-x-0",
               isSwapping ? "auth-swap-fade" : "",
             ].join(" ")}
           >
             <AuthTransition>{children}</AuthTransition>
           </section>
-        </div>
+        </motion.div>
       </main>
-    </>
+    </LayoutGroup>
   );
 }
