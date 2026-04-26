@@ -11,7 +11,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { getBlingRedirectUri, getBlingWebhookUrl } from "@/lib/bling";
 import { prisma } from "@/lib/prisma";
 
 type SearchParams = Promise<{
@@ -64,8 +63,6 @@ export default async function BlingIntegrationPage(props: {
   ]);
 
   const isConnected = Boolean(connection);
-  const redirectUri = getBlingRedirectUri();
-  const webhookUrl = getBlingWebhookUrl();
 
   return (
     <div className="flex flex-col gap-4 p-4 lg:p-6">
@@ -73,7 +70,7 @@ export default async function BlingIntegrationPage(props: {
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Integração Bling</h1>
           <p className="max-w-2xl text-sm text-muted-foreground">
-            Conexão OAuth 2.0 com API v3 e recebimento de webhooks assinados.
+            Gerencie a conexão da sua conta e acompanhe o status da sincronização.
           </p>
         </div>
         <Badge variant={isConnected ? "default" : "outline"} className="w-fit">
@@ -98,10 +95,10 @@ export default async function BlingIntegrationPage(props: {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <IconPlugConnected className="size-5" />
-              API OAuth
+              Conexão da conta
             </CardTitle>
             <CardDescription>
-              Use o botão para autorizar este sistema na conta Bling.
+              Autorize ou renove o acesso da sua conta Bling neste sistema.
             </CardDescription>
             <CardAction>
               <Button asChild size="sm">
@@ -113,12 +110,6 @@ export default async function BlingIntegrationPage(props: {
             </CardAction>
           </CardHeader>
           <CardContent className="grid gap-3 text-sm">
-            <div>
-              <div className="font-medium">URL de redirecionamento</div>
-              <code className="mt-1 block overflow-x-auto rounded-md bg-muted px-3 py-2 text-xs">
-                {redirectUri}
-              </code>
-            </div>
             <div className="grid gap-1 text-muted-foreground">
               <div>Conectado em: {formatDate(connection?.connectedAt)}</div>
               <div>Empresa Bling: {connection?.companyId ?? "Não identificada"}</div>
@@ -132,43 +123,33 @@ export default async function BlingIntegrationPage(props: {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <IconWebhook className="size-5" />
-              Webhook & Sincronização
+              Sincronização
             </CardTitle>
             <CardDescription>
-              Configurações de recebimento de dados e sincronização automática.
+              Atualize os dados e acompanhe a atividade recente da integração.
             </CardDescription>
           </CardHeader>
           <CardContent className="grid gap-4 text-sm">
-            <div>
-              <div className="font-medium">URL do Webhook</div>
-              <code className="mt-1 block overflow-x-auto rounded-md bg-muted px-3 py-2 text-xs">
-                {webhookUrl}
-              </code>
-            </div>
-            
             <div className="grid gap-2">
-              <div className="font-medium">Sincronização Manual</div>
+              <div className="font-medium">Atualização manual</div>
               <div className="flex flex-wrap gap-2">
                 <Button variant="outline" size="sm" asChild>
                   <a href="/api/bling/sync/incremental?minutes=60" target="_blank">
-                    Sincronia Incremental (1h)
+                    Atualizar última hora
                   </a>
                 </Button>
                 <Button variant="outline" size="sm" asChild>
                   <a href="/api/bling/sync/full" target="_blank">
-                    Sincronia Completa
+                    Atualização completa
                   </a>
                 </Button>
               </div>
-              <p className="text-[10px] text-muted-foreground italic">
-                * A sincronia incremental deve ser configurada em um serviço de CRON externo a cada 5-15 minutos.
-              </p>
             </div>
 
             <div className="grid gap-1 pt-2 border-t text-muted-foreground">
-              <div>Eventos de Webhook recebidos: {eventCount}</div>
+              <div>Eventos recebidos: {eventCount}</div>
               <div>
-                Último evento:{" "}
+                Última atividade:{" "}
                 {lastEvent
                    ? `${lastEvent.event} em ${formatDate(lastEvent.receivedAt)}`
                    : "Nenhum evento recebido"}
@@ -177,26 +158,6 @@ export default async function BlingIntegrationPage(props: {
           </CardContent>
         </Card>
       </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Configuração no Bling</CardTitle>
-          <CardDescription>
-            O aplicativo cadastrado no Bling deve ter os escopos dos recursos usados pelo sistema.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="grid gap-2 text-sm text-muted-foreground">
-          <p>
-            No Bling, informe a URL de redirecionamento acima no cadastro do aplicativo.
-            Depois, na aba Webhooks, adicione a URL do servidor e marque os recursos e
-            ações que este sistema deve receber.
-          </p>
-          <p>
-            O endpoint de webhook valida o cabeçalho X-Bling-Signature-256 e grava cada
-            eventId uma única vez para suportar retentativas.
-          </p>
-        </CardContent>
-      </Card>
     </div>
   );
 }
