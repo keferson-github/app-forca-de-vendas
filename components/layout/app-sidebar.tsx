@@ -207,7 +207,7 @@ export function AppSidebar({ user, ...props }: AppSidebarProps) {
                   className={cn(
                     isCollapsedDesktop
                       ? collapsedPrimaryCtaCleanClass
-                      : "rounded-xl border border-white/6 bg-[linear-gradient(180deg,rgba(255,255,255,0.06),rgba(255,255,255,0.02)),linear-gradient(135deg,rgba(16,185,129,0.94),rgba(13,148,136,0.92))] text-white shadow-[0_18px_32px_-20px_rgba(20,184,166,0.72)] hover:text-white hover:shadow-[0_20px_36px_-20px_rgba(20,184,166,0.82)]",
+                      : "rounded-xl border border-black/8 bg-white text-slate-900 shadow-[0_18px_32px_-20px_rgba(15,23,42,0.22)] hover:bg-white hover:text-slate-900 hover:shadow-[0_20px_36px_-20px_rgba(15,23,42,0.28)]",
                     collapsedPrimaryCtaClass
                   )}
                 >
