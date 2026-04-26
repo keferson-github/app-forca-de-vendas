@@ -127,6 +127,35 @@ function formatCpfCnpj(value: string) {
   )}-${digits.slice(12)}`;
 }
 
+function formatCnpj(value: string) {
+  const digits = onlyDigits(value).slice(0, 14);
+
+  if (!digits) {
+    return "";
+  }
+
+  if (digits.length <= 2) {
+    return digits;
+  }
+
+  if (digits.length <= 5) {
+    return `${digits.slice(0, 2)}.${digits.slice(2)}`;
+  }
+
+  if (digits.length <= 8) {
+    return `${digits.slice(0, 2)}.${digits.slice(2, 5)}.${digits.slice(5)}`;
+  }
+
+  if (digits.length <= 12) {
+    return `${digits.slice(0, 2)}.${digits.slice(2, 5)}.${digits.slice(5, 8)}/${digits.slice(8)}`;
+  }
+
+  return `${digits.slice(0, 2)}.${digits.slice(2, 5)}.${digits.slice(5, 8)}/${digits.slice(
+    8,
+    12
+  )}-${digits.slice(12)}`;
+}
+
 function formatPhone(value: string) {
   let digits = onlyDigits(value);
 
@@ -173,6 +202,7 @@ export function CustomerFormSheet({
   const [state, formAction] = useActionState(action, initialState);
   const { open, onOpenChange, contentRef } = useSheetSlideGsap(initialOpen);
   const values = state.values;
+  const cnpjOnlyField = !customer && !defaultIsProspect;
   const isProspect = values?.isProspect ?? customer?.isProspect ?? defaultIsProspect;
   const prospectStatus =
     values?.prospectStatus
@@ -225,16 +255,25 @@ export function CustomerFormSheet({
                 />
               </div>
               <div className="grid gap-2">
-                <Label htmlFor={`${customer?.id ?? "new"}-cnpjCpf`}>CNPJ/CPF</Label>
+                <Label htmlFor={`${customer?.id ?? "new"}-cnpjCpf`}>
+                  {cnpjOnlyField ? "CNPJ" : "CNPJ/CPF"}
+                </Label>
                 <Input
                   id={`${customer?.id ?? "new"}-cnpjCpf`}
                   name="cnpjCpf"
-                  defaultValue={values?.cnpjCpf ?? formatCpfCnpj(customer?.cnpjCpf ?? "")}
-                  placeholder="00.000.000/0000-00"
+                  defaultValue={
+                    values?.cnpjCpf
+                    ?? (cnpjOnlyField
+                      ? formatCnpj(customer?.cnpjCpf ?? "")
+                      : formatCpfCnpj(customer?.cnpjCpf ?? ""))
+                  }
+                  placeholder={cnpjOnlyField ? "00.000.000/0000-00" : "00.000.000/0000-00"}
                   inputMode="numeric"
                   maxLength={18}
                   onChange={(event) => {
-                    event.currentTarget.value = formatCpfCnpj(event.currentTarget.value);
+                    event.currentTarget.value = cnpjOnlyField
+                      ? formatCnpj(event.currentTarget.value)
+                      : formatCpfCnpj(event.currentTarget.value);
                   }}
                 />
               </div>
