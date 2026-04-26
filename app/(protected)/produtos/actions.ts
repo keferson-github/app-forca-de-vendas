@@ -29,8 +29,31 @@ const ALLOWED_IMAGE_TYPES = {
 } as const;
 
 const ALLOWED_IMAGE_EXTENSIONS = [".jpeg", ".png", ".webp"] as const;
+const BLOB_TOKEN_PATTERN = /^vercel_blob_rw_[A-Za-z0-9_-]+$/;
 
 class ImageUploadError extends Error {}
+
+function getBlobToken() {
+  const rawToken = process.env.BLOB_READ_WRITE_TOKEN;
+
+  if (!rawToken) {
+    return null;
+  }
+
+  const normalizedToken = rawToken.trim().replace(/^['\"]|['\"]$/g, "");
+
+  if (!normalizedToken) {
+    return null;
+  }
+
+  if (!BLOB_TOKEN_PATTERN.test(normalizedToken)) {
+    throw new ImageUploadError(
+      "Configuração inválida do serviço de imagem. Verifique as variáveis de ambiente."
+    );
+  }
+
+  return normalizedToken;
+}
 
 function parsePrice(value: string) {
   let normalized = value.trim().replace(/[R$\s]/g, "");
@@ -110,7 +133,48 @@ function extractImageFile(formData: FormData) {
   return value;
 }
 
-function validateImageFile(file: File | null) {
+function detectImageTypeFromSignature(signature: Uint8Array) {
+  const isJpeg = signature.length >= 3
+    && signature[0] === 0xff
+    && signature[1] === 0xd8
+    && signature[2] === 0xff;
+
+  if (isJpeg) {
+    return "jpeg" as const;
+  }
+
+  const isPng = signature.length >= 8
+    && signature[0] === 0x89
+    && signature[1] === 0x50
+    && signature[2] === 0x4e
+    && signature[3] === 0x47
+    && signature[4] === 0x0d
+    && signature[5] === 0x0a
+    && signature[6] === 0x1a
+    && signature[7] === 0x0a;
+
+  if (isPng) {
+    return "png" as const;
+  }
+
+  const isWebp = signature.length >= 12
+    && signature[0] === 0x52
+    && signature[1] === 0x49
+    && signature[2] === 0x46
+    && signature[3] === 0x46
+    && signature[8] === 0x57
+    && signature[9] === 0x45
+    && signature[10] === 0x42
+    && signature[11] === 0x50;
+
+  if (isWebp) {
+    return "webp" as const;
+  }
+
+  return null;
+}
+
+async function validateImageFile(file: File | null) {
   if (!file) {
     return null;
   }
@@ -119,8 +183,17 @@ function validateImageFile(file: File | null) {
     return "A imagem deve ter no máximo 5MB.";
   }
 
-  if (!getImageExtension(file)) {
+  const extension = getImageExtension(file);
+
+  if (!extension) {
     return "Formato inválido. Use apenas arquivos .jpeg, .png ou .webp.";
+  }
+
+  const signatureBuffer = await file.slice(0, 12).arrayBuffer();
+  const detectedType = detectImageTypeFromSignature(new Uint8Array(signatureBuffer));
+
+  if (!detectedType || detectedType !== extension) {
+    return "Arquivo de imagem inválido. Use uma imagem .jpeg, .png ou .webp válida.";
   }
 
   return null;
@@ -133,14 +206,12 @@ async function saveImageFile(file: File) {
     throw new Error("Formato de imagem inválido.");
   }
 
-  const blobToken = process.env.BLOB_READ_WRITE_TOKEN;
+  const blobToken = getBlobToken();
   const fileName = `products/${Date.now()}-${randomUUID()}.${extension}`;
 
   if (blobToken) {
-    const buffer = Buffer.from(await file.arrayBuffer());
-
     try {
-      const uploaded = await put(fileName, buffer, {
+      const uploaded = await put(fileName, file, {
         access: "public",
         addRandomSuffix: false,
         contentType: file.type || undefined,
@@ -148,7 +219,8 @@ async function saveImageFile(file: File) {
       });
 
       return uploaded.url;
-    } catch {
+    } catch (error) {
+      console.error("Falha no upload de imagem para Blob.", error);
       throw new ImageUploadError("Não foi possível enviar a imagem do produto no momento.");
     }
   }
@@ -193,7 +265,13 @@ async function removeImageFile(imageUrl?: string | null) {
   }
 
   if (isVercelBlobUrl(imageUrl)) {
-    const blobToken = process.env.BLOB_READ_WRITE_TOKEN;
+    let blobToken: string | null = null;
+
+    try {
+      blobToken = getBlobToken();
+    } catch {
+      return;
+    }
 
     if (!blobToken) {
       return;
@@ -276,7 +354,7 @@ export async function createProductAction(
     return { error: parsed.error.issues[0]?.message ?? "Dados inválidos." };
   }
 
-  const imageFileError = validateImageFile(imageFile);
+  const imageFileError = await validateImageFile(imageFile);
   if (imageFileError) {
     return { error: imageFileError };
   }
@@ -333,7 +411,7 @@ export async function updateProductAction(
     return { error: "Produto não identificado." };
   }
 
-  const imageFileError = validateImageFile(imageFile);
+  const imageFileError = await validateImageFile(imageFile);
   if (imageFileError) {
     return { error: imageFileError };
   }
