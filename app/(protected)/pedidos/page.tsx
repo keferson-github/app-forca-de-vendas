@@ -4,6 +4,7 @@ import { OrdersPageClient } from "@/components/pedidos/orders-page-client";
 import { prisma } from "@/lib/prisma";
 
 type SearchParams = Promise<{
+  open?: string;
   q?: string;
   page?: string;
 }>;
@@ -54,6 +55,7 @@ export default async function PedidosPage(props: { searchParams: SearchParams })
     return null;
   }
 
+  const openNewOrder = searchParams.open === "new-order";
   const query = (searchParams.q ?? "").trim();
   const requestedPage = parsePage(searchParams.page);
   const where = buildWhere(session.user.id, query);
@@ -71,6 +73,14 @@ export default async function PedidosPage(props: { searchParams: SearchParams })
     include: {
       customer: {
         select: {
+          id: true,
+          name: true,
+          companyName: true,
+        },
+      },
+      carrier: {
+        select: {
+          id: true,
           name: true,
         },
       },
@@ -82,18 +92,43 @@ export default async function PedidosPage(props: { searchParams: SearchParams })
     },
   });
 
+  const carriers = await prisma.carrier.findMany({
+    where: {
+      userId: session.user.id,
+    },
+    orderBy: [{ name: "asc" }, { updatedAt: "desc" }, { id: "desc" }],
+    take: 100,
+    select: {
+      id: true,
+      name: true,
+    },
+  });
+
   return (
     <OrdersPageClient
+      openNewOrder={openNewOrder}
       orders={orders.map((order) => ({
         id: order.id,
         orderNumber: order.orderNumber,
+        customerId: order.customer.id,
         customerName: order.customer.name,
+        customerCompany: order.customer.companyName,
+        carrierId: order.carrier?.id ?? null,
+        carrierName: order.carrier?.name ?? null,
+        operation: order.operation,
         status: order.status,
+        paymentTerm: order.paymentTerm,
+        receivingCompany: order.receivingCompany,
+        freightType: order.freightType,
+        deliveryType: order.deliveryType,
+        notes: order.notes,
+        customerOrderNumber: order.customerOrderNumber,
         total: Number(order.total),
         createdAt: order.createdAt.toISOString(),
         updatedAt: order.updatedAt.toISOString(),
         itemsCount: order._count.items,
       }))}
+      carriers={carriers}
       query={query}
       pagination={{
         currentPage,

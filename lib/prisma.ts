@@ -1,6 +1,17 @@
 import { PrismaClient } from "@prisma/client";
 
-const globalForPrisma = globalThis as unknown as { prisma: PrismaClient };
+function createPrismaClient() {
+  return new PrismaClient({
+    log: [
+      { emit: "event", level: "error" },
+      { emit: "stdout", level: "warn" },
+    ],
+  });
+}
+
+type AppPrismaClient = ReturnType<typeof createPrismaClient>;
+
+const globalForPrisma = globalThis as unknown as { prisma?: AppPrismaClient };
 
 function isIgnorablePrismaConnectionError(message: string) {
   return (
@@ -11,12 +22,7 @@ function isIgnorablePrismaConnectionError(message: string) {
 
 export const prisma =
   globalForPrisma.prisma ??
-  new PrismaClient({
-    log: [
-      { emit: "event", level: "error" },
-      { emit: "stdout", level: "warn" },
-    ],
-  });
+  createPrismaClient();
 
 prisma.$on("error", (event) => {
   if (isIgnorablePrismaConnectionError(event.message)) {
