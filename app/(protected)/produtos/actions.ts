@@ -4,7 +4,7 @@ import { randomUUID } from "node:crypto";
 import { mkdir, unlink, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { Prisma } from "@prisma/client";
-import { del, put } from "@vercel/blob";
+import { BlobAccessError, BlobStoreNotFoundError, del, put } from "@vercel/blob";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
@@ -220,6 +220,18 @@ async function saveImageFile(file: File) {
 
       return uploaded.url;
     } catch (error) {
+      if (error instanceof BlobAccessError) {
+        throw new ImageUploadError(
+          "A Blob Store conectada não permite upload público. Para imagens de produtos, conecte uma Blob Store com acesso Public."
+        );
+      }
+
+      if (error instanceof BlobStoreNotFoundError) {
+        throw new ImageUploadError(
+          "Blob Store não encontrada para este token. Verifique se o BLOB_READ_WRITE_TOKEN pertence ao mesmo projeto."
+        );
+      }
+
       console.error("Falha no upload de imagem para Blob.", error);
       throw new ImageUploadError("Não foi possível enviar a imagem do produto no momento.");
     }
