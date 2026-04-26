@@ -132,26 +132,46 @@ export default async function BlingIntegrationPage(props: {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <IconWebhook className="size-5" />
-              Webhook
+              Webhook & Sincronização
             </CardTitle>
             <CardDescription>
-              Cadastre esta URL na aba Webhooks do aplicativo no Bling.
+              Configurações de recebimento de dados e sincronização automática.
             </CardDescription>
           </CardHeader>
-          <CardContent className="grid gap-3 text-sm">
+          <CardContent className="grid gap-4 text-sm">
             <div>
-              <div className="font-medium">URL do servidor</div>
+              <div className="font-medium">URL do Webhook</div>
               <code className="mt-1 block overflow-x-auto rounded-md bg-muted px-3 py-2 text-xs">
                 {webhookUrl}
               </code>
             </div>
-            <div className="grid gap-1 text-muted-foreground">
-              <div>Eventos recebidos: {eventCount}</div>
+            
+            <div className="grid gap-2">
+              <div className="font-medium">Sincronização Manual</div>
+              <div className="flex flex-wrap gap-2">
+                <Button variant="outline" size="sm" asChild>
+                  <a href="/api/bling/sync/incremental?minutes=60" target="_blank">
+                    Sincronia Incremental (1h)
+                  </a>
+                </Button>
+                <Button variant="outline" size="sm" asChild>
+                  <a href="/api/bling/sync/full" target="_blank">
+                    Sincronia Completa
+                  </a>
+                </Button>
+              </div>
+              <p className="text-[10px] text-muted-foreground italic">
+                * A sincronia incremental deve ser configurada em um serviço de CRON externo a cada 5-15 minutos.
+              </p>
+            </div>
+
+            <div className="grid gap-1 pt-2 border-t text-muted-foreground">
+              <div>Eventos de Webhook recebidos: {eventCount}</div>
               <div>
                 Último evento:{" "}
                 {lastEvent
-                  ? `${lastEvent.event} em ${formatDate(lastEvent.receivedAt)}`
-                  : "Nenhum evento recebido"}
+                   ? `${lastEvent.event} em ${formatDate(lastEvent.receivedAt)}`
+                   : "Nenhum evento recebido"}
               </div>
             </div>
           </CardContent>

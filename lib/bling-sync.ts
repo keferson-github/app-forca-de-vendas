@@ -288,35 +288,66 @@ async function applyBlingProductSnapshot(
   }
 ) {
   const product = await getProductByIdentifiers(userId, identifiers);
-  if (!product) {
+
+  if (product) {
+    const payload: Prisma.ProductUpdateInput = {
+      lastBlingSyncAt: new Date(),
+      lastBlingError: null,
+    };
+
+    if (snapshot.blingProductId) payload.blingProductId = snapshot.blingProductId;
+    if (snapshot.code) payload.code = snapshot.code;
+    if (snapshot.name) payload.name = snapshot.name;
+    if (snapshot.price !== null) {
+      payload.price = new Prisma.Decimal(snapshot.price.toFixed(2));
+    }
+    if (snapshot.stockQuantity !== null) {
+      payload.stockQuantity = new Prisma.Decimal(snapshot.stockQuantity.toFixed(3));
+    }
+
+    await prisma.product.update({
+      where: { id: product.id },
+      data: payload,
+    });
+    return true;
+  }
+
+  // Se nao existe, tenta criar (Upsert funcional)
+  // Para criar, precisamos minimamente de code e name
+  if (!snapshot.code || !snapshot.name) {
+    // Se nao temos dados suficientes para criar, mas temos o ID do Bling,
+    // tentamos buscar os detalhes completos antes de desistir
+    if (snapshot.blingProductId) {
+      try {
+        const details = await getBlingProductDetails(userId, snapshot.blingProductId);
+        const fullSnapshot = extractBlingProductFromBody(details);
+        if (fullSnapshot && fullSnapshot.code && fullSnapshot.name) {
+          return applyBlingProductSnapshot(userId, identifiers, {
+            ...fullSnapshot,
+            stockQuantity: snapshot.stockQuantity ?? fullSnapshot.stockQuantity,
+          });
+        }
+      } catch {
+        return false;
+      }
+    }
     return false;
   }
 
-  const payload: Prisma.ProductUpdateInput = {
-    lastBlingSyncAt: new Date(),
-    lastBlingError: null,
-  };
-
-  if (snapshot.blingProductId) {
-    payload.blingProductId = snapshot.blingProductId;
-  }
-  if (snapshot.code) {
-    payload.code = snapshot.code;
-  }
-  if (snapshot.name) {
-    payload.name = snapshot.name;
-  }
-  if (snapshot.price !== null) {
-    payload.price = new Prisma.Decimal(snapshot.price.toFixed(2));
-  }
-  if (snapshot.stockQuantity !== null) {
-    payload.stockQuantity = new Prisma.Decimal(snapshot.stockQuantity.toFixed(3));
-  }
-
-  await prisma.product.update({
-    where: { id: product.id },
-    data: payload,
+  await prisma.product.create({
+    data: {
+      userId,
+      blingProductId: snapshot.blingProductId,
+      code: snapshot.code,
+      name: snapshot.name,
+      price: new Prisma.Decimal((snapshot.price ?? 0).toFixed(2)),
+      stockQuantity: new Prisma.Decimal((snapshot.stockQuantity ?? 0).toFixed(3)),
+      category: "ACESSORIOS", // Default para novos produtos vindos do Bling
+      subcategory: "GERAL",
+      lastBlingSyncAt: new Date(),
+    },
   });
+
   return true;
 }
 
@@ -572,4 +603,133 @@ export async function syncConfirmedOrdersToBling(userId: string, options?: { ord
     failed: results.filter((item) => !item.synced).length,
     results,
   };
+}
+
+/**
+ * Realiza a sincronização incremental de produtos do Bling para o banco local.
+ * Busca produtos alterados em um intervalo de tempo específico.
+ */
+export async function syncProductsFromBlingIncremental(userId: string, minutesLookback = 15) {
+  const now = new Date();
+  const startTime = new Date(now.getTime() - minutesLookback * 60 * 1000);
+  
+  const formatBlingDate = (date: Date) => {
+    return date.toISOString().replace("T", " ").split(".")[0];
+  };
+
+  const params = new URLSearchParams({
+    dataAlteracaoInicial: formatBlingDate(startTime),
+    dataAlteracaoFinal: formatBlingDate(now),
+    limite: "100",
+  });
+
+  const response = await blingRequest<{ data: any[] }>(userId, `/produtos?${params.toString()}`);
+  const blingProducts = response.data || [];
+
+  const results = {
+    processed: 0,
+    updated: 0,
+    created: 0,
+    failed: 0,
+  };
+
+  for (const item of blingProducts) {
+    results.processed++;
+    try {
+      const snapshot = extractBlingProductFromBody(item);
+      if (!snapshot) continue;
+
+      // Buscar saldo de estoque atualizado (opcional, mas recomendado)
+      const stock = await getBlingStockBalance(userId, snapshot.blingProductId!);
+      
+      const identifiers = { 
+        blingProductId: snapshot.blingProductId, 
+        code: snapshot.code 
+      };
+
+      const applied = await applyBlingProductSnapshot(userId, identifiers, {
+        ...snapshot,
+        stockQuantity: stock ?? snapshot.stockQuantity
+      });
+
+      if (applied) {
+        // Verificar se foi update ou create (baseado no que o applyBlingProductSnapshot faria)
+        const existsLocally = await getProductByIdentifiers(userId, identifiers);
+        if (existsLocally) results.updated++;
+        else results.created++;
+      } else {
+        results.failed++;
+      }
+    } catch (error) {
+      results.failed++;
+    }
+  }
+
+  return results;
+}
+
+/**
+ * Realiza a sincronização completa de todos os produtos do Bling para o banco local.
+ * Percorre todas as páginas de produtos.
+ */
+export async function syncProductsFromBlingFull(userId: string) {
+  let pagina = 1;
+  const limite = 100;
+  let hasMore = true;
+
+  const results = {
+    processed: 0,
+    updated: 0,
+    created: 0,
+    failed: 0,
+  };
+
+  while (hasMore) {
+    try {
+      const response = await blingRequest<{ data: any[] }>(userId, `/produtos?pagina=${pagina}&limite=${limite}`);
+      const blingProducts = response.data || [];
+
+      if (blingProducts.length === 0) {
+        hasMore = false;
+        break;
+      }
+
+      for (const item of blingProducts) {
+        results.processed++;
+        try {
+          const snapshot = extractBlingProductFromBody(item);
+          if (!snapshot) continue;
+
+          const identifiers = { 
+            blingProductId: snapshot.blingProductId, 
+            code: snapshot.code 
+          };
+
+          // No full sync, o estoque pode ser consultado depois ou ja vir no snapshot
+          const applied = await applyBlingProductSnapshot(userId, identifiers, snapshot);
+
+          if (applied) {
+            const existsLocally = await getProductByIdentifiers(userId, identifiers);
+            if (existsLocally) results.updated++;
+            else results.created++;
+          } else {
+            results.failed++;
+          }
+        } catch {
+          results.failed++;
+        }
+      }
+
+      if (blingProducts.length < limite) {
+        hasMore = false;
+      } else {
+        pagina++;
+      }
+    } catch (error) {
+      console.error(`Erro na pagina ${pagina} do Full Sync:`, error);
+      hasMore = false;
+    }
+  }
+
+  return results;
 }
