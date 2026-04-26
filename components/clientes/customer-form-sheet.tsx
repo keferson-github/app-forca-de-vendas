@@ -202,6 +202,7 @@ export function CustomerFormSheet({
   const [state, formAction] = useActionState(action, initialState);
   const { open, onOpenChange, contentRef } = useSheetSlideGsap(initialOpen);
   const values = state.values;
+  const customerDocument = customer?.cnpjCpf ?? "";
   const cnpjOnlyField = !customer && !defaultIsProspect;
   const isProspect = values?.isProspect ?? customer?.isProspect ?? defaultIsProspect;
   const prospectStatus =
@@ -264,10 +265,10 @@ export function CustomerFormSheet({
                   defaultValue={
                     values?.cnpjCpf
                     ?? (cnpjOnlyField
-                      ? formatCnpj(customer?.cnpjCpf ?? "")
-                      : formatCpfCnpj(customer?.cnpjCpf ?? ""))
+                      ? formatCnpj(customerDocument)
+                      : formatCpfCnpj(customerDocument))
                   }
-                  placeholder={cnpjOnlyField ? "00.000.000/0000-00" : "00.000.000/0000-00"}
+                  placeholder="00.000.000/0000-00"
                   inputMode="numeric"
                   maxLength={18}
                   onChange={(event) => {
