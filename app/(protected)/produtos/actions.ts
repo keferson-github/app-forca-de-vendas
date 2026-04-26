@@ -4,6 +4,7 @@ import { randomUUID } from "node:crypto";
 import { mkdir, unlink, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { Prisma } from "@prisma/client";
+import { del, put } from "@vercel/blob";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
@@ -28,6 +29,8 @@ const ALLOWED_IMAGE_TYPES = {
 } as const;
 
 const ALLOWED_IMAGE_EXTENSIONS = [".jpeg", ".png", ".webp"] as const;
+
+class ImageUploadError extends Error {}
 
 function parsePrice(value: string) {
   let normalized = value.trim().replace(/[R$\s]/g, "");
@@ -130,24 +133,82 @@ async function saveImageFile(file: File) {
     throw new Error("Formato de imagem inválido.");
   }
 
+  const blobToken = process.env.BLOB_READ_WRITE_TOKEN;
+  const fileName = `products/${Date.now()}-${randomUUID()}.${extension}`;
+
+  if (blobToken) {
+    const buffer = Buffer.from(await file.arrayBuffer());
+
+    try {
+      const uploaded = await put(fileName, buffer, {
+        access: "public",
+        addRandomSuffix: false,
+        contentType: file.type || undefined,
+        token: blobToken,
+      });
+
+      return uploaded.url;
+    } catch {
+      throw new ImageUploadError("Não foi possível enviar a imagem do produto no momento.");
+    }
+  }
+
+  if (process.env.VERCEL === "1") {
+    throw new ImageUploadError(
+      "Upload de imagem indisponível: configure a variável BLOB_READ_WRITE_TOKEN na Vercel."
+    );
+  }
+
   const uploadDir = path.join(process.cwd(), "public", "uploads", "products");
   await mkdir(uploadDir, { recursive: true });
 
-  const fileName = `${Date.now()}-${randomUUID()}.${extension}`;
-  const absolutePath = path.join(uploadDir, fileName);
+  const localFileName = `${Date.now()}-${randomUUID()}.${extension}`;
+  const absolutePath = path.join(uploadDir, localFileName);
   const buffer = Buffer.from(await file.arrayBuffer());
 
   await writeFile(absolutePath, buffer);
 
-  return `/uploads/products/${fileName}`;
+  return `/uploads/products/${localFileName}`;
 }
 
 function isManagedImagePath(imageUrl: string) {
   return imageUrl.startsWith("/uploads/products/") && !imageUrl.includes("..");
 }
 
+function isVercelBlobUrl(imageUrl: string) {
+  return /^https:\/\/[^/]+\.public\.blob\.vercel-storage\.com\//i.test(imageUrl);
+}
+
+function getImageUploadErrorMessage(error: unknown) {
+  if (error instanceof ImageUploadError) {
+    return error.message;
+  }
+
+  return "Não foi possível processar a imagem do produto. Tente novamente.";
+}
+
 async function removeImageFile(imageUrl?: string | null) {
-  if (!imageUrl || !isManagedImagePath(imageUrl)) {
+  if (!imageUrl) {
+    return;
+  }
+
+  if (isVercelBlobUrl(imageUrl)) {
+    const blobToken = process.env.BLOB_READ_WRITE_TOKEN;
+
+    if (!blobToken) {
+      return;
+    }
+
+    try {
+      await del(imageUrl, { token: blobToken });
+    } catch {
+      return;
+    }
+
+    return;
+  }
+
+  if (!isManagedImagePath(imageUrl)) {
     return;
   }
 
@@ -220,7 +281,15 @@ export async function createProductAction(
     return { error: imageFileError };
   }
 
-  const imageUrl = imageFile ? await saveImageFile(imageFile) : null;
+  let imageUrl: string | null = null;
+
+  if (imageFile) {
+    try {
+      imageUrl = await saveImageFile(imageFile);
+    } catch (error) {
+      return { error: getImageUploadErrorMessage(error) };
+    }
+  }
 
   try {
     const createdProduct = await prisma.product.create({
@@ -285,11 +354,15 @@ export async function updateProductAction(
   }
 
   const shouldRemoveCurrentImage = parsed.data.removeImage && !imageFile;
-  const nextImageUrl = shouldRemoveCurrentImage
-    ? null
-    : imageFile
-      ? await saveImageFile(imageFile)
-      : currentProduct.imageUrl;
+  let nextImageUrl = shouldRemoveCurrentImage ? null : currentProduct.imageUrl;
+
+  if (imageFile) {
+    try {
+      nextImageUrl = await saveImageFile(imageFile);
+    } catch (error) {
+      return { error: getImageUploadErrorMessage(error) };
+    }
+  }
 
   try {
     const updated = await prisma.product.updateMany({
