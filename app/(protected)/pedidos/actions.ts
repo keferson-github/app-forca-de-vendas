@@ -59,7 +59,7 @@ async function requireUserId() {
   const session = await auth();
 
   if (!session?.user?.id) {
-    throw new Error("Sessao expirada. Faca login novamente.");
+    throw new Error("Sessão expirada. Faça login novamente.");
   }
 
   return session.user.id;
@@ -151,11 +151,11 @@ async function validateRelations(userId: string, customerId: string, carrierId?:
   ]);
 
   if (!customer) {
-    return "Cliente nao encontrado ou sem permissao para uso neste pedido.";
+    return "Cliente não encontrado ou sem permissão para uso neste pedido.";
   }
 
   if (carrierId && !carrier) {
-    return "Transportadora nao encontrada ou sem permissao para uso neste pedido.";
+    return "Transportadora não encontrada ou sem permissão para uso neste pedido.";
   }
 
   return null;
@@ -216,7 +216,7 @@ export async function createOrderAction(
 
   if (!parsed.success) {
     return {
-      error: parsed.error.issues[0]?.message ?? "Dados invalidos.",
+      error: parsed.error.issues[0]?.message ?? "Dados inválidos.",
       values,
     };
   }
@@ -246,13 +246,13 @@ export async function updateOrderAction(
 
   if (!parsed.success) {
     return {
-      error: parsed.error.issues[0]?.message ?? "Dados invalidos.",
+      error: parsed.error.issues[0]?.message ?? "Dados inválidos.",
       values,
     };
   }
 
   if (!parsed.data.id) {
-    return { error: "Pedido nao identificado.", values };
+    return { error: "Pedido não identificado.", values };
   }
 
   const relationError = await validateRelations(
@@ -274,7 +274,7 @@ export async function updateOrderAction(
   });
 
   if (updated.count === 0) {
-    return { error: "Pedido nao encontrado ou sem permissao para editar.", values };
+    return { error: "Pedido não encontrado ou sem permissão para editar.", values };
   }
 
   revalidatePath("/pedidos");

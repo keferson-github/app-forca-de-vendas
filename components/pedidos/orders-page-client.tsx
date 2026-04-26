@@ -161,10 +161,10 @@ const paymentTermLabels: Record<OrderListItem["paymentTerm"], string> = {
   DAYS_7: "7 dias",
   DAYS_7_14_21: "7/14/21 dias",
   DAYS_7_14_21_28: "7/14/21/28 dias",
-  A_VISTA_ANTECIPADA: "A vista antecipada",
-  BONIFICACAO: "Bonificacao",
-  CARTAO_CREDITO: "Cartao de credito",
-  CARTAO_DEBITO: "Cartao de debito",
+  A_VISTA_ANTECIPADA: "À vista antecipada",
+  BONIFICACAO: "Bonificação",
+  CARTAO_CREDITO: "Cartão de crédito",
+  CARTAO_DEBITO: "Cartão de débito",
   TROCA: "Troca",
 };
 
@@ -230,7 +230,7 @@ function DetailRow({ label, value }: { label: string; value?: string | null }) {
   return (
     <div className="grid gap-1 rounded-lg bg-muted/45 p-3">
       <dt className="text-xs font-medium text-muted-foreground">{label}</dt>
-      <dd className="text-sm text-foreground">{value || "Nao informado"}</dd>
+      <dd className="text-sm text-foreground">{value || "Não informado"}</dd>
     </div>
   );
 }
@@ -254,7 +254,7 @@ function CustomerLookupField({ inputId, selectedCustomer, onSelect }: CustomerLo
       <input type="hidden" name="customerId" value={selectedCustomer?.id ?? ""} />
       <SearchInputWithAutocomplete
         query={selectedCustomer ? getCustomerSearchLabel(selectedCustomer) : ""}
-        placeholder="Buscar cliente por nome, empresa ou numero"
+        placeholder="Buscar cliente por nome, empresa ou número"
         minChars={2}
         autocomplete={{
           endpoint: "/api/clientes/autocomplete",
@@ -387,7 +387,7 @@ function OrderFormSheet({
               </div>
 
               <div className="grid gap-2">
-                <Label htmlFor={`${order?.id ?? "new"}-operation`}>Operacao</Label>
+                <Label htmlFor={`${order?.id ?? "new"}-operation`}>Operação</Label>
                 <Input
                   id={`${order?.id ?? "new"}-operation`}
                   value="Venda"
@@ -398,7 +398,7 @@ function OrderFormSheet({
             </div>
 
             <div className="grid gap-2">
-              <Label htmlFor={`${order?.id ?? "new"}-paymentTerm`}>Condicao de pagamento</Label>
+              <Label htmlFor={`${order?.id ?? "new"}-paymentTerm`}>Condição de pagamento</Label>
               <Select
                 value={selectedPaymentTerm}
                 onValueChange={(value) => {
@@ -406,7 +406,7 @@ function OrderFormSheet({
                 }}
               >
                 <SelectTrigger id={`${order?.id ?? "new"}-paymentTerm`} className="w-full">
-                  <SelectValue placeholder="Selecione a condicao" />
+                  <SelectValue placeholder="Selecione a condição" />
                 </SelectTrigger>
                 <SelectContent>
                   {Object.entries(paymentTermLabels).map(([value, label]) => (
@@ -481,13 +481,13 @@ function OrderFormSheet({
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="grid gap-2">
                 <Label htmlFor={`${order?.id ?? "new"}-customerOrderNumber`}>
-                  Nº pedido cliente
+                  Nº do pedido do cliente
                 </Label>
                 <Input
                   id={`${order?.id ?? "new"}-customerOrderNumber`}
                   name="customerOrderNumber"
                   defaultValue={values?.customerOrderNumber ?? order?.customerOrderNumber ?? ""}
-                  placeholder="Numero informado pelo cliente"
+                  placeholder="Número informado pelo cliente"
                 />
               </div>
 
@@ -502,12 +502,12 @@ function OrderFormSheet({
             </div>
 
             <div className="grid gap-2">
-              <Label htmlFor={`${order?.id ?? "new"}-notes`}>Observacao</Label>
+              <Label htmlFor={`${order?.id ?? "new"}-notes`}>Observação</Label>
               <Textarea
                 id={`${order?.id ?? "new"}-notes`}
                 name="notes"
                 defaultValue={values?.notes ?? order?.notes ?? ""}
-                placeholder="Observacoes do pedido, entrega ou faturamento"
+                placeholder="Observações do pedido, entrega ou faturamento"
               />
             </div>
 
@@ -524,7 +524,7 @@ function OrderFormSheet({
                 Limpar
               </Button>
               <SubmitButton className="sm:w-auto">
-                {order ? "Salvar alteracoes" : "Salvar pedido"}
+                {order ? "Salvar alterações" : "Salvar pedido"}
               </SubmitButton>
             </div>
           </SheetFooter>
@@ -557,16 +557,16 @@ function OrderDetailSheet({ order }: { order: OrderListItem }) {
           <DetailRow label="Empresa do cliente" value={order.customerCompany} />
           <DetailRow label="Transportadora" value={order.carrierName} />
           <div className="grid gap-3 sm:grid-cols-2">
-            <DetailRow label="Operacao" value="Venda" />
-            <DetailRow label="Condicao de pagamento" value={paymentTermLabels[order.paymentTerm]} />
+            <DetailRow label="Operação" value="Venda" />
+            <DetailRow label="Condição de pagamento" value={paymentTermLabels[order.paymentTerm]} />
           </div>
           <div className="grid gap-3 sm:grid-cols-2">
             <DetailRow label="Frete" value={freightTypeLabels[order.freightType]} />
             <DetailRow label="Entrega" value={deliveryTypeLabels[order.deliveryType]} />
           </div>
           <DetailRow label="Empresa que recebe" value={order.receivingCompany} />
-          <DetailRow label="Nº pedido cliente" value={order.customerOrderNumber} />
-          <DetailRow label="Observacao" value={order.notes} />
+          <DetailRow label="Nº do pedido do cliente" value={order.customerOrderNumber} />
+          <DetailRow label="Observação" value={order.notes} />
           <div className="grid gap-3 sm:grid-cols-3">
             <DetailRow label="Itens" value={String(order.itemsCount)} />
             <DetailRow label="Total" value={formatCurrency(order.total)} />
@@ -585,9 +585,9 @@ function EmptyState() {
         <div className="mx-auto mb-4 flex size-12 items-center justify-center rounded-full bg-muted">
           <Search className="size-5 text-muted-foreground" />
         </div>
-        <h3 className="text-base font-semibold">Nao foram encontrados pedidos</h3>
+        <h3 className="text-base font-semibold">Não foram encontrados pedidos</h3>
         <p className="mt-1 max-w-sm text-sm text-muted-foreground">
-          Tente refazer a busca clicando no icone acima ou registre um novo pedido.
+          Tente refazer a busca clicando no ícone acima ou registre um novo pedido.
         </p>
       </div>
     </div>
@@ -619,7 +619,7 @@ export function OrdersPageClient({
             initialOpen={openNewOrder}
             triggerLabel="Novo pedido"
             title="Novo pedido"
-            description="Preencha os dados comerciais do pedido para registrar a operacao."
+            description="Preencha os dados comerciais do pedido para registrar a operação."
           />
         </div>
       </div>
@@ -628,7 +628,7 @@ export function OrdersPageClient({
         <CardHeader className="gap-4">
           <div>
             <CardTitle>Lista de pedidos</CardTitle>
-            <CardDescription>Busque por numero, cliente, empresa recebedora e observacoes.</CardDescription>
+            <CardDescription>Busque por número, cliente, empresa recebedora e observações.</CardDescription>
           </div>
 
           <GlobalSearchForm
@@ -716,7 +716,7 @@ export function OrdersPageClient({
           initialOpen={openNewOrder}
           triggerLabel="Novo pedido"
           title="Novo pedido"
-          description="Preencha os dados comerciais do pedido para registrar a operacao."
+          description="Preencha os dados comerciais do pedido para registrar a operação."
           trigger={
             <MobileFloatingActionButton>
               <ShoppingCart className="size-4" />
