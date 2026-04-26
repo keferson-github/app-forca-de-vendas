@@ -209,14 +209,19 @@ function parseCustomerAutocompletePayload(payload: unknown): OrderAutocompleteCu
 }
 
 function getCustomerSearchLabel(customer: OrderAutocompleteCustomer) {
-  const normalizedName = customer.name.trim().toLocaleLowerCase("pt-BR");
-  const normalizedCompanyName = customer.companyName?.trim().toLocaleLowerCase("pt-BR");
-
-  if (!customer.companyName || normalizedCompanyName === normalizedName) {
+  if (!customer.companyName) {
     return customer.name;
   }
 
   return `${customer.name} - ${customer.companyName}`;
+}
+
+function getCustomerCompanyLabel(customer: OrderAutocompleteCustomer) {
+  if (!customer.companyName) {
+    return "Empresa não informada";
+  }
+
+  return customer.companyName;
 }
 
 function buildOrderCustomer(order?: OrderListItem): OrderAutocompleteCustomer | null {
@@ -262,7 +267,7 @@ function CustomerLookupField({ inputId, selectedCustomer, onSelect }: CustomerLo
       <SearchInputWithAutocomplete
         query={selectedCustomer ? getCustomerSearchLabel(selectedCustomer) : ""}
         placeholder="Buscar cliente por nome, empresa ou número"
-        minChars={2}
+        minChars={1}
         autocomplete={{
           endpoint: "/api/clientes/autocomplete",
           loadingLabel: "Buscando clientes...",
@@ -274,7 +279,7 @@ function CustomerLookupField({ inputId, selectedCustomer, onSelect }: CustomerLo
             <>
               <span className="text-sm font-medium">{item.name}</span>
               <span className="text-xs text-muted-foreground">
-                {item.companyName || item.customerCode || item.phone || "Cliente sem complemento"}
+                {getCustomerCompanyLabel(item)}
               </span>
             </>
           ),
@@ -289,7 +294,7 @@ function CustomerLookupField({ inputId, selectedCustomer, onSelect }: CustomerLo
         onAutocompleteSelect={onSelect}
       />
       <p className="text-xs text-muted-foreground">
-        Digite ao menos 2 caracteres e selecione o cliente na lista.
+        Digite ao menos 1 caractere e selecione o cliente na lista.
       </p>
     </div>
   );
@@ -364,7 +369,7 @@ function OrderFormSheet({
             <input type="hidden" name="deliveryType" value={selectedDeliveryType} />
 
             <CustomerLookupField
-              key={`${order?.id ?? "new"}-${customerLookupVersion}-${selectedCustomer?.id ?? "empty"}`}
+              key={`${order?.id ?? "new"}-${customerLookupVersion}`}
               inputId={`${order?.id ?? "new"}-customerId`}
               selectedCustomer={selectedCustomer}
               onSelect={setSelectedCustomer}

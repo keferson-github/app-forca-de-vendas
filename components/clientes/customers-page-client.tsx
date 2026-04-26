@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { MoreHorizontal, Search, Users } from "lucide-react";
 import { CustomerDeleteSheet } from "@/components/clientes/customer-delete-sheet";
 import { CustomerDetailSheet } from "@/components/clientes/customer-detail-sheet";
@@ -80,7 +81,7 @@ function SegmentLink({
 }) {
   return (
     <Button asChild variant={active ? "default" : "outline"} size="sm">
-      <a href={href}>{children}</a>
+      <Link href={href} scroll={false}>{children}</Link>
     </Button>
   );
 }

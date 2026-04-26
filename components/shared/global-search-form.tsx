@@ -104,6 +104,7 @@ export function SearchInputWithAutocomplete<TItem = never>({
   const [autocompleteItems, setAutocompleteItems] = useState<TItem[]>([]);
   const [isAutocompleteLoading, setIsAutocompleteLoading] = useState(false);
   const [isAutocompleteVisible, setIsAutocompleteVisible] = useState(false);
+  const [inputValue, setInputValue] = useState(query);
   const [autocompleteTerm, setAutocompleteTerm] = useState(query);
 
   function clearAutocompleteResources() {
@@ -192,10 +193,7 @@ export function SearchInputWithAutocomplete<TItem = never>({
 
     const nextValue = autocomplete.getItemValue(item);
 
-    if (searchInputRef.current) {
-      searchInputRef.current.value = nextValue;
-    }
-
+    setInputValue(nextValue);
     setAutocompleteTerm(nextValue);
     setIsAutocompleteVisible(false);
     setAutocompleteItems([]);
@@ -213,12 +211,13 @@ export function SearchInputWithAutocomplete<TItem = never>({
       <Input
         ref={searchInputRef}
         name={searchParamName}
-        defaultValue={query}
+        value={inputValue}
         placeholder={placeholder}
         className="pl-9"
         {...inputProps}
         onChange={(event) => {
           const nextValue = event.currentTarget.value;
+          setInputValue(nextValue);
           onValueChange?.(nextValue);
           inputProps?.onChange?.(event);
 
