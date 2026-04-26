@@ -11,7 +11,6 @@ import {
   IconCirclePlusFilled,
   IconClipboardList,
   IconLayoutDashboard,
-  IconInnerShadowTop,
   IconLogout,
   IconMapPinCheck,
   IconNotes,
@@ -71,6 +70,24 @@ function isActivePath(pathname: string, url: string) {
   return pathname === url || pathname.startsWith(`${url}/`);
 }
 
+const collapsedBrandShellClass =
+  "group-data-[collapsible=icon]:mx-auto group-data-[collapsible=icon]:mt-3 group-data-[collapsible=icon]:mb-2 group-data-[collapsible=icon]:h-auto group-data-[collapsible=icon]:w-auto group-data-[collapsible=icon]:rounded-[1.8rem] group-data-[collapsible=icon]:bg-transparent group-data-[collapsible=icon]:p-0 group-data-[collapsible=icon]:shadow-none";
+
+const collapsedBrandMarkClass =
+  "relative flex aspect-square size-9 items-center justify-center overflow-hidden rounded-[1.35rem] border border-white/8 bg-[linear-gradient(180deg,rgba(255,255,255,0.06),rgba(255,255,255,0.01)),linear-gradient(155deg,rgba(15,23,42,0.94),rgba(6,10,18,0.98))] shadow-[0_20px_34px_-24px_rgba(0,0,0,0.72),inset_0_1px_0_rgba(255,255,255,0.08)] group-data-[collapsible=icon]:size-[3.15rem] group-data-[collapsible=icon]:rounded-[1.55rem] group-data-[collapsible=icon]:border-white/10 group-data-[collapsible=icon]:shadow-[0_24px_42px_-26px_rgba(0,0,0,0.88),0_0_0_1px_rgba(148,163,184,0.08),inset_0_1px_0_rgba(255,255,255,0.11)]";
+
+const collapsedBrandMarkCleanClass =
+  "relative flex aspect-square size-[3.15rem] items-center justify-center overflow-hidden rounded-full border-0 bg-transparent shadow-none";
+
+const collapsedPrimaryCtaClass =
+  "min-w-8 bg-primary text-primary-foreground duration-200 ease-linear hover:bg-primary/90 hover:text-primary-foreground active:bg-primary/90 active:text-primary-foreground group-data-[collapsible=icon]:!border-0 group-data-[collapsible=icon]:!bg-transparent group-data-[collapsible=icon]:!shadow-none group-data-[collapsible=icon]:text-emerald-300 group-data-[collapsible=icon]:hover:-translate-y-0.5 group-data-[collapsible=icon]:hover:text-emerald-200 group-data-[collapsible=icon]:active:translate-y-0 group-data-[collapsible=icon]:[&>a>svg]:size-[20px]";
+
+const collapsedPrimaryCtaCleanClass =
+  "group-data-[collapsible=icon]:text-emerald-300 group-data-[collapsible=icon]:transition-[transform,color,opacity] group-data-[collapsible=icon]:duration-200 group-data-[collapsible=icon]:hover:-translate-y-0.5 group-data-[collapsible=icon]:hover:text-emerald-200 group-data-[collapsible=icon]:[&>a>svg]:size-[19px] group-data-[collapsible=icon]:[&>a>span]:hidden";
+
+const collapsedNavButtonClass =
+  "group-data-[collapsible=icon]:text-sidebar-foreground/78 group-data-[collapsible=icon]:transition-[transform,color,opacity] group-data-[collapsible=icon]:duration-200 group-data-[collapsible=icon]:hover:-translate-y-0.5 group-data-[collapsible=icon]:hover:text-white group-data-[collapsible=icon]:data-[active=true]:text-white group-data-[collapsible=icon]:[&>a>svg]:size-[18px]";
+
 function NavGroup({ label, items }: { label: string; items: NavItem[] }) {
   const pathname = usePathname();
   const { isMobile, setOpenMobile } = useSidebar();
@@ -88,21 +105,27 @@ function NavGroup({ label, items }: { label: string; items: NavItem[] }) {
         <SidebarMenu>
           {items.map((item) => (
             <SidebarMenuItem key={item.url}>
+              {(() => {
+                const active = isActivePath(pathname, item.url);
+
+                return (
               <SidebarMenuButton
                 asChild
                 tooltip={item.title}
-                isActive={isActivePath(pathname, item.url)}
+                isActive={active}
                 className={cn(
-                  item.title === "Dashboard" && "group-data-[collapsible=icon]:text-indigo-500"
+                  collapsedNavButtonClass,
+                  item.title === "Clientes"
+                    && "group-data-[collapsible=icon]:data-[active=true]:text-cyan-300 group-data-[collapsible=icon]:data-[active=true]:drop-shadow-[0_0_10px_rgba(34,211,238,0.32)]"
                 )}
               >
                 <Link href={item.url} onClick={handleNavigate}>
-                  <item.icon className={cn(
-                    item.title === "Dashboard" && "group-data-[collapsible=icon]:drop-shadow-[0_0_8px_rgba(99,102,241,0.5)]"
-                  )} />
+                  <item.icon />
                   <span>{item.title}</span>
                 </Link>
               </SidebarMenuButton>
+                );
+              })()}
             </SidebarMenuItem>
           ))}
         </SidebarMenu>
@@ -112,7 +135,8 @@ function NavGroup({ label, items }: { label: string; items: NavItem[] }) {
 }
 
 export function AppSidebar({ user, ...props }: AppSidebarProps) {
-  const { isMobile, setOpenMobile } = useSidebar();
+  const { isMobile, setOpenMobile, state } = useSidebar();
+  const isCollapsedDesktop = !isMobile && state === "collapsed";
   const initials = user.name
     .split(" ")
     .filter(Boolean)
@@ -134,19 +158,35 @@ export function AppSidebar({ user, ...props }: AppSidebarProps) {
             <SidebarMenuButton
               asChild
               size="lg"
-              className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
+              className={cn(
+                "data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground",
+                collapsedBrandShellClass
+              )}
             >
-              <Link href="/dashboard" onClick={handleNavigate}>
-                <div className="flex aspect-square size-8 items-center justify-center overflow-hidden rounded-full border border-sidebar-border bg-white group-data-[collapsible=icon]:size-8 group-data-[collapsible=icon]:mx-auto">
+              <Link
+                href="/dashboard"
+                onClick={handleNavigate}
+                className="flex items-center gap-3 group-data-[collapsible=icon]:justify-center"
+              >
+                <div
+                  className={isCollapsedDesktop ? collapsedBrandMarkCleanClass : collapsedBrandMarkClass}
+                >
+                  {isCollapsedDesktop ? null : (
+                    <>
+                      <span className="pointer-events-none absolute inset-[1px] rounded-[inherit] bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.14),transparent_48%)] opacity-75 group-data-[collapsible=icon]:opacity-100" />
+                      <span className="pointer-events-none absolute -inset-3 rounded-[2rem] bg-[radial-gradient(circle,rgba(45,212,191,0.22),transparent_62%)] opacity-0 blur-xl group-data-[collapsible=icon]:opacity-100" />
+                      <span className="pointer-events-none absolute inset-[6px] rounded-[1.15rem] border border-white/8 bg-[linear-gradient(180deg,rgba(15,23,42,0.36),rgba(15,23,42,0.08))] group-data-[collapsible=icon]:inset-[5px] group-data-[collapsible=icon]:rounded-[1.3rem]" />
+                    </>
+                  )}
                   <Image
                     src="/img/logo-esb.jpeg"
                     alt="Logo Eu Sou o Bichão"
-                    width={32}
-                    height={32}
-                    className="h-full w-full object-cover"
+                    width={44}
+                    height={44}
+                    className="relative z-10 h-full w-full rounded-[inherit] object-cover"
                   />
                 </div>
-                <div className="grid flex-1 text-left text-sm leading-tight">
+                <div className="grid flex-1 text-left text-sm leading-tight group-data-[collapsible=icon]:hidden">
                   <span className="truncate font-semibold">Forca de Vendas</span>
                   <span className="truncate text-xs">Representante Comercial</span>
                 </div>
@@ -163,12 +203,21 @@ export function AppSidebar({ user, ...props }: AppSidebarProps) {
               <SidebarMenuItem>
                 <SidebarMenuButton
                   asChild
-                  tooltip="Novo pedido"
-                  className="min-w-8 bg-primary text-primary-foreground duration-200 ease-linear hover:bg-primary/90 hover:text-primary-foreground active:bg-primary/90 active:text-primary-foreground group-data-[collapsible=icon]:size-8! group-data-[collapsible=icon]:rounded-full group-data-[collapsible=icon]:bg-linear-to-br group-data-[collapsible=icon]:from-emerald-400 group-data-[collapsible=icon]:to-teal-600 group-data-[collapsible=icon]:shadow-md group-data-[collapsible=icon]:shadow-emerald-500/20"
+                  tooltip="Novo cliente"
+                  className={cn(
+                    isCollapsedDesktop
+                      ? collapsedPrimaryCtaCleanClass
+                      : "rounded-xl border border-white/6 bg-[linear-gradient(180deg,rgba(255,255,255,0.06),rgba(255,255,255,0.02)),linear-gradient(135deg,rgba(16,185,129,0.94),rgba(13,148,136,0.92))] text-white shadow-[0_18px_32px_-20px_rgba(20,184,166,0.72)] hover:text-white hover:shadow-[0_20px_36px_-20px_rgba(20,184,166,0.82)]",
+                    collapsedPrimaryCtaClass
+                  )}
                 >
-                  <Link href="/pedidos" onClick={handleNavigate}>
-                    <IconCirclePlusFilled />
-                    <span>Novo pedido</span>
+                  <Link
+                    href="/clientes?open=new-customer"
+                    onClick={handleNavigate}
+                    className={cn(isCollapsedDesktop && "flex items-center justify-center")}
+                  >
+                    {isCollapsedDesktop ? <IconUserPlus /> : <IconCirclePlusFilled />}
+                    <span>Novo cliente</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>

@@ -45,6 +45,7 @@ import {
 } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
 import { useNoticeToast } from "@/hooks/use-notice-toast";
+import { useSheetSlideGsap } from "@/hooks/use-sheet-slide-gsap";
 
 export type CarrierListItem = {
   id: string;
@@ -151,9 +152,11 @@ function CarrierFormSheet({
 }: CarrierFormSheetProps) {
   const action = carrier ? updateCarrierAction : createCarrierAction;
   const [state, formAction] = useActionState(action, initialState);
+  const { open, onOpenChange, contentRef } = useSheetSlideGsap();
+  const values = state.values;
 
   return (
-    <Sheet>
+    <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetTrigger asChild>
         {trigger ?? (
           <Button variant={variant} size={size}>
@@ -162,7 +165,10 @@ function CarrierFormSheet({
           </Button>
         )}
       </SheetTrigger>
-      <SheetContent className="w-full overflow-y-auto sm:max-w-xl">
+      <SheetContent
+        ref={contentRef}
+        className="w-full overflow-y-auto data-[state=open]:animate-none sm:max-w-xl"
+      >
         <form action={formAction} className="flex min-h-full flex-col">
           <SheetHeader>
             <SheetTitle>{title}</SheetTitle>
@@ -170,14 +176,14 @@ function CarrierFormSheet({
           </SheetHeader>
 
           <div className="grid gap-4 px-4 pb-4">
-            {carrier ? <input type="hidden" name="id" value={carrier.id} /> : null}
+            {carrier ? <input type="hidden" name="id" value={values?.id || carrier.id} /> : null}
 
             <div className="grid gap-2">
               <Label htmlFor={`${carrier?.id ?? "new"}-name`}>Nome da transportadora</Label>
               <Input
                 id={`${carrier?.id ?? "new"}-name`}
                 name="name"
-                defaultValue={carrier?.name ?? ""}
+                defaultValue={values?.name ?? carrier?.name ?? ""}
                 placeholder="Nome da transportadora"
                 required
               />
@@ -189,7 +195,7 @@ function CarrierFormSheet({
                 <Input
                   id={`${carrier?.id ?? "new"}-contact`}
                   name="contact"
-                  defaultValue={carrier?.contact ?? ""}
+                  defaultValue={values?.contact ?? carrier?.contact ?? ""}
                   placeholder="Nome do contato"
                 />
               </div>
@@ -198,7 +204,7 @@ function CarrierFormSheet({
                 <Input
                   id={`${carrier?.id ?? "new"}-phone`}
                   name="phone"
-                  defaultValue={formatPhone(carrier?.phone ?? "")}
+                  defaultValue={values?.phone ?? formatPhone(carrier?.phone ?? "")}
                   placeholder="Telefone principal"
                   autoComplete="tel"
                   inputMode="tel"
@@ -215,7 +221,7 @@ function CarrierFormSheet({
               <Textarea
                 id={`${carrier?.id ?? "new"}-notes`}
                 name="notes"
-                defaultValue={carrier?.notes ?? ""}
+                defaultValue={values?.notes ?? carrier?.notes ?? ""}
                 placeholder="Instrucoes de coleta, entrega ou observacoes comerciais"
               />
             </div>

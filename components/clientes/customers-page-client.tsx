@@ -28,6 +28,7 @@ import { useNoticeToast } from "@/hooks/use-notice-toast";
 
 type CustomersPageClientProps = {
   customers: CustomerListItem[];
+  openNewCustomer: boolean;
   query: string;
   segment: "all" | "customers" | "prospects";
   pagination: {
@@ -86,6 +87,7 @@ function SegmentLink({
 
 export function CustomersPageClient({
   customers,
+  openNewCustomer,
   query,
   segment,
   pagination,
@@ -106,6 +108,8 @@ export function CustomersPageClient({
         </div>
         <div className="hidden flex-wrap gap-2 md:flex">
           <CustomerFormSheet
+            key={openNewCustomer ? "new-customer-open" : "new-customer-closed"}
+            initialOpen={openNewCustomer}
             triggerLabel="Novo cliente"
             title="Novo cliente"
             description="Cadastre uma empresa ou pessoa que ja faz parte da carteira."
@@ -220,6 +224,8 @@ export function CustomersPageClient({
 
       <MobileFloatingAction>
         <CustomerFormSheet
+          key={openNewCustomer ? "mobile-new-customer-open" : "mobile-new-customer-closed"}
+          initialOpen={openNewCustomer}
           triggerLabel="Novo cliente"
           title="Novo cliente"
           description="Cadastre uma empresa ou pessoa que ja faz parte da carteira."

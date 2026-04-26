@@ -16,8 +16,20 @@ import {
 } from "@/lib/product-categories";
 import { prisma } from "@/lib/prisma";
 
+export type ProductFormValues = {
+  id: string;
+  code: string;
+  name: string;
+  category: string;
+  subcategory: string;
+  removeImage: boolean;
+  price: string;
+  description: string;
+};
+
 export type ProductFormState = {
   error?: string;
+  values?: ProductFormValues;
 };
 
 const MAX_IMAGE_SIZE_BYTES = 5 * 1024 * 1024;
@@ -323,17 +335,39 @@ async function requireUserId() {
   return session.user.id;
 }
 
-function parseProductForm(formData: FormData) {
-  return productSchema.safeParse({
-    id: String(formData.get("id") ?? "") || undefined,
-    code: formData.get("code"),
-    name: formData.get("name"),
-    category: formData.get("category"),
-    subcategory: formData.get("subcategory"),
+function getTextValue(formData: FormData, field: string) {
+  const value = formData.get(field);
+  return typeof value === "string" ? value : "";
+}
+
+function getProductFormValues(formData: FormData): ProductFormValues {
+  return {
+    id: getTextValue(formData, "id"),
+    code: getTextValue(formData, "code"),
+    name: getTextValue(formData, "name"),
+    category: getTextValue(formData, "category"),
+    subcategory: getTextValue(formData, "subcategory"),
     removeImage: formData.get("removeImage") === "on" || formData.get("removeImage") === "true",
-    price: formData.get("price"),
-    description: formData.get("description"),
+    price: getTextValue(formData, "price"),
+    description: getTextValue(formData, "description"),
+  };
+}
+
+function parseProductForm(formData: FormData) {
+  const values = getProductFormValues(formData);
+
+  const parsed = productSchema.safeParse({
+    id: values.id || undefined,
+    code: values.code,
+    name: values.name,
+    category: values.category,
+    subcategory: values.subcategory,
+    removeImage: values.removeImage,
+    price: values.price,
+    description: values.description,
   });
+
+  return { values, parsed };
 }
 
 function productPayload(data: z.infer<typeof productSchema>, imageUrl: string | null) {
@@ -359,16 +393,19 @@ export async function createProductAction(
   formData: FormData
 ): Promise<ProductFormState> {
   const userId = await requireUserId();
-  const parsed = parseProductForm(formData);
+  const { values, parsed } = parseProductForm(formData);
   const imageFile = extractImageFile(formData);
 
   if (!parsed.success) {
-    return { error: parsed.error.issues[0]?.message ?? "Dados inválidos." };
+    return {
+      error: parsed.error.issues[0]?.message ?? "Dados inválidos.",
+      values,
+    };
   }
 
   const imageFileError = await validateImageFile(imageFile);
   if (imageFileError) {
-    return { error: imageFileError };
+    return { error: imageFileError, values };
   }
 
   let imageUrl: string | null = null;
@@ -377,7 +414,7 @@ export async function createProductAction(
     try {
       imageUrl = await saveImageFile(imageFile);
     } catch (error) {
-      return { error: getImageUploadErrorMessage(error) };
+      return { error: getImageUploadErrorMessage(error), values };
     }
   }
 
@@ -395,7 +432,7 @@ export async function createProductAction(
       error instanceof Prisma.PrismaClientKnownRequestError &&
       error.code === "P2002"
     ) {
-      return { error: "Já existe um produto com esse código." };
+      return { error: "Já existe um produto com esse código.", values };
     }
 
     await removeImageFile(imageUrl);
@@ -412,20 +449,23 @@ export async function updateProductAction(
   formData: FormData
 ): Promise<ProductFormState> {
   const userId = await requireUserId();
-  const parsed = parseProductForm(formData);
+  const { values, parsed } = parseProductForm(formData);
   const imageFile = extractImageFile(formData);
 
   if (!parsed.success) {
-    return { error: parsed.error.issues[0]?.message ?? "Dados inválidos." };
+    return {
+      error: parsed.error.issues[0]?.message ?? "Dados inválidos.",
+      values,
+    };
   }
 
   if (!parsed.data.id) {
-    return { error: "Produto não identificado." };
+    return { error: "Produto não identificado.", values };
   }
 
   const imageFileError = await validateImageFile(imageFile);
   if (imageFileError) {
-    return { error: imageFileError };
+    return { error: imageFileError, values };
   }
 
   const currentProduct = await prisma.product.findFirst({
@@ -440,7 +480,7 @@ export async function updateProductAction(
   });
 
   if (!currentProduct) {
-    return { error: "Produto não encontrado ou sem permissão para editar." };
+    return { error: "Produto não encontrado ou sem permissão para editar.", values };
   }
 
   const shouldRemoveCurrentImage = parsed.data.removeImage && !imageFile;
@@ -450,7 +490,7 @@ export async function updateProductAction(
     try {
       nextImageUrl = await saveImageFile(imageFile);
     } catch (error) {
-      return { error: getImageUploadErrorMessage(error) };
+      return { error: getImageUploadErrorMessage(error), values };
     }
   }
 
@@ -464,7 +504,7 @@ export async function updateProductAction(
     });
 
     if (updated.count === 0) {
-      return { error: "Produto não encontrado ou sem permissão para editar." };
+      return { error: "Produto não encontrado ou sem permissão para editar.", values };
     }
 
     if (
@@ -481,7 +521,7 @@ export async function updateProductAction(
       error instanceof Prisma.PrismaClientKnownRequestError &&
       error.code === "P2002"
     ) {
-      return { error: "Já existe um produto com esse código." };
+      return { error: "Já existe um produto com esse código.", values };
     }
 
     if (imageFile && nextImageUrl) {

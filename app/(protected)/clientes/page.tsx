@@ -4,6 +4,7 @@ import { CustomersPageClient } from "@/components/clientes/customers-page-client
 import { prisma } from "@/lib/prisma";
 
 type SearchParams = Promise<{
+  open?: string;
   q?: string;
   segment?: string;
   page?: string;
@@ -64,6 +65,7 @@ export default async function ClientesPage(props: { searchParams: SearchParams }
   }
 
   const query = (searchParams.q ?? "").trim();
+  const openNewCustomer = searchParams.open === "new-customer";
   const segment = getSegment(searchParams.segment);
   const requestedPage = parsePage(searchParams.page);
   const where = buildWhere(session.user.id, query, segment);
@@ -110,6 +112,7 @@ export default async function ClientesPage(props: { searchParams: SearchParams }
           contacts: customer._count.contacts,
         },
       }))}
+      openNewCustomer={openNewCustomer}
       query={query}
       segment={segment}
       pagination={{

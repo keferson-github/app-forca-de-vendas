@@ -29,6 +29,7 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { Textarea } from "@/components/ui/textarea";
+import { useSheetSlideGsap } from "@/hooks/use-sheet-slide-gsap";
 
 export type CustomerListItem = {
   id: string;
@@ -53,6 +54,7 @@ export type CustomerListItem = {
 type CustomerFormSheetProps = {
   customer?: CustomerListItem;
   defaultIsProspect?: boolean;
+  initialOpen?: boolean;
   triggerLabel: string;
   title: string;
   description: string;
@@ -159,6 +161,7 @@ function formatPhone(value: string) {
 export function CustomerFormSheet({
   customer,
   defaultIsProspect = false,
+  initialOpen = false,
   triggerLabel,
   title,
   description,
@@ -168,12 +171,16 @@ export function CustomerFormSheet({
 }: CustomerFormSheetProps) {
   const action = customer ? updateCustomerAction : createCustomerAction;
   const [state, formAction] = useActionState(action, initialState);
-  const isProspect = customer?.isProspect ?? defaultIsProspect;
+  const { open, onOpenChange, contentRef } = useSheetSlideGsap(initialOpen);
+  const values = state.values;
+  const isProspect = values?.isProspect ?? customer?.isProspect ?? defaultIsProspect;
   const prospectStatus =
-    customer?.prospectStatus ?? (defaultIsProspect ? "PROSPECT" : "CONVERTED");
+    values?.prospectStatus
+    ?? customer?.prospectStatus
+    ?? (defaultIsProspect ? "PROSPECT" : "CONVERTED");
 
   return (
-    <Sheet>
+    <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetTrigger asChild>
         {trigger ?? (
           <Button variant={variant} size={size}>
@@ -182,7 +189,10 @@ export function CustomerFormSheet({
           </Button>
         )}
       </SheetTrigger>
-      <SheetContent className="w-full overflow-y-auto sm:max-w-xl">
+      <SheetContent
+        ref={contentRef}
+        className="w-full overflow-y-auto data-[state=open]:animate-none sm:max-w-xl"
+      >
         <form action={formAction} className="flex min-h-full flex-col">
           <SheetHeader>
             <SheetTitle>{title}</SheetTitle>
@@ -190,14 +200,14 @@ export function CustomerFormSheet({
           </SheetHeader>
 
           <div className="grid gap-4 px-4 pb-4">
-            {customer ? <input type="hidden" name="id" value={customer.id} /> : null}
+            {customer ? <input type="hidden" name="id" value={values?.id || customer.id} /> : null}
 
             <div className="grid gap-2">
               <Label htmlFor={`${customer?.id ?? "new"}-name`}>Nome do cliente</Label>
               <Input
                 id={`${customer?.id ?? "new"}-name`}
                 name="name"
-                defaultValue={customer?.name ?? ""}
+                defaultValue={values?.name ?? customer?.name ?? ""}
                 placeholder="Nome do cliente"
                 autoComplete="organization"
                 required
@@ -210,7 +220,7 @@ export function CustomerFormSheet({
                 <Input
                   id={`${customer?.id ?? "new"}-companyName`}
                   name="companyName"
-                  defaultValue={customer?.companyName ?? ""}
+                  defaultValue={values?.companyName ?? customer?.companyName ?? ""}
                   placeholder="Razao social ou fantasia"
                 />
               </div>
@@ -219,7 +229,7 @@ export function CustomerFormSheet({
                 <Input
                   id={`${customer?.id ?? "new"}-cnpjCpf`}
                   name="cnpjCpf"
-                  defaultValue={formatCpfCnpj(customer?.cnpjCpf ?? "")}
+                  defaultValue={values?.cnpjCpf ?? formatCpfCnpj(customer?.cnpjCpf ?? "")}
                   placeholder="00.000.000/0000-00"
                   inputMode="numeric"
                   maxLength={18}
@@ -236,7 +246,7 @@ export function CustomerFormSheet({
                 <Input
                   id={`${customer?.id ?? "new"}-customerCode`}
                   name="customerCode"
-                  defaultValue={customer?.customerCode ?? ""}
+                  defaultValue={values?.customerCode ?? customer?.customerCode ?? ""}
                   placeholder="Codigo interno"
                 />
               </div>
@@ -245,7 +255,7 @@ export function CustomerFormSheet({
                 <Input
                   id={`${customer?.id ?? "new"}-phone`}
                   name="phone"
-                  defaultValue={formatPhone(customer?.phone ?? "")}
+                  defaultValue={values?.phone ?? formatPhone(customer?.phone ?? "")}
                   placeholder="Telefone ou WhatsApp"
                   autoComplete="tel"
                   inputMode="tel"
@@ -264,7 +274,7 @@ export function CustomerFormSheet({
               <Textarea
                 id={`${customer?.id ?? "new"}-commercialAddress`}
                 name="commercialAddress"
-                defaultValue={customer?.commercialAddress ?? ""}
+                defaultValue={values?.commercialAddress ?? customer?.commercialAddress ?? ""}
                 placeholder="Rua, numero, bairro, cidade e UF"
               />
             </div>
@@ -276,7 +286,7 @@ export function CustomerFormSheet({
               <Textarea
                 id={`${customer?.id ?? "new"}-deliveryAddress`}
                 name="deliveryAddress"
-                defaultValue={customer?.deliveryAddress ?? ""}
+                defaultValue={values?.deliveryAddress ?? customer?.deliveryAddress ?? ""}
                 placeholder="Endereco usado para entregas"
               />
             </div>

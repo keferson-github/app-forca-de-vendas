@@ -49,6 +49,7 @@ import {
 import { TableCell, TableRow } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
 import { useNoticeToast } from "@/hooks/use-notice-toast";
+import { useSheetSlideGsap } from "@/hooks/use-sheet-slide-gsap";
 import {
   getDefaultProductSubcategory,
   getProductCategoryLabel,
@@ -181,6 +182,14 @@ function formatPriceMask(value: string) {
   }).format(amount);
 }
 
+function toCategoryValue(value: string | undefined, fallback: ProductCategoryValue) {
+  if (value && productCategoryValues.includes(value as ProductCategoryValue)) {
+    return value as ProductCategoryValue;
+  }
+
+  return fallback;
+}
+
 function EmptyState() {
   return (
     <div className="grid min-h-[280px] place-items-center px-4 py-12 text-center">
@@ -263,13 +272,15 @@ function ProductFormSheet({
 }: ProductFormSheetProps) {
   const action = product ? updateProductAction : createProductAction;
   const [state, formAction] = useActionState(action, initialState);
+  const { open, onOpenChange, contentRef } = useSheetSlideGsap();
+  const values = state.values;
   const codeInputRef = useRef<HTMLInputElement | null>(null);
   const generateAnimationTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [isGeneratingCode, setIsGeneratingCode] = useState(false);
-  const initialCategory = product?.category ?? "ACESSORIOS";
+  const initialCategory = toCategoryValue(values?.category, product?.category ?? "ACESSORIOS");
   const [selectedCategory, setSelectedCategory] = useState<ProductCategoryValue>(initialCategory);
   const [selectedSubcategory, setSelectedSubcategory] = useState(
-    product?.subcategory ?? getDefaultProductSubcategory(initialCategory)
+    values?.subcategory ?? product?.subcategory ?? getDefaultProductSubcategory(initialCategory)
   );
   const subcategoryOptions = getProductSubcategoryOptions(selectedCategory);
   const effectiveSubcategory = subcategoryOptions.some(
@@ -287,7 +298,7 @@ function ProductFormSheet({
   }, []);
 
   return (
-    <Sheet>
+    <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetTrigger asChild>
         {trigger ?? (
           <Button variant={variant} size={size}>
@@ -296,7 +307,10 @@ function ProductFormSheet({
           </Button>
         )}
       </SheetTrigger>
-      <SheetContent className="w-full overflow-y-auto sm:max-w-xl">
+      <SheetContent
+        ref={contentRef}
+        className="w-full overflow-y-auto data-[state=open]:animate-none sm:max-w-xl"
+      >
         <form action={formAction} className="flex min-h-full flex-col">
           <SheetHeader>
             <SheetTitle>{title}</SheetTitle>
@@ -304,7 +318,7 @@ function ProductFormSheet({
           </SheetHeader>
 
           <div className="grid gap-4 px-4 pb-4">
-            {product ? <input type="hidden" name="id" value={product.id} /> : null}
+            {product ? <input type="hidden" name="id" value={values?.id || product.id} /> : null}
 
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="grid gap-2">
@@ -339,7 +353,7 @@ function ProductFormSheet({
                   ref={codeInputRef}
                   id={`${product?.id ?? "new"}-code`}
                   name="code"
-                  defaultValue={product?.code ?? ""}
+                  defaultValue={values?.code ?? product?.code ?? ""}
                   placeholder="Ex.: PRD-AB12CD"
                   required
                 />
@@ -353,7 +367,7 @@ function ProductFormSheet({
                   <Input
                     id={`${product?.id ?? "new"}-price`}
                     name="price"
-                    defaultValue={product ? formatPriceInput(product.price) : ""}
+                    defaultValue={values?.price ?? (product ? formatPriceInput(product.price) : "")}
                     placeholder="0,00"
                     inputMode="numeric"
                     maxLength={17}
@@ -372,7 +386,7 @@ function ProductFormSheet({
               <Input
                 id={`${product?.id ?? "new"}-name`}
                 name="name"
-                defaultValue={product?.name ?? ""}
+                defaultValue={values?.name ?? product?.name ?? ""}
                 placeholder="Nome do produto"
                 required
               />
@@ -449,7 +463,7 @@ function ProductFormSheet({
                   <Checkbox
                     id={`${product.id}-removeImage`}
                     name="removeImage"
-                    defaultChecked={false}
+                    defaultChecked={values?.removeImage ?? false}
                   />
                   <Label htmlFor={`${product.id}-removeImage`} className="cursor-pointer text-sm font-normal">
                     Remover imagem atual
@@ -463,7 +477,7 @@ function ProductFormSheet({
               <Textarea
                 id={`${product?.id ?? "new"}-description`}
                 name="description"
-                defaultValue={product?.description ?? ""}
+                defaultValue={values?.description ?? product?.description ?? ""}
                 placeholder="Detalhes técnicos, aplicações e observações comerciais"
               />
             </div>

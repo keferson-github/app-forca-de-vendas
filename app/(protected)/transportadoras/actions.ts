@@ -7,8 +7,17 @@ import { z } from "zod";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 
+export type CarrierFormValues = {
+  id: string;
+  name: string;
+  contact: string;
+  phone: string;
+  notes: string;
+};
+
 export type CarrierFormState = {
   error?: string;
+  values?: CarrierFormValues;
 };
 
 const carrierSchema = z.object({
@@ -33,14 +42,33 @@ async function requireUserId() {
   return session.user.id;
 }
 
+function getTextValue(formData: FormData, field: string) {
+  const value = formData.get(field);
+  return typeof value === "string" ? value : "";
+}
+
+function getCarrierFormValues(formData: FormData): CarrierFormValues {
+  return {
+    id: getTextValue(formData, "id"),
+    name: getTextValue(formData, "name"),
+    contact: getTextValue(formData, "contact"),
+    phone: getTextValue(formData, "phone"),
+    notes: getTextValue(formData, "notes"),
+  };
+}
+
 function parseCarrierForm(formData: FormData) {
-  return carrierSchema.safeParse({
-    id: String(formData.get("id") ?? "") || undefined,
-    name: formData.get("name"),
-    contact: formData.get("contact"),
-    phone: formData.get("phone"),
-    notes: formData.get("notes"),
+  const values = getCarrierFormValues(formData);
+
+  const parsed = carrierSchema.safeParse({
+    id: values.id || undefined,
+    name: values.name,
+    contact: values.contact,
+    phone: values.phone,
+    notes: values.notes,
   });
+
+  return { values, parsed };
 }
 
 function carrierPayload(data: z.infer<typeof carrierSchema>) {
@@ -57,10 +85,13 @@ export async function createCarrierAction(
   formData: FormData
 ): Promise<CarrierFormState> {
   const userId = await requireUserId();
-  const parsed = parseCarrierForm(formData);
+  const { values, parsed } = parseCarrierForm(formData);
 
   if (!parsed.success) {
-    return { error: parsed.error.issues[0]?.message ?? "Dados invalidos." };
+    return {
+      error: parsed.error.issues[0]?.message ?? "Dados invalidos.",
+      values,
+    };
   }
 
   await prisma.carrier.create({
@@ -79,14 +110,17 @@ export async function updateCarrierAction(
   formData: FormData
 ): Promise<CarrierFormState> {
   const userId = await requireUserId();
-  const parsed = parseCarrierForm(formData);
+  const { values, parsed } = parseCarrierForm(formData);
 
   if (!parsed.success) {
-    return { error: parsed.error.issues[0]?.message ?? "Dados invalidos." };
+    return {
+      error: parsed.error.issues[0]?.message ?? "Dados invalidos.",
+      values,
+    };
   }
 
   if (!parsed.data.id) {
-    return { error: "Transportadora nao identificada." };
+    return { error: "Transportadora nao identificada.", values };
   }
 
   const updated = await prisma.carrier.updateMany({
@@ -98,7 +132,10 @@ export async function updateCarrierAction(
   });
 
   if (updated.count === 0) {
-    return { error: "Transportadora nao encontrada ou sem permissao para editar." };
+    return {
+      error: "Transportadora nao encontrada ou sem permissao para editar.",
+      values,
+    };
   }
 
   revalidatePath("/transportadoras");

@@ -7,8 +7,22 @@ import { z } from "zod";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 
+export type CustomerFormValues = {
+  id: string;
+  name: string;
+  companyName: string;
+  cnpjCpf: string;
+  customerCode: string;
+  phone: string;
+  commercialAddress: string;
+  deliveryAddress: string;
+  isProspect: boolean;
+  prospectStatus: (typeof prospectStatuses)[number];
+};
+
 export type CustomerFormState = {
   error?: string;
+  values?: CustomerFormValues;
 };
 
 const prospectStatuses = ["PROSPECT", "QUALIFIED", "DISQUALIFIED", "CONVERTED"] as const;
@@ -174,19 +188,51 @@ async function requireUserId() {
   return session.user.id;
 }
 
-function parseCustomerForm(formData: FormData) {
-  return customerSchema.safeParse({
-    id: String(formData.get("id") ?? "") || undefined,
-    name: formData.get("name"),
-    companyName: formData.get("companyName"),
-    cnpjCpf: formData.get("cnpjCpf"),
-    customerCode: formData.get("customerCode"),
-    phone: formData.get("phone"),
-    commercialAddress: formData.get("commercialAddress"),
-    deliveryAddress: formData.get("deliveryAddress"),
+function getTextValue(formData: FormData, field: string) {
+  const value = formData.get(field);
+  return typeof value === "string" ? value : "";
+}
+
+function getProspectStatus(value: string): CustomerFormValues["prospectStatus"] {
+  if (prospectStatuses.includes(value as CustomerFormValues["prospectStatus"])) {
+    return value as CustomerFormValues["prospectStatus"];
+  }
+
+  return "PROSPECT";
+}
+
+function getCustomerFormValues(formData: FormData): CustomerFormValues {
+  return {
+    id: getTextValue(formData, "id"),
+    name: getTextValue(formData, "name"),
+    companyName: getTextValue(formData, "companyName"),
+    cnpjCpf: getTextValue(formData, "cnpjCpf"),
+    customerCode: getTextValue(formData, "customerCode"),
+    phone: getTextValue(formData, "phone"),
+    commercialAddress: getTextValue(formData, "commercialAddress"),
+    deliveryAddress: getTextValue(formData, "deliveryAddress"),
     isProspect: formData.get("isProspect") === "on" || formData.get("isProspect") === "true",
-    prospectStatus: formData.get("prospectStatus") || "PROSPECT",
+    prospectStatus: getProspectStatus(getTextValue(formData, "prospectStatus")),
+  };
+}
+
+function parseCustomerForm(formData: FormData) {
+  const values = getCustomerFormValues(formData);
+
+  const parsed = customerSchema.safeParse({
+    id: values.id || undefined,
+    name: values.name,
+    companyName: values.companyName,
+    cnpjCpf: values.cnpjCpf,
+    customerCode: values.customerCode,
+    phone: values.phone,
+    commercialAddress: values.commercialAddress,
+    deliveryAddress: values.deliveryAddress,
+    isProspect: values.isProspect,
+    prospectStatus: values.prospectStatus,
   });
+
+  return { values, parsed };
 }
 
 function customerPayload(data: z.infer<typeof customerSchema>) {
@@ -211,10 +257,13 @@ export async function createCustomerAction(
   formData: FormData
 ): Promise<CustomerFormState> {
   const userId = await requireUserId();
-  const parsed = parseCustomerForm(formData);
+  const { values, parsed } = parseCustomerForm(formData);
 
   if (!parsed.success) {
-    return { error: parsed.error.issues[0]?.message ?? "Dados invalidos." };
+    return {
+      error: parsed.error.issues[0]?.message ?? "Dados invalidos.",
+      values,
+    };
   }
 
   await prisma.customer.create({
@@ -233,14 +282,17 @@ export async function updateCustomerAction(
   formData: FormData
 ): Promise<CustomerFormState> {
   const userId = await requireUserId();
-  const parsed = parseCustomerForm(formData);
+  const { values, parsed } = parseCustomerForm(formData);
 
   if (!parsed.success) {
-    return { error: parsed.error.issues[0]?.message ?? "Dados invalidos." };
+    return {
+      error: parsed.error.issues[0]?.message ?? "Dados invalidos.",
+      values,
+    };
   }
 
   if (!parsed.data.id) {
-    return { error: "Cliente nao identificado." };
+    return { error: "Cliente nao identificado.", values };
   }
 
   const updated = await prisma.customer.updateMany({
