@@ -2,13 +2,15 @@
 
 import type * as React from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
+import { cn } from "@/lib/utils";
 import {
   IconCalendar,
   IconCheckupList,
   IconCirclePlusFilled,
   IconClipboardList,
-  IconDashboard,
+  IconLayoutDashboard,
   IconInnerShadowTop,
   IconLogout,
   IconMapPinCheck,
@@ -50,7 +52,7 @@ type AppSidebarProps = React.ComponentProps<typeof Sidebar> & {
 };
 
 const primaryItems: NavItem[] = [
-  { title: "Dashboard", url: "/dashboard", icon: IconDashboard },
+  { title: "Dashboard", url: "/dashboard", icon: IconLayoutDashboard },
   { title: "Clientes", url: "/clientes", icon: IconUsers },
   { title: "Pedidos", url: "/pedidos", icon: IconClipboardList },
   { title: "Produtos", url: "/produtos", icon: IconPackage },
@@ -90,9 +92,14 @@ function NavGroup({ label, items }: { label: string; items: NavItem[] }) {
                 asChild
                 tooltip={item.title}
                 isActive={isActivePath(pathname, item.url)}
+                className={cn(
+                  item.title === "Dashboard" && "group-data-[collapsible=icon]:text-indigo-500"
+                )}
               >
                 <Link href={item.url} onClick={handleNavigate}>
-                  <item.icon />
+                  <item.icon className={cn(
+                    item.title === "Dashboard" && "group-data-[collapsible=icon]:drop-shadow-[0_0_8px_rgba(99,102,241,0.5)]"
+                  )} />
                   <span>{item.title}</span>
                 </Link>
               </SidebarMenuButton>
@@ -130,8 +137,14 @@ export function AppSidebar({ user, ...props }: AppSidebarProps) {
               className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
             >
               <Link href="/dashboard" onClick={handleNavigate}>
-                <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
-                  <IconInnerShadowTop className="size-4" />
+                <div className="flex aspect-square size-8 items-center justify-center overflow-hidden rounded-full border border-sidebar-border bg-white group-data-[collapsible=icon]:size-8 group-data-[collapsible=icon]:mx-auto">
+                  <Image
+                    src="/img/logo-esb.jpeg"
+                    alt="Logo Eu Sou o Bichão"
+                    width={32}
+                    height={32}
+                    className="h-full w-full object-cover"
+                  />
                 </div>
                 <div className="grid flex-1 text-left text-sm leading-tight">
                   <span className="truncate font-semibold">Forca de Vendas</span>
@@ -145,13 +158,13 @@ export function AppSidebar({ user, ...props }: AppSidebarProps) {
 
       <SidebarContent>
         <SidebarGroup>
-          <SidebarGroupContent className="flex flex-col gap-2">
+          <SidebarGroupContent className="flex flex-col gap-3">
             <SidebarMenu>
-              <SidebarMenuItem className="flex items-center gap-2">
+              <SidebarMenuItem>
                 <SidebarMenuButton
                   asChild
                   tooltip="Novo pedido"
-                  className="min-w-8 bg-primary text-primary-foreground duration-200 ease-linear hover:bg-primary/90 hover:text-primary-foreground active:bg-primary/90 active:text-primary-foreground"
+                  className="min-w-8 bg-primary text-primary-foreground duration-200 ease-linear hover:bg-primary/90 hover:text-primary-foreground active:bg-primary/90 active:text-primary-foreground group-data-[collapsible=icon]:size-8! group-data-[collapsible=icon]:rounded-full group-data-[collapsible=icon]:bg-linear-to-br group-data-[collapsible=icon]:from-emerald-400 group-data-[collapsible=icon]:to-teal-600 group-data-[collapsible=icon]:shadow-md group-data-[collapsible=icon]:shadow-emerald-500/20"
                 >
                   <Link href="/pedidos" onClick={handleNavigate}>
                     <IconCirclePlusFilled />
@@ -172,7 +185,7 @@ export function AppSidebar({ user, ...props }: AppSidebarProps) {
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton size="lg" tooltip={user.name}>
-              <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-accent text-xs font-semibold text-sidebar-accent-foreground">
+              <div className="flex aspect-square size-8 items-center justify-center rounded-lg text-xs font-semibold text-sidebar-accent-foreground group-data-[collapsible=icon]:size-8">
                 {initials || "U"}
               </div>
               <div className="grid flex-1 text-left text-sm leading-tight">

@@ -4,6 +4,8 @@ import * as React from "react"
 import { cva, type VariantProps } from "class-variance-authority"
 import { PanelLeftIcon } from "lucide-react"
 import { Slot } from "radix-ui"
+import gsap from "gsap"
+import { useGSAP } from "@gsap/react"
 
 import { useIsMobile } from "@/hooks/use-mobile"
 import { cn } from "@/lib/utils"
@@ -29,7 +31,7 @@ const SIDEBAR_COOKIE_NAME = "sidebar_state"
 const SIDEBAR_COOKIE_MAX_AGE = 60 * 60 * 24 * 7
 const SIDEBAR_WIDTH = "16rem"
 const SIDEBAR_WIDTH_MOBILE = "18rem"
-const SIDEBAR_WIDTH_ICON = "3rem"
+const SIDEBAR_WIDTH_ICON = "3.5rem"
 const SIDEBAR_KEYBOARD_SHORTCUT = "b"
 
 type SidebarContextProps = {
@@ -67,7 +69,12 @@ function SidebarProvider({
   onOpenChange?: (open: boolean) => void
 }) {
   const isMobile = useIsMobile()
+  const [mounted, setMounted] = React.useState(false)
   const [openMobile, setOpenMobile] = React.useState(false)
+
+  React.useEffect(() => {
+    setMounted(true)
+  }, [])
 
   // This is the internal state of the sidebar.
   // We use openProp and setOpenProp for control from outside the component.
@@ -126,6 +133,10 @@ function SidebarProvider({
     [state, open, setOpen, isMobile, openMobile, setOpenMobile, toggleSidebar]
   )
 
+  if (!mounted) {
+    return null
+  }
+
   return (
     <SidebarContext.Provider value={contextValue}>
       <TooltipProvider delayDuration={0}>
@@ -164,6 +175,105 @@ function Sidebar({
   collapsible?: "offcanvas" | "icon" | "none"
 }) {
   const { isMobile, state, openMobile, setOpenMobile } = useSidebar()
+  const open = state === "expanded"
+  const containerRef = React.useRef<HTMLDivElement>(null)
+  const gapRef = React.useRef<HTMLDivElement>(null)
+  const mobileRef = React.useRef<HTMLDivElement>(null)
+
+  // Mobile Animation
+  useGSAP(() => {
+    if (!isMobile || !openMobile || !mobileRef.current) return
+
+    const sideAnim = side === "left" ? "-100%" : "100%"
+    
+    // Force override any CSS transitions
+    gsap.set(mobileRef.current, { transition: "none", x: sideAnim })
+
+    gsap.fromTo(mobileRef.current, 
+      { x: sideAnim, opacity: 0 },
+      {
+        x: "0%",
+        opacity: 1,
+        duration: 0.8,
+        ease: "back.out(1.7)",
+        clearProps: "transition",
+      }
+    )
+  }, { dependencies: [openMobile, isMobile, side], revertOnUpdate: true })
+
+  // Desktop Animation
+  useGSAP(() => {
+    if (isMobile || !containerRef.current || !gapRef.current) return
+
+    const width = open ? SIDEBAR_WIDTH : collapsible === "icon" ? SIDEBAR_WIDTH_ICON : "0px"
+
+    // Animate the placeholder gap
+    gsap.to(gapRef.current, {
+      width,
+      duration: open ? 0.6 : 0.45,
+      ease: open ? "back.out(1.7)" : "back.in(1.7)",
+    })
+
+    // Animate the actual sidebar container
+    if (collapsible === "offcanvas") {
+      gsap.to(containerRef.current, {
+        x: open ? "0%" : side === "left" ? "-100%" : "100%",
+        duration: open ? 0.6 : 0.45,
+        ease: open ? "back.out(1.7)" : "back.in(1.7)",
+      })
+    } else if (collapsible === "icon") {
+      gsap.to(containerRef.current, {
+        width,
+        duration: open ? 0.6 : 0.45,
+        ease: open ? "back.out(1.7)" : "back.in(1.7)",
+      })
+    }
+
+    const items = containerRef.current.querySelectorAll('[data-slot="sidebar-menu-item"]')
+    
+    if (open) {
+      // Stagger effect for menu items when opening
+      if (items.length > 0) {
+        gsap.fromTo(items, 
+          { opacity: 0, x: -15 },
+          { 
+            opacity: 1, 
+            x: 0, 
+            stagger: 0.04, 
+            duration: 0.5, 
+            ease: "back.out(1.7)",
+            delay: 0.2
+          }
+        )
+      }
+    } else {
+      // Quando fechando, se for modo ícone, mantemos a opacidade mas escondemos o que não é ícone
+      if (collapsible === "icon") {
+        gsap.to(items, {
+          opacity: 1, // Mantém visível para mostrar os ícones
+          x: 0,
+          duration: 0.3,
+          ease: "power2.inOut"
+        })
+        
+        // Esconde especificamente os textos dentro dos botões
+        const labels = containerRef.current.querySelectorAll('[data-slot="sidebar-menu-button"] span')
+        gsap.to(labels, {
+          opacity: 0,
+          duration: 0.2,
+          ease: "power2.in"
+        })
+      } else {
+        // Se for fechar totalmente (offcanvas), aí sim fazemos o fade out completo
+        gsap.to(items, {
+          opacity: 0,
+          x: -10,
+          duration: 0.2,
+          ease: "power2.in"
+        })
+      }
+    }
+  }, { dependencies: [open, isMobile, collapsible, side], revertOnUpdate: true })
 
   if (collapsible === "none") {
     return (
@@ -184,11 +294,12 @@ function Sidebar({
     return (
       <Sheet open={openMobile} onOpenChange={setOpenMobile} {...props}>
         <SheetContent
+          ref={mobileRef}
           data-sidebar="sidebar"
           data-slot="sidebar"
           data-mobile="true"
           className={cn(
-            "w-(--sidebar-width) bg-sidebar p-0 text-sidebar-foreground will-change-transform data-[state=open]:duration-500 data-[state=closed]:duration-320 data-[state=open]:ease-[cubic-bezier(0.2,0.9,0.2,1)] data-[state=closed]:ease-[cubic-bezier(0.4,0,0.25,1)] [&>button]:hidden",
+            "w-(--sidebar-width) bg-sidebar p-0 text-sidebar-foreground will-change-transform [&>button]:hidden data-[state=open]:animate-none data-[state=open]:slide-in-from-left-0 data-[state=open]:slide-in-from-right-0",
             className
           )}
           style={
@@ -220,8 +331,9 @@ function Sidebar({
       {/* This is what handles the sidebar gap on desktop */}
       <div
         data-slot="sidebar-gap"
+        ref={gapRef}
         className={cn(
-          "relative w-(--sidebar-width) bg-transparent transition-[width] duration-200 ease-linear",
+          "relative w-(--sidebar-width) bg-transparent",
           "group-data-[collapsible=offcanvas]:w-0",
           "group-data-[side=right]:rotate-180",
           variant === "floating" || variant === "inset"
@@ -231,8 +343,9 @@ function Sidebar({
       />
       <div
         data-slot="sidebar-container"
+        ref={containerRef}
         className={cn(
-          "fixed inset-y-0 z-10 hidden h-svh w-(--sidebar-width) transition-[left,right,width] duration-200 ease-linear md:flex",
+          "fixed inset-y-0 z-10 hidden h-svh w-(--sidebar-width) md:flex",
           side === "left"
             ? "left-0 group-data-[collapsible=offcanvas]:left-[calc(var(--sidebar-width)*-1)]"
             : "right-0 group-data-[collapsible=offcanvas]:right-[calc(var(--sidebar-width)*-1)]",
@@ -369,7 +482,7 @@ function SidebarHeader({ className, ...props }: React.ComponentProps<"div">) {
     <div
       data-slot="sidebar-header"
       data-sidebar="header"
-      className={cn("flex flex-col gap-2 p-2", className)}
+      className={cn("flex flex-col gap-2 p-2 group-data-[collapsible=icon]:p-0 group-data-[collapsible=icon]:items-center", className)}
       {...props}
     />
   )
@@ -380,7 +493,7 @@ function SidebarFooter({ className, ...props }: React.ComponentProps<"div">) {
     <div
       data-slot="sidebar-footer"
       data-sidebar="footer"
-      className={cn("flex flex-col gap-2 p-2", className)}
+      className={cn("flex flex-col gap-2 p-2 group-data-[collapsible=icon]:p-0 group-data-[collapsible=icon]:items-center", className)}
       {...props}
     />
   )
@@ -394,7 +507,7 @@ function SidebarSeparator({
     <Separator
       data-slot="sidebar-separator"
       data-sidebar="separator"
-      className={cn("mx-2 w-auto bg-sidebar-border", className)}
+      className={cn("mx-2 w-auto bg-sidebar-border group-data-[collapsible=icon]:mx-3 group-data-[collapsible=icon]:w-6", className)}
       {...props}
     />
   )
@@ -406,7 +519,7 @@ function SidebarContent({ className, ...props }: React.ComponentProps<"div">) {
       data-slot="sidebar-content"
       data-sidebar="content"
       className={cn(
-        "flex min-h-0 flex-1 flex-col gap-2 overflow-auto group-data-[collapsible=icon]:overflow-hidden",
+        "flex min-h-0 flex-1 flex-col gap-2 overflow-auto group-data-[collapsible=icon]:overflow-hidden p-2 group-data-[collapsible=icon]:p-0",
         className
       )}
       {...props}
@@ -488,7 +601,7 @@ function SidebarMenu({ className, ...props }: React.ComponentProps<"ul">) {
     <ul
       data-slot="sidebar-menu"
       data-sidebar="menu"
-      className={cn("flex w-full min-w-0 flex-col gap-1", className)}
+      className={cn("flex w-full min-w-0 flex-col gap-1 p-2 group-data-[collapsible=icon]:p-0 group-data-[collapsible=icon]:items-center", className)}
       {...props}
     />
   )
@@ -506,7 +619,7 @@ function SidebarMenuItem({ className, ...props }: React.ComponentProps<"li">) {
 }
 
 const sidebarMenuButtonVariants = cva(
-  "peer/menu-button flex w-full items-center gap-2 overflow-hidden rounded-md p-2 text-left text-sm ring-sidebar-ring outline-hidden transition-[width,height,padding] group-has-data-[sidebar=menu-action]/menu-item:pr-8 group-data-[collapsible=icon]:size-8! group-data-[collapsible=icon]:p-2! hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2 active:bg-sidebar-accent active:text-sidebar-accent-foreground disabled:pointer-events-none disabled:opacity-50 aria-disabled:pointer-events-none aria-disabled:opacity-50 data-[active=true]:bg-sidebar-accent data-[active=true]:font-medium data-[active=true]:text-sidebar-accent-foreground data-[state=open]:hover:bg-sidebar-accent data-[state=open]:hover:text-sidebar-accent-foreground [&>span:last-child]:truncate [&>svg]:size-4 [&>svg]:shrink-0",
+  "peer/menu-button relative flex w-full items-center gap-2 overflow-hidden rounded-lg p-2 text-left text-sm ring-sidebar-ring outline-hidden transition-all duration-300 group-has-data-[sidebar=menu-action]/menu-item:pr-8 group-data-[collapsible=icon]:size-8! group-data-[collapsible=icon]:p-0! group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:rounded-xl group-data-[collapsible=icon]:mx-auto hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground focus-visible:ring-2 active:bg-sidebar-accent active:text-sidebar-accent-foreground disabled:pointer-events-none disabled:opacity-50 aria-disabled:pointer-events-none aria-disabled:opacity-50 data-[active=true]:bg-sidebar-accent data-[active=true]:font-medium data-[active=true]:text-sidebar-accent-foreground data-[state=open]:hover:bg-sidebar-accent data-[state=open]:hover:text-sidebar-accent-foreground [&>span:last-child]:truncate [&>svg]:size-4 [&>svg]:shrink-0 group-data-[collapsible=icon]:[&>svg]:size-[18px] group-data-[collapsible=icon]:hover:[&>svg]:scale-110 group-data-[collapsible=icon]:data-[active=true]:before:absolute group-data-[collapsible=icon]:data-[active=true]:before:left-0 group-data-[collapsible=icon]:data-[active=true]:before:h-5 group-data-[collapsible=icon]:data-[active=true]:before:w-1 group-data-[collapsible=icon]:data-[active=true]:before:rounded-r-full group-data-[collapsible=icon]:data-[active=true]:before:bg-primary group-data-[collapsible=icon]:data-[active=true]:before:content-['']",
   {
     variants: {
       variant: {
