@@ -209,7 +209,14 @@ function parseCustomerAutocompletePayload(payload: unknown): OrderAutocompleteCu
 }
 
 function getCustomerSearchLabel(customer: OrderAutocompleteCustomer) {
-  return customer.companyName ? `${customer.name} - ${customer.companyName}` : customer.name;
+  const normalizedName = customer.name.trim().toLocaleLowerCase("pt-BR");
+  const normalizedCompanyName = customer.companyName?.trim().toLocaleLowerCase("pt-BR");
+
+  if (!customer.companyName || normalizedCompanyName === normalizedName) {
+    return customer.name;
+  }
+
+  return `${customer.name} - ${customer.companyName}`;
 }
 
 function buildOrderCustomer(order?: OrderListItem): OrderAutocompleteCustomer | null {
