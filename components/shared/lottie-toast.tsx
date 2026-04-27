@@ -82,7 +82,7 @@ export function LottieToast({
 
   const resolvedAnimationData = initialAnimationData
     ?? cachedAnimationData
-    ?? (fetchedAnimation?.path === animationPath ? fetchedAnimation.data : null);
+    ?? (fetchedAnimation?.path === animationPath ? (fetchedAnimation?.data ?? null) : null);
 
   useEffect(() => {
     const toastElement = rootRef.current?.closest("[data-sonner-toast]") as HTMLElement | null;
