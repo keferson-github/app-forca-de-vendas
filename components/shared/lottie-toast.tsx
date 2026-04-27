@@ -12,7 +12,8 @@ export type LottieToastTone = "success" | "info" | "warning" | "error";
 type LottieToastProps = {
   title: string;
   description?: string;
-  animationPath: string;
+  animationPath?: string;
+  animationData?: object;
   tone?: LottieToastTone;
   stackedOnMobile?: boolean;
   bareOnMobile?: boolean;
@@ -31,13 +32,14 @@ export function LottieToast({
   title,
   description,
   animationPath,
+  animationData: initialAnimationData,
   tone = "success",
   stackedOnMobile = false,
   bareOnMobile = false,
   overlayOnMobile = false,
   onClose,
 }: LottieToastProps) {
-  const [animationData, setAnimationData] = useState<object | null>(null);
+  const [animationData, setAnimationData] = useState<object | null>(initialAnimationData ?? null);
   const [mounted, setMounted] = useState(false);
   const [isRemoving, setIsRemoving] = useState(false);
   const rootRef = useRef<HTMLDivElement | null>(null);
@@ -51,6 +53,16 @@ export function LottieToast({
   }, []);
 
   useEffect(() => {
+    if (initialAnimationData) {
+      setAnimationData(initialAnimationData);
+      return undefined;
+    }
+
+    if (!animationPath) {
+      setAnimationData(null);
+      return undefined;
+    }
+
     let isActive = true;
 
     fetch(animationPath)
@@ -74,7 +86,7 @@ export function LottieToast({
     return () => {
       isActive = false;
     };
-  }, [animationPath]);
+  }, [animationPath, initialAnimationData]);
 
   useEffect(() => {
     if (!mounted) {

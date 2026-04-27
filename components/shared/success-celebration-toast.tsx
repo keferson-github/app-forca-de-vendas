@@ -1,6 +1,7 @@
 "use client";
 
 import { LottieToast } from "@/components/shared/lottie-toast";
+import successAnimation from "@/public/lottie/successfully.json";
 
 type SuccessCelebrationToastProps = {
   title: string;
@@ -17,7 +18,7 @@ export function SuccessCelebrationToast({
     <LottieToast
       title={title}
       description={description}
-      animationPath="/lottie/successfully.json"
+      animationData={successAnimation}
       tone="success"
       stackedOnMobile
       bareOnMobile
