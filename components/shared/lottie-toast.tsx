@@ -99,7 +99,9 @@ export function LottieToast({
     }
 
     const syncRemovingState = () => {
-      setIsRemoving(toastElement.dataset.removed === "true");
+      const nextIsRemoving = toastElement.dataset.removed === "true";
+
+      setIsRemoving((current) => (current === nextIsRemoving ? current : nextIsRemoving));
     };
 
     syncRemovingState();
@@ -125,7 +127,7 @@ export function LottieToast({
         animationData={resolvedAnimationData}
         loop={false}
         autoplay
-        className={animationSizeClass}
+        className={cn(animationSizeClass, "transform-gpu will-change-transform")}
         aria-hidden
       />
     );
@@ -137,7 +139,7 @@ export function LottieToast({
         ? createPortal(
           <div
             className={cn(
-              "pointer-events-none fixed inset-0 z-[70] bg-[#FAFAFA]/78 backdrop-blur-md transition-opacity duration-320 ease-[cubic-bezier(0.22,1,0.36,1)] dark:bg-black/60 md:hidden",
+              "pointer-events-none fixed inset-0 z-[70] bg-[#FAFAFA]/82 backdrop-blur-sm transition-opacity duration-320 ease-[cubic-bezier(0.22,1,0.36,1)] dark:bg-black/62 md:hidden",
               isRemoving ? "opacity-0" : "opacity-100",
             )}
             aria-hidden
@@ -148,7 +150,7 @@ export function LottieToast({
 
       {bareOnMobile ? (
         <div className="relative z-[71] flex w-[min(92vw,360px)] flex-col items-center gap-2 text-center text-popover-foreground">
-          <div className="size-20">{animation}</div>
+          <div className="size-20 transform-gpu will-change-transform">{animation}</div>
           <div className="min-w-0">
             <p className="text-base font-semibold leading-tight">{title}</p>
             {description ? (
