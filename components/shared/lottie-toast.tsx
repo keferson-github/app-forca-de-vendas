@@ -16,6 +16,7 @@ type LottieToastProps = {
   animationData?: object;
   animationSizeClass?: string;
   tone?: LottieToastTone;
+  centered?: boolean;
   stackedOnMobile?: boolean;
   bareOnMobile?: boolean;
   overlayOnMobile?: boolean;
@@ -38,40 +39,26 @@ export function LottieToast({
   animationData: initialAnimationData,
   animationSizeClass = "size-12",
   tone = "success",
+  centered = false,
   stackedOnMobile = false,
   bareOnMobile = false,
   overlayOnMobile = false,
   onClose,
 }: LottieToastProps) {
-  const [fetchedAnimationData, setFetchedAnimationData] = useState<object | null>(null);
-  const [mounted, setMounted] = useState(false);
+  const [fetchedAnimation, setFetchedAnimation] = useState<{
+    path: string;
+    data: object;
+  } | null>(null);
   const [isRemoving, setIsRemoving] = useState(false);
   const rootRef = useRef<HTMLDivElement | null>(null);
+  const cachedAnimationData = animationPath ? (animationCache.get(animationPath) ?? null) : null;
 
   useEffect(() => {
-    setMounted(true);
-
-    return () => {
-      setMounted(false);
-    };
-  }, []);
-
-  useEffect(() => {
-    if (initialAnimationData || !animationPath) {
-      setFetchedAnimationData(null);
+    if (initialAnimationData || !animationPath || cachedAnimationData) {
       return undefined;
     }
 
     let isActive = true;
-
-    const cached = animationCache.get(animationPath);
-
-    if (cached) {
-      setFetchedAnimationData(cached);
-      return () => {
-        isActive = false;
-      };
-    }
 
     fetch(animationPath)
       .then(async (response) => {
@@ -83,27 +70,21 @@ export function LottieToast({
 
         if (isActive) {
           animationCache.set(animationPath, payload as object);
-          setFetchedAnimationData(payload);
+          setFetchedAnimation({ path: animationPath, data: payload as object });
         }
       })
-      .catch(() => {
-        if (isActive) {
-          setFetchedAnimationData(null);
-        }
-      });
+      .catch(() => {});
 
     return () => {
       isActive = false;
     };
-  }, [animationPath, initialAnimationData]);
+  }, [animationPath, cachedAnimationData, initialAnimationData]);
 
-  const resolvedAnimationData = initialAnimationData ?? fetchedAnimationData;
+  const resolvedAnimationData = initialAnimationData
+    ?? cachedAnimationData
+    ?? (fetchedAnimation?.path === animationPath ? fetchedAnimation.data : null);
 
   useEffect(() => {
-    if (!mounted) {
-      return undefined;
-    }
-
     const toastElement = rootRef.current?.closest("[data-sonner-toast]") as HTMLElement | null;
 
     if (!toastElement) {
@@ -127,7 +108,7 @@ export function LottieToast({
     return () => {
       observer.disconnect();
     };
-  }, [mounted]);
+  }, []);
 
   const animation = useMemo(() => {
     if (!resolvedAnimationData) {
@@ -145,9 +126,54 @@ export function LottieToast({
     );
   }, [animationSizeClass, resolvedAnimationData]);
 
+  const toastContent = bareOnMobile ? (
+    <div className="relative z-[71] flex w-[min(92vw,360px)] flex-col items-center gap-2 text-center text-popover-foreground md:w-[min(92vw,420px)]">
+      <div className="size-20 transform-gpu will-change-transform">{animation}</div>
+      <div className="min-w-0">
+        <p className="text-base font-semibold leading-tight">{title}</p>
+        {description ? (
+          <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{description}</p>
+        ) : null}
+      </div>
+    </div>
+  ) : (
+    <div className={cn(
+      "relative flex w-[min(92vw,360px)] items-center gap-3 rounded-lg border bg-popover p-3 text-popover-foreground shadow-[var(--shadow-surface-strong)]",
+      stackedOnMobile && "flex-col items-center gap-2 text-center sm:flex-row sm:items-center sm:gap-3 sm:text-left",
+    )}>
+      <div className={cn("grid size-12 place-items-center rounded-md border", toneClasses[tone])}>
+        {animation}
+      </div>
+
+      <div className={cn(
+        "min-w-0 flex-1 justify-center min-h-12 flex flex-col",
+        stackedOnMobile && "items-center sm:items-start",
+      )}>
+        <p className="text-sm font-semibold leading-tight">{title}</p>
+        {description ? (
+          <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{description}</p>
+        ) : null}
+      </div>
+
+      <Button
+        type="button"
+        variant="ghost"
+        size="icon-sm"
+        className={cn(
+          "-mr-1 -mt-1",
+          stackedOnMobile && "absolute top-2 right-2 mr-0 mt-0",
+        )}
+        onClick={onClose}
+        aria-label="Fechar notificação"
+      >
+        <X className="size-4" />
+      </Button>
+    </div>
+  );
+
   return (
     <div ref={rootRef} className="relative">
-      {overlayOnMobile && mounted
+      {overlayOnMobile && typeof document !== "undefined"
         ? createPortal(
           <div
             className={cn(
@@ -160,49 +186,14 @@ export function LottieToast({
         )
         : null}
 
-      {bareOnMobile ? (
-        <div className="relative z-[71] flex w-[min(92vw,360px)] flex-col items-center gap-2 text-center text-popover-foreground">
-          <div className="size-20 transform-gpu will-change-transform">{animation}</div>
-          <div className="min-w-0">
-            <p className="text-base font-semibold leading-tight">{title}</p>
-            {description ? (
-              <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{description}</p>
-            ) : null}
+      {centered ? (
+        <div className="pointer-events-none fixed inset-0 z-[71] grid place-items-center p-4">
+          <div className="pointer-events-auto">
+            {toastContent}
           </div>
         </div>
       ) : (
-        <div className={cn(
-          "relative flex w-[min(92vw,360px)] items-center gap-3 rounded-lg border bg-popover p-3 text-popover-foreground shadow-[var(--shadow-surface-strong)]",
-          stackedOnMobile && "flex-col items-center gap-2 text-center sm:flex-row sm:items-center sm:gap-3 sm:text-left",
-        )}>
-          <div className={cn("grid size-12 place-items-center rounded-md border", toneClasses[tone])}>
-            {animation}
-          </div>
-
-          <div className={cn(
-            "min-w-0 flex-1 justify-center min-h-12 flex flex-col",
-            stackedOnMobile && "items-center sm:items-start",
-          )}>
-            <p className="text-sm font-semibold leading-tight">{title}</p>
-            {description ? (
-              <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{description}</p>
-            ) : null}
-          </div>
-
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon-sm"
-            className={cn(
-              "-mr-1 -mt-1",
-              stackedOnMobile && "absolute top-2 right-2 mr-0 mt-0",
-            )}
-            onClick={onClose}
-            aria-label="Fechar notificação"
-          >
-            <X className="size-4" />
-          </Button>
-        </div>
+        toastContent
       )}
     </div>
   );

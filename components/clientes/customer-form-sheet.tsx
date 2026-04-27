@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import { UserPlus, Users } from "lucide-react";
 import {
   createCustomerAction,
@@ -202,6 +202,8 @@ export function CustomerFormSheet({
   const [state, formAction] = useActionState(action, initialState);
   const { open, onOpenChange, contentRef } = useSheetSlideGsap(initialOpen);
   const values = state.values;
+  const commercialAddressValue = values?.commercialAddress ?? customer?.commercialAddress ?? "";
+  const deliveryAddressValue = values?.deliveryAddress ?? customer?.deliveryAddress ?? "";
   const customerDocument = customer?.cnpjCpf ?? "";
   const cnpjOnlyField = !customer && !defaultIsProspect;
   const isProspect = values?.isProspect ?? customer?.isProspect ?? defaultIsProspect;
@@ -209,9 +211,28 @@ export function CustomerFormSheet({
     values?.prospectStatus
     ?? customer?.prospectStatus
     ?? (defaultIsProspect ? "PROSPECT" : "CONVERTED");
+  const [showCommercialAddress, setShowCommercialAddress] = useState(
+    () => commercialAddressValue.trim().length > 0
+  );
+  const [showDeliveryAddress, setShowDeliveryAddress] = useState(
+    () => deliveryAddressValue.trim().length > 0
+  );
+
+  function resetAddressSections() {
+    setShowCommercialAddress(commercialAddressValue.trim().length > 0);
+    setShowDeliveryAddress(deliveryAddressValue.trim().length > 0);
+  }
+
+  function handleOpenChange(nextOpen: boolean) {
+    onOpenChange(nextOpen);
+
+    if (nextOpen) {
+      resetAddressSections();
+    }
+  }
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
+    <Sheet open={open} onOpenChange={handleOpenChange}>
       <SheetTrigger asChild>
         {trigger ?? (
           <Button variant={variant} size={size}>
@@ -224,7 +245,7 @@ export function CustomerFormSheet({
         ref={contentRef}
         className="w-full overflow-y-auto data-[state=open]:animate-none sm:max-w-xl"
       >
-        <form action={formAction} className="flex min-h-full flex-col">
+        <form action={formAction} className="flex min-h-full flex-col" onReset={resetAddressSections}>
           <SheetHeader>
             <SheetTitle>{title}</SheetTitle>
             <SheetDescription>{description}</SheetDescription>
@@ -307,28 +328,52 @@ export function CustomerFormSheet({
               </div>
             </div>
 
-            <div className="grid gap-2">
-              <Label htmlFor={`${customer?.id ?? "new"}-commercialAddress`}>
-                Endereco comercial
-              </Label>
-              <Textarea
-                id={`${customer?.id ?? "new"}-commercialAddress`}
-                name="commercialAddress"
-                defaultValue={values?.commercialAddress ?? customer?.commercialAddress ?? ""}
-                placeholder="Rua, numero, bairro, cidade e UF"
-              />
+            <div className="grid gap-3 rounded-lg border border-border/60 bg-muted/20 p-3">
+              <label className="flex items-center gap-2 text-sm font-medium">
+                <Checkbox
+                  checked={showCommercialAddress}
+                  onCheckedChange={(checked) => setShowCommercialAddress(checked === true)}
+                />
+                Informar endereco comercial
+              </label>
+
+              {showCommercialAddress ? (
+                <div className="grid gap-2">
+                  <Label htmlFor={`${customer?.id ?? "new"}-commercialAddress`}>
+                    Endereco comercial
+                  </Label>
+                  <Textarea
+                    id={`${customer?.id ?? "new"}-commercialAddress`}
+                    name="commercialAddress"
+                    defaultValue={commercialAddressValue}
+                    placeholder="Rua, numero, bairro, cidade e UF"
+                  />
+                </div>
+              ) : null}
             </div>
 
-            <div className="grid gap-2">
-              <Label htmlFor={`${customer?.id ?? "new"}-deliveryAddress`}>
-                Endereco de entrega
-              </Label>
-              <Textarea
-                id={`${customer?.id ?? "new"}-deliveryAddress`}
-                name="deliveryAddress"
-                defaultValue={values?.deliveryAddress ?? customer?.deliveryAddress ?? ""}
-                placeholder="Endereco usado para entregas"
-              />
+            <div className="grid gap-3 rounded-lg border border-border/60 bg-muted/20 p-3">
+              <label className="flex items-center gap-2 text-sm font-medium">
+                <Checkbox
+                  checked={showDeliveryAddress}
+                  onCheckedChange={(checked) => setShowDeliveryAddress(checked === true)}
+                />
+                Informar endereco de entrega
+              </label>
+
+              {showDeliveryAddress ? (
+                <div className="grid gap-2">
+                  <Label htmlFor={`${customer?.id ?? "new"}-deliveryAddress`}>
+                    Endereco de entrega
+                  </Label>
+                  <Textarea
+                    id={`${customer?.id ?? "new"}-deliveryAddress`}
+                    name="deliveryAddress"
+                    defaultValue={deliveryAddressValue}
+                    placeholder="Endereco usado para entregas"
+                  />
+                </div>
+              ) : null}
             </div>
 
             <div className="grid gap-4 rounded-lg bg-muted/45 p-3 sm:grid-cols-[1fr_180px]">

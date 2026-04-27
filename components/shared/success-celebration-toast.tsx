@@ -21,6 +21,7 @@ export function SuccessCelebrationToast({
       animationData={successAnimation}
       animationSizeClass="size-[4.5rem]"
       tone="success"
+      centered
       stackedOnMobile
       bareOnMobile
       overlayOnMobile

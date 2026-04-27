@@ -61,9 +61,9 @@ const operationItems: NavItem[] = [
   { title: "Transportadoras", url: "/transportadoras", icon: IconTruck },
   { title: "CRM", url: "/crm", icon: IconUserPlus },
   { title: "Checkins", url: "/checkins", icon: IconMapPinCheck },
-  { title: "Anotacoes", url: "/anotacoes", icon: IconNotes },
+  { title: "Anotações", url: "/anotacoes", icon: IconNotes },
   { title: "Agenda", url: "/agenda", icon: IconCalendar },
-  { title: "Integracoes", url: "/integracoes/bling", icon: IconPlugConnected },
+  { title: "Integrações", url: "/integracoes/bling", icon: IconPlugConnected },
 ];
 
 function isActivePath(pathname: string, url: string) {
@@ -187,7 +187,7 @@ export function AppSidebar({ user, ...props }: AppSidebarProps) {
                   />
                 </div>
                 <div className="grid flex-1 text-left text-sm leading-tight group-data-[collapsible=icon]:hidden">
-                  <span className="truncate font-semibold">Forca de Vendas</span>
+                  <span className="truncate font-semibold">Força de Vendas</span>
                   <span className="truncate text-xs">Representante Comercial</span>
                 </div>
               </Link>
@@ -226,7 +226,7 @@ export function AppSidebar({ user, ...props }: AppSidebarProps) {
         </SidebarGroup>
 
         <NavGroup label="Principal" items={primaryItems} />
-        <NavGroup label="Operacao" items={operationItems} />
+        <NavGroup label="Operação" items={operationItems} />
       </SidebarContent>
 
       <SidebarFooter>
@@ -240,7 +240,7 @@ export function AppSidebar({ user, ...props }: AppSidebarProps) {
               <div className="grid flex-1 text-left text-sm leading-tight">
                 <span className="truncate font-medium">{user.name}</span>
                 <span className="truncate text-xs text-muted-foreground">
-                  {user.email ?? "Sessao ativa"}
+                  {user.email ?? "Sessão ativa"}
                 </span>
               </div>
             </SidebarMenuButton>
@@ -258,7 +258,7 @@ export function AppSidebar({ user, ...props }: AppSidebarProps) {
           <SidebarMenuItem>
             <SidebarMenuButton disabled className="opacity-70">
               <IconCheckupList />
-              <span>Versao 0.1.0</span>
+              <span>Versão 0.1.0</span>
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
