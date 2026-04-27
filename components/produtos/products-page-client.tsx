@@ -136,9 +136,15 @@ function parseProductAutocompletePayload(payload: unknown): ProductAutocompleteI
 
 const initialState: ProductFormState = {};
 
-const noticeMessages: Record<string, string> = {
-  "product-created": "Produto cadastrado com sucesso.",
-  "product-updated": "Produto atualizado com sucesso.",
+const noticeMessages = {
+  "product-created": {
+    message: "Produto cadastrado com sucesso.",
+    preset: "success-celebration" as const,
+  },
+  "product-updated": {
+    message: "Produto atualizado com sucesso.",
+    preset: "success-celebration" as const,
+  },
   "product-deleted": "Produto excluído com sucesso.",
 };
 

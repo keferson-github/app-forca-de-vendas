@@ -1,5 +1,6 @@
 import type { Prisma } from "@prisma/client";
 import { auth } from "@/auth";
+import { SectionPlaceholder } from "@/components/layout/section-placeholder";
 import { ProductsPageClient } from "@/components/produtos/products-page-client";
 import { prisma } from "@/lib/prisma";
 
@@ -46,6 +47,15 @@ function buildWhere(userId: string, query: string) {
   return where;
 }
 
+function isDatabaseUnavailableError(error: unknown) {
+  if (!(error instanceof Error)) {
+    return false;
+  }
+
+  return error.message.includes("Can't reach database server")
+    || error.message.includes("Error in PostgreSQL connection");
+}
+
 export default async function ProdutosPage(props: { searchParams: SearchParams }) {
   const searchParams = await props.searchParams;
   const session = await auth();
@@ -58,47 +68,60 @@ export default async function ProdutosPage(props: { searchParams: SearchParams }
   const query = (searchParams.q ?? "").trim();
   const where = buildWhere(session.user.id, query);
 
-  const totalFiltered = await prisma.product.count({ where });
+  try {
+    const totalFiltered = await prisma.product.count({ where });
 
-  const totalPages = Math.max(1, Math.ceil(totalFiltered / PAGE_SIZE));
-  const currentPage = Math.min(requestedPage, totalPages);
+    const totalPages = Math.max(1, Math.ceil(totalFiltered / PAGE_SIZE));
+    const currentPage = Math.min(requestedPage, totalPages);
 
-  const products = await prisma.product.findMany({
-    where,
-    orderBy: [{ updatedAt: "desc" }, { createdAt: "desc" }, { id: "desc" }],
-    skip: (currentPage - 1) * PAGE_SIZE,
-    take: PAGE_SIZE,
-    include: {
-      _count: {
-        select: {
-          orderItems: true,
+    const products = await prisma.product.findMany({
+      where,
+      orderBy: [{ updatedAt: "desc" }, { createdAt: "desc" }, { id: "desc" }],
+      skip: (currentPage - 1) * PAGE_SIZE,
+      take: PAGE_SIZE,
+      include: {
+        _count: {
+          select: {
+            orderItems: true,
+          },
         },
       },
-    },
-  });
+    });
 
-  return (
-    <ProductsPageClient
-      products={products.map((product) => ({
-        id: product.id,
-        code: product.code,
-        name: product.name,
-        category: product.category,
-        subcategory: product.subcategory,
-        price: Number(product.price),
-        imageUrl: product.imageUrl,
-        description: product.description,
-        createdAt: product.createdAt.toISOString(),
-        updatedAt: product.updatedAt.toISOString(),
-        itemsCount: product._count.orderItems,
-      }))}
-      query={query}
-      pagination={{
-        currentPage,
-        pageSize: PAGE_SIZE,
-        totalItems: totalFiltered,
-        totalPages,
-      }}
-    />
-  );
+    return (
+      <ProductsPageClient
+        products={products.map((product) => ({
+          id: product.id,
+          code: product.code,
+          name: product.name,
+          category: product.category,
+          subcategory: product.subcategory,
+          price: Number(product.price),
+          imageUrl: product.imageUrl,
+          description: product.description,
+          createdAt: product.createdAt.toISOString(),
+          updatedAt: product.updatedAt.toISOString(),
+          itemsCount: product._count.orderItems,
+        }))}
+        query={query}
+        pagination={{
+          currentPage,
+          pageSize: PAGE_SIZE,
+          totalItems: totalFiltered,
+          totalPages,
+        }}
+      />
+    );
+  } catch (error) {
+    if (!isDatabaseUnavailableError(error)) {
+      throw error;
+    }
+
+    return (
+      <SectionPlaceholder
+        title="Produtos temporariamente indisponíveis"
+        description="Não foi possível conectar ao banco de dados agora. Tente novamente em alguns instantes."
+      />
+    );
+  }
 }

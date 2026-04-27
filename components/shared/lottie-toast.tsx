@@ -138,7 +138,7 @@ export function LottieToast({
         ? createPortal(
           <div
             className={cn(
-              "pointer-events-none fixed inset-0 z-[70] bg-black/45 backdrop-blur-[1px] transition-opacity duration-320 ease-[cubic-bezier(0.22,1,0.36,1)] md:hidden",
+              "pointer-events-none fixed inset-0 z-[70] bg-black/60 backdrop-blur-[1px] transition-opacity duration-320 ease-[cubic-bezier(0.22,1,0.36,1)] md:hidden",
               isRemoving ? "opacity-0" : "opacity-100",
             )}
             aria-hidden
