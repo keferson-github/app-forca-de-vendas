@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { auth } from "@/auth";
+import { buildNoticeUrl } from "@/lib/notice";
 import { prisma } from "@/lib/prisma";
 
 export type CustomerFormValues = {
@@ -23,6 +24,7 @@ export type CustomerFormValues = {
 export type CustomerFormState = {
   error?: string;
   values?: CustomerFormValues;
+  successNotice?: "customer-updated";
 };
 
 const prospectStatuses = ["PROSPECT", "QUALIFIED", "DISQUALIFIED", "CONVERTED"] as const;
@@ -274,7 +276,10 @@ export async function createCustomerAction(
   });
 
   revalidatePath("/clientes");
-  redirect(`/clientes?notice=${parsed.data.isProspect ? "prospect-created" : "customer-created"}`);
+  redirect(buildNoticeUrl(
+    "/clientes",
+    parsed.data.isProspect ? "prospect-created" : "customer-created",
+  ));
 }
 
 export async function updateCustomerAction(
@@ -308,7 +313,7 @@ export async function updateCustomerAction(
   }
 
   revalidatePath("/clientes");
-  redirect("/clientes?notice=customer-updated");
+  redirect(buildNoticeUrl("/clientes", "customer-updated"));
 }
 
 export async function deleteCustomerAction(
@@ -348,5 +353,5 @@ export async function deleteCustomerAction(
   }
 
   revalidatePath("/clientes");
-  redirect("/clientes?notice=customer-deleted");
+  redirect(buildNoticeUrl("/clientes", "customer-deleted"));
 }

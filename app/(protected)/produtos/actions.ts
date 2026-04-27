@@ -9,6 +9,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { auth } from "@/auth";
+import { buildNoticeUrl } from "@/lib/notice";
 import { syncProductToBlingById } from "@/lib/bling-sync";
 import {
   isValidProductSubcategory,
@@ -441,7 +442,7 @@ export async function createProductAction(
   }
 
   revalidatePath("/produtos");
-  redirect("/produtos?notice=product-created");
+  redirect(buildNoticeUrl("/produtos", "product-created"));
 }
 
 export async function updateProductAction(
@@ -532,7 +533,7 @@ export async function updateProductAction(
   }
 
   revalidatePath("/produtos");
-  redirect("/produtos?notice=product-updated");
+  redirect(buildNoticeUrl("/produtos", "product-updated"));
 }
 
 export async function deleteProductAction(
@@ -588,5 +589,5 @@ export async function deleteProductAction(
   }
 
   revalidatePath("/produtos");
-  redirect("/produtos?notice=product-deleted");
+  redirect(buildNoticeUrl("/produtos", "product-deleted"));
 }

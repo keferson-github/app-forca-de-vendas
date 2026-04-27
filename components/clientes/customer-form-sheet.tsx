@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useEffect, useRef, useState } from "react";
 import { UserPlus, Users } from "lucide-react";
 import {
   createCustomerAction,
@@ -8,6 +8,7 @@ import {
   type CustomerFormState,
 } from "@/app/(protected)/clientes/actions";
 import { SubmitButton } from "@/components/auth/submit-button";
+import { appToast } from "@/lib/toast";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
@@ -204,6 +205,9 @@ export function CustomerFormSheet({
   const values = state.values;
   const commercialAddressValue = values?.commercialAddress ?? customer?.commercialAddress ?? "";
   const deliveryAddressValue = values?.deliveryAddress ?? customer?.deliveryAddress ?? "";
+  const hasCommercialAddressValue = commercialAddressValue.trim().length > 0;
+  const hasDeliveryAddressValue = deliveryAddressValue.trim().length > 0;
+  const addressSectionsStorageKey = customer ? `customer-address-sections:${customer.id}` : null;
   const customerDocument = customer?.cnpjCpf ?? "";
   const cnpjOnlyField = !customer && !defaultIsProspect;
   const isProspect = values?.isProspect ?? customer?.isProspect ?? defaultIsProspect;
@@ -211,16 +215,84 @@ export function CustomerFormSheet({
     values?.prospectStatus
     ?? customer?.prospectStatus
     ?? (defaultIsProspect ? "PROSPECT" : "CONVERTED");
+
+  function readStoredAddressSections() {
+    if (!addressSectionsStorageKey || typeof window === "undefined") {
+      return null;
+    }
+
+    try {
+      const raw = window.localStorage.getItem(addressSectionsStorageKey);
+
+      if (!raw) {
+        return null;
+      }
+
+      const parsed = JSON.parse(raw) as {
+        showCommercialAddress?: boolean;
+        showDeliveryAddress?: boolean;
+      };
+
+      return {
+        showCommercialAddress:
+          typeof parsed.showCommercialAddress === "boolean"
+            ? parsed.showCommercialAddress
+            : hasCommercialAddressValue,
+        showDeliveryAddress:
+          typeof parsed.showDeliveryAddress === "boolean"
+            ? parsed.showDeliveryAddress
+            : hasDeliveryAddressValue,
+      };
+    } catch {
+      return null;
+    }
+  }
+
+  function resolveAddressSectionsState() {
+    const stored = readStoredAddressSections();
+
+    return {
+      showCommercialAddress: stored?.showCommercialAddress ?? hasCommercialAddressValue,
+      showDeliveryAddress: stored?.showDeliveryAddress ?? hasDeliveryAddressValue,
+    };
+  }
+
   const [showCommercialAddress, setShowCommercialAddress] = useState(
-    () => commercialAddressValue.trim().length > 0
+    () => resolveAddressSectionsState().showCommercialAddress
   );
   const [showDeliveryAddress, setShowDeliveryAddress] = useState(
-    () => deliveryAddressValue.trim().length > 0
+    () => resolveAddressSectionsState().showDeliveryAddress
   );
+  const lastSuccessNotice = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (!state.successNotice || lastSuccessNotice.current === state.successNotice) {
+      return;
+    }
+
+    lastSuccessNotice.current = state.successNotice;
+
+    if (state.successNotice === "customer-updated") {
+      appToast.successCelebration("Cadastro atualizado com sucesso.");
+      onOpenChange(false);
+    }
+  }, [onOpenChange, state.successNotice]);
 
   function resetAddressSections() {
-    setShowCommercialAddress(commercialAddressValue.trim().length > 0);
-    setShowDeliveryAddress(deliveryAddressValue.trim().length > 0);
+    const nextSectionsState = resolveAddressSectionsState();
+    setShowCommercialAddress(nextSectionsState.showCommercialAddress);
+    setShowDeliveryAddress(nextSectionsState.showDeliveryAddress);
+  }
+
+  function persistAddressSectionsState() {
+    if (!addressSectionsStorageKey || typeof window === "undefined") {
+      return;
+    }
+
+    window.localStorage.setItem(
+      addressSectionsStorageKey,
+      JSON.stringify({ showCommercialAddress, showDeliveryAddress })
+    );
   }
 
   function handleOpenChange(nextOpen: boolean) {
@@ -245,7 +317,12 @@ export function CustomerFormSheet({
         ref={contentRef}
         className="w-full overflow-y-auto data-[state=open]:animate-none sm:max-w-xl"
       >
-        <form action={formAction} className="flex min-h-full flex-col" onReset={resetAddressSections}>
+        <form
+          action={formAction}
+          className="flex min-h-full flex-col"
+          onReset={resetAddressSections}
+          onSubmit={persistAddressSectionsState}
+        >
           <SheetHeader>
             <SheetTitle>{title}</SheetTitle>
             <SheetDescription>{description}</SheetDescription>

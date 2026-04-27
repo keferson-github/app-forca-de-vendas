@@ -590,6 +590,7 @@ function ProductMobileCard({ product }: { product: ProductListItem }) {
             }
           />
           <ProductFormSheet
+            key={`edit-mobile-${product.id}-${product.updatedAt}`}
             product={product}
             triggerLabel="Editar"
             title="Editar produto"
@@ -815,6 +816,7 @@ export function ProductsPageClient({ products, query, pagination }: ProductsPage
                           }
                         />
                         <ProductFormSheet
+                          key={`edit-table-${product.id}-${product.updatedAt}`}
                           product={product}
                           triggerLabel="Editar"
                           title="Editar produto"

@@ -1,13 +1,15 @@
 "use client";
 
 import { useActionState, useRef, useState } from "react";
-import { Eye, Pencil, Plus, Search, ShoppingCart } from "lucide-react";
+import { Eye, Pencil, Plus, Search, ShoppingCart, Trash2 } from "lucide-react";
 import {
   createOrderAction,
+  deleteOrderAction,
   updateOrderAction,
   type OrderFormState,
 } from "@/app/(protected)/pedidos/actions";
 import { SubmitButton } from "@/components/auth/submit-button";
+import { ConfirmActionDialog } from "@/components/shared/confirm-action-dialog";
 import { DataTable } from "@/components/shared/data-table";
 import { GlobalSearchForm } from "@/components/shared/global-search-form";
 import { SearchInputWithAutocomplete } from "@/components/shared/global-search-form";
@@ -140,6 +142,10 @@ const noticeMessages = {
   },
   "order-updated": {
     message: "Pedido atualizado com sucesso.",
+    preset: "success-celebration" as const,
+  },
+  "order-deleted": {
+    message: "Pedido excluído com sucesso.",
     preset: "success-celebration" as const,
   },
 };
@@ -596,6 +602,30 @@ function OrderDetailSheet({ order }: { order: OrderListItem }) {
   );
 }
 
+function OrderDeleteDialog({ order }: { order: OrderListItem }) {
+  return (
+    <ConfirmActionDialog
+      action={deleteOrderAction}
+      hiddenFields={{ id: order.id }}
+      title="Excluir pedido"
+      description={
+        <>
+          Esta ação remove o pedido #{order.orderNumber}. Os itens e documentos vinculados
+          também serão removidos.
+        </>
+      }
+      confirmLabel="Confirmar exclusão"
+      pendingLabel="Excluindo..."
+      confirmVariant="destructive"
+      trigger={
+        <Button variant="ghost" size="icon-sm" aria-label={`Excluir pedido ${order.orderNumber}`}>
+          <Trash2 />
+        </Button>
+      }
+    />
+  );
+}
+
 function EmptyState() {
   return (
     <div className="grid min-h-[280px] place-items-center px-4 py-12 text-center">
@@ -700,6 +730,7 @@ export function OrdersPageClient({
                       <div className="flex justify-end gap-1">
                         <OrderDetailSheet order={order} />
                         <OrderFormSheet
+                          key={`edit-${order.id}-${order.updatedAt}`}
                           carriers={carriers}
                           order={order}
                           triggerLabel="Editar"
@@ -708,6 +739,7 @@ export function OrdersPageClient({
                           variant="ghost"
                           size="sm"
                         />
+                        <OrderDeleteDialog order={order} />
                       </div>
                     </TableCell>
                   </>

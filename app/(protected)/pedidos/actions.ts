@@ -11,6 +11,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { auth } from "@/auth";
+import { buildNoticeUrl } from "@/lib/notice";
 import { prisma } from "@/lib/prisma";
 
 const paymentTermValues = Object.values(PaymentTerm);
@@ -234,7 +235,7 @@ export async function createOrderAction(
   await createOrderWithUniqueNumber(userId, orderPayload(parsed.data));
 
   revalidatePath("/pedidos");
-  redirect("/pedidos?notice=order-created");
+  redirect(buildNoticeUrl("/pedidos", "order-created"));
 }
 
 export async function updateOrderAction(
@@ -278,5 +279,31 @@ export async function updateOrderAction(
   }
 
   revalidatePath("/pedidos");
-  redirect("/pedidos?notice=order-updated");
+  redirect(buildNoticeUrl("/pedidos", "order-updated"));
+}
+
+export async function deleteOrderAction(
+  _state: OrderFormState,
+  formData: FormData,
+): Promise<OrderFormState> {
+  const userId = await requireUserId();
+  const id = String(formData.get("id") ?? "");
+
+  if (!id) {
+    return { error: "Pedido não identificado." };
+  }
+
+  const deleted = await prisma.order.deleteMany({
+    where: {
+      id,
+      userId,
+    },
+  });
+
+  if (deleted.count === 0) {
+    return { error: "Pedido não encontrado ou sem permissão para excluir." };
+  }
+
+  revalidatePath("/pedidos");
+  redirect(buildNoticeUrl("/pedidos", "order-deleted"));
 }

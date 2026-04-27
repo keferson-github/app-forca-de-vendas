@@ -19,12 +19,11 @@ export function SuccessCelebrationToast({
       title={title}
       description={description}
       animationData={successAnimation}
-      animationSizeClass="size-[4.5rem]"
+      animationSizeClass="size-11"
       tone="success"
-      centered
-      stackedOnMobile
-      bareOnMobile
-      overlayOnMobile
+      stackedOnMobile={false}
+      bareOnMobile={false}
+      overlayOnMobile={false}
       onClose={onClose}
     />
   );

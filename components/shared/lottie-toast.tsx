@@ -1,8 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import Lottie from "lottie-react";
+import { Player } from "@lottiefiles/react-lottie-player";
 import { X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -30,8 +29,6 @@ const toneClasses: Record<LottieToastTone, string> = {
   error: "border-rose-500/35 bg-rose-500/10",
 };
 
-const animationCache = new Map<string, object>();
-
 export function LottieToast({
   title,
   description,
@@ -45,86 +42,22 @@ export function LottieToast({
   overlayOnMobile = false,
   onClose,
 }: LottieToastProps) {
-  const [fetchedAnimation, setFetchedAnimation] = useState<{
-    path: string;
-    data: object;
-  } | null>(null);
-  const [isRemoving, setIsRemoving] = useState(false);
-  const rootRef = useRef<HTMLDivElement | null>(null);
-  const cachedAnimationData = animationPath ? (animationCache.get(animationPath) ?? null) : null;
+  const animationSource = initialAnimationData ?? animationPath;
 
-  useEffect(() => {
-    if (initialAnimationData || !animationPath || cachedAnimationData) {
-      return undefined;
-    }
-
-    let isActive = true;
-
-    fetch(animationPath)
-      .then(async (response) => {
-        if (!response.ok) {
-          throw new Error("Animation file not found");
-        }
-
-        const payload = await response.json();
-
-        if (isActive) {
-          animationCache.set(animationPath, payload as object);
-          setFetchedAnimation({ path: animationPath, data: payload as object });
-        }
-      })
-      .catch(() => {});
-
-    return () => {
-      isActive = false;
-    };
-  }, [animationPath, cachedAnimationData, initialAnimationData]);
-
-  const resolvedAnimationData = initialAnimationData
-    ?? cachedAnimationData
-    ?? (fetchedAnimation?.path === animationPath ? (fetchedAnimation?.data ?? null) : null);
-
-  useEffect(() => {
-    const toastElement = rootRef.current?.closest("[data-sonner-toast]") as HTMLElement | null;
-
-    if (!toastElement) {
-      return undefined;
-    }
-
-    const syncRemovingState = () => {
-      const nextIsRemoving = toastElement.dataset.removed === "true";
-
-      setIsRemoving((current) => (current === nextIsRemoving ? current : nextIsRemoving));
-    };
-
-    syncRemovingState();
-
-    const observer = new MutationObserver(syncRemovingState);
-    observer.observe(toastElement, {
-      attributes: true,
-      attributeFilter: ["data-removed"],
-    });
-
-    return () => {
-      observer.disconnect();
-    };
-  }, []);
-
-  const animation = useMemo(() => {
-    if (!resolvedAnimationData) {
-      return <div className="size-12 animate-pulse rounded-full bg-muted" aria-hidden />;
-    }
-
-    return (
-      <Lottie
-        animationData={resolvedAnimationData}
-        loop={false}
+  const animation = animationSource ? (
+    <div className={cn(animationSizeClass, "transform-gpu will-change-transform")} aria-hidden>
+      <Player
         autoplay
-        className={cn(animationSizeClass, "transform-gpu will-change-transform")}
-        aria-hidden
+        loop={false}
+        keepLastFrame
+        renderer="svg"
+        src={animationSource as object | string}
+        style={{ width: "100%", height: "100%" }}
       />
-    );
-  }, [animationSizeClass, resolvedAnimationData]);
+    </div>
+  ) : (
+    <div className="size-12 animate-pulse rounded-full bg-muted" aria-hidden />
+  );
 
   const toastContent = bareOnMobile ? (
     <div className="relative z-[71] flex w-[min(92vw,360px)] flex-col items-center gap-2 text-center text-popover-foreground md:w-[min(92vw,420px)]">
@@ -172,29 +105,27 @@ export function LottieToast({
   );
 
   return (
-    <div ref={rootRef} className="relative">
+    <div className="relative">
       {overlayOnMobile && typeof document !== "undefined"
         ? createPortal(
           <div
-            className={cn(
-              "pointer-events-none fixed inset-0 z-[70] bg-[#FAFAFA]/82 backdrop-blur-sm transition-opacity duration-320 ease-[cubic-bezier(0.22,1,0.36,1)] dark:bg-black/62",
-              isRemoving ? "opacity-0 md:duration-180" : "opacity-100",
-            )}
+            className="pointer-events-none fixed inset-0 z-[70] bg-[#FAFAFA]/82 backdrop-blur-sm dark:bg-black/62"
             aria-hidden
           />,
           document.body,
         )
         : null}
 
-      {centered ? (
-        <div className="pointer-events-none fixed inset-0 z-[71] grid place-items-center p-4">
-          <div className="pointer-events-auto">
-            {toastContent}
-          </div>
-        </div>
-      ) : (
-        toastContent
-      )}
+      {centered && typeof document !== "undefined"
+        ? createPortal(
+          <div className="pointer-events-none fixed inset-0 z-[71] grid place-items-center p-4">
+            <div className="pointer-events-auto">
+              {toastContent}
+            </div>
+          </div>,
+          document.body,
+        )
+        : toastContent}
     </div>
   );
 }

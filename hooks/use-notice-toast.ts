@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { useSearchParams } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { appToast } from "@/lib/toast";
 
 type NoticeToastVariant = "message" | "success" | "error" | "info" | "warning";
@@ -29,20 +29,39 @@ export function useNoticeToast(
   messages: Record<string, string | NoticeToastConfig>,
   { paramName = "notice", variant = "success" }: UseNoticeToastOptions = {},
 ) {
+  const pathname = usePathname();
+  const router = useRouter();
   const searchParams = useSearchParams();
-  const lastNotice = useRef<string | null>(null);
+  const lastNoticeKey = useRef<string | null>(null);
 
   useEffect(() => {
     const notice = searchParams.get(paramName);
+    const noticeId = searchParams.get("noticeId");
+    const noticeKey = notice ? `${notice}:${noticeId ?? ""}` : null;
 
-    if (!notice || lastNotice.current === notice) {
+    if (!notice) {
+      lastNoticeKey.current = null;
       return;
     }
 
-    lastNotice.current = notice;
+    if (lastNoticeKey.current === noticeKey) {
+      return;
+    }
+
+    const clearNoticeParam = () => {
+      const nextParams = new URLSearchParams(searchParams.toString());
+      nextParams.delete(paramName);
+      nextParams.delete("noticeId");
+
+      const nextUrl = nextParams.size > 0 ? `${pathname}?${nextParams.toString()}` : pathname;
+      router.replace(nextUrl, { scroll: false });
+    };
+
+    lastNoticeKey.current = noticeKey;
     const noticeConfig = messages[notice];
 
     if (!noticeConfig) {
+      clearNoticeParam();
       return;
     }
 
@@ -54,6 +73,7 @@ export function useNoticeToast(
       appToast.successCelebration(config.message, {
         description: config.description,
       });
+      clearNoticeParam();
       return;
     }
 
@@ -72,6 +92,7 @@ export function useNoticeToast(
         overlayOnMobile: config.overlayOnMobile,
         className: classNames || undefined,
       });
+      clearNoticeParam();
       return;
     }
 
@@ -93,5 +114,6 @@ export function useNoticeToast(
         appToast.success(config.message);
         break;
     }
-  }, [messages, paramName, searchParams, variant]);
+    clearNoticeParam();
+  }, [messages, paramName, pathname, router, searchParams, variant]);
 }

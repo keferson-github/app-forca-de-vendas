@@ -201,6 +201,7 @@ export function CustomersPageClient({
                       <div className="flex justify-end gap-1">
                         <CustomerDetailSheet customer={customer} />
                         <CustomerFormSheet
+                          key={`edit-${customer.id}-${customer.updatedAt}`}
                           customer={customer}
                           triggerLabel="Editar"
                           title="Editar cadastro"

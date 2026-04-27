@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { auth } from "@/auth";
+import { buildNoticeUrl } from "@/lib/notice";
 import { prisma } from "@/lib/prisma";
 
 export type CarrierFormValues = {
@@ -102,7 +103,7 @@ export async function createCarrierAction(
   });
 
   revalidatePath("/transportadoras");
-  redirect("/transportadoras?notice=carrier-created");
+  redirect(buildNoticeUrl("/transportadoras", "carrier-created"));
 }
 
 export async function updateCarrierAction(
@@ -139,7 +140,7 @@ export async function updateCarrierAction(
   }
 
   revalidatePath("/transportadoras");
-  redirect("/transportadoras?notice=carrier-updated");
+  redirect(buildNoticeUrl("/transportadoras", "carrier-updated"));
 }
 
 export async function deleteCarrierAction(
@@ -179,5 +180,5 @@ export async function deleteCarrierAction(
   }
 
   revalidatePath("/transportadoras");
-  redirect("/transportadoras?notice=carrier-deleted");
+  redirect(buildNoticeUrl("/transportadoras", "carrier-deleted"));
 }

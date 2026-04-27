@@ -381,6 +381,7 @@ export function CarriersPageClient({ carriers, query, pagination }: CarriersPage
                         <div className="flex justify-end gap-1">
                           <CarrierDetailSheet carrier={carrier} />
                           <CarrierFormSheet
+                            key={`edit-${carrier.id}-${carrier.updatedAt}`}
                             carrier={carrier}
                             triggerLabel="Editar"
                             title="Editar transportadora"
