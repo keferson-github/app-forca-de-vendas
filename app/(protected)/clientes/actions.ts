@@ -363,7 +363,8 @@ export async function deleteCustomerAction(
       };
     }
 
-    throw error;
+    console.error("Erro inesperado ao excluir cliente.", error);
+    return { error: "Nao foi possivel excluir o cliente no momento. Tente novamente." };
   }
 
   revalidatePath("/clientes");

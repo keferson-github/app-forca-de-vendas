@@ -176,7 +176,10 @@ export async function deleteCarrierAction(
       };
     }
 
-    throw error;
+    console.error("Erro inesperado ao excluir transportadora.", error);
+    return {
+      error: "Nao foi possivel excluir a transportadora no momento. Tente novamente.",
+    };
   }
 
   revalidatePath("/transportadoras");

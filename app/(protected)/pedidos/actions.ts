@@ -293,15 +293,29 @@ export async function deleteOrderAction(
     return { error: "Pedido não identificado." };
   }
 
-  const deleted = await prisma.order.deleteMany({
-    where: {
-      id,
-      userId,
-    },
-  });
+  try {
+    const deleted = await prisma.order.deleteMany({
+      where: {
+        id,
+        userId,
+      },
+    });
 
-  if (deleted.count === 0) {
-    return { error: "Pedido não encontrado ou sem permissão para excluir." };
+    if (deleted.count === 0) {
+      return { error: "Pedido não encontrado ou sem permissão para excluir." };
+    }
+  } catch (error) {
+    if (
+      error instanceof Prisma.PrismaClientKnownRequestError
+      && error.code === "P2003"
+    ) {
+      return {
+        error: "Não foi possível excluir: este pedido possui registros vinculados.",
+      };
+    }
+
+    console.error("Erro inesperado ao excluir pedido.", error);
+    return { error: "Não foi possível excluir o pedido no momento. Tente novamente." };
   }
 
   revalidatePath("/pedidos");

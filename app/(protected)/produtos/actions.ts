@@ -572,8 +572,6 @@ export async function deleteProductAction(
     if (deleted.count === 0) {
       return { error: "Produto não encontrado ou sem permissão para excluir." };
     }
-
-    await removeImageFile(currentProduct.imageUrl);
   } catch (error) {
     if (
       error instanceof Prisma.PrismaClientKnownRequestError &&
@@ -585,7 +583,17 @@ export async function deleteProductAction(
       };
     }
 
-    throw error;
+    console.error("Erro inesperado ao excluir produto.", error);
+    return { error: "Não foi possível excluir o produto no momento. Tente novamente." };
+  }
+
+  try {
+    await removeImageFile(currentProduct.imageUrl);
+  } catch (error) {
+    console.error("Produto excluído, mas houve falha ao remover a imagem.", {
+      productId: id,
+      error,
+    });
   }
 
   revalidatePath("/produtos");
