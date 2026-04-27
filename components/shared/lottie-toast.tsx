@@ -29,6 +29,8 @@ const toneClasses: Record<LottieToastTone, string> = {
   error: "border-rose-500/35 bg-rose-500/10",
 };
 
+const animationCache = new Map<string, object>();
+
 export function LottieToast({
   title,
   description,
@@ -62,6 +64,15 @@ export function LottieToast({
 
     let isActive = true;
 
+    const cached = animationCache.get(animationPath);
+
+    if (cached) {
+      setFetchedAnimationData(cached);
+      return () => {
+        isActive = false;
+      };
+    }
+
     fetch(animationPath)
       .then(async (response) => {
         if (!response.ok) {
@@ -71,6 +82,7 @@ export function LottieToast({
         const payload = await response.json();
 
         if (isActive) {
+          animationCache.set(animationPath, payload as object);
           setFetchedAnimationData(payload);
         }
       })
