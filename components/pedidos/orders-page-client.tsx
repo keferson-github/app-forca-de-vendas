@@ -656,6 +656,7 @@ export function OrdersPageClient({
           ) : (
             <>
               <DataTable
+                hideOnMobile={false}
                 columns={[
                   { id: "order", label: "Pedido" },
                   { id: "customer", label: "Cliente" },
