@@ -5,6 +5,19 @@ import { useSearchParams } from "next/navigation";
 import { appToast } from "@/lib/toast";
 
 type NoticeToastVariant = "message" | "success" | "error" | "info" | "warning";
+type NoticeAnimatedTone = "success" | "info" | "warning" | "error";
+
+type NoticeToastConfig = {
+  message: string;
+  variant?: NoticeToastVariant;
+  animationPath?: string;
+  animationTone?: NoticeAnimatedTone;
+  description?: string;
+  mobileCentered?: boolean;
+  stackedOnMobile?: boolean;
+  bareOnMobile?: boolean;
+  overlayOnMobile?: boolean;
+};
 
 type UseNoticeToastOptions = {
   paramName?: string;
@@ -12,7 +25,7 @@ type UseNoticeToastOptions = {
 };
 
 export function useNoticeToast(
-  messages: Record<string, string>,
+  messages: Record<string, string | NoticeToastConfig>,
   { paramName = "notice", variant = "success" }: UseNoticeToastOptions = {},
 ) {
   const searchParams = useSearchParams();
@@ -26,28 +39,50 @@ export function useNoticeToast(
     }
 
     lastNotice.current = notice;
-    const message = messages[notice];
+    const noticeConfig = messages[notice];
 
-    if (!message) {
+    if (!noticeConfig) {
       return;
     }
 
-    switch (variant) {
+    const config: NoticeToastConfig = typeof noticeConfig === "string"
+      ? { message: noticeConfig, variant }
+      : { ...noticeConfig, variant: noticeConfig.variant ?? variant };
+
+    if (config.animationPath) {
+      const classNames = [
+        config.mobileCentered ? "toast-mobile-centered" : "",
+        config.bareOnMobile ? "toast-mobile-bare" : "",
+      ].filter(Boolean).join(" ");
+
+      appToast.animated(config.message, {
+        animationPath: config.animationPath,
+        tone: config.animationTone ?? "success",
+        description: config.description,
+        stackedOnMobile: config.stackedOnMobile,
+        bareOnMobile: config.bareOnMobile,
+        overlayOnMobile: config.overlayOnMobile,
+        className: classNames || undefined,
+      });
+      return;
+    }
+
+    switch (config.variant) {
       case "message":
-        appToast.message(message);
+        appToast.message(config.message);
         break;
       case "error":
-        appToast.error(message);
+        appToast.error(config.message);
         break;
       case "info":
-        appToast.info(message);
+        appToast.info(config.message);
         break;
       case "warning":
-        appToast.warning(message);
+        appToast.warning(config.message);
         break;
       case "success":
       default:
-        appToast.success(message);
+        appToast.success(config.message);
         break;
     }
   }, [messages, paramName, searchParams, variant]);

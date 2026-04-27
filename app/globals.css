@@ -183,3 +183,25 @@ body {
   --shadow-soft: 0 20px 34px -28px rgba(0, 0, 0, 0.44), 0 12px 20px -16px rgba(0, 0, 0, 0.32), 0 1px 0 rgba(255, 255, 255, 0.04) inset;
   --shadow-header: 0 18px 30px -28px rgba(0, 0, 0, 0.58), 0 1px 0 rgba(255, 255, 255, 0.05) inset;
 }
+
+.toast-mobile-bare {
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+  padding: 0 !important;
+}
+
+@media (max-width: 767px) {
+  .toast-mobile-centered {
+    position: fixed !important;
+    top: 50% !important;
+    left: 50% !important;
+    right: auto !important;
+    bottom: auto !important;
+    margin: 0 !important;
+    transform: translate(-50%, -50%) !important;
+    width: min(92vw, 360px) !important;
+    z-index: 71 !important;
+  }
+}

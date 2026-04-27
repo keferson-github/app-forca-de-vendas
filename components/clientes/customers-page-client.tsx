@@ -40,11 +40,35 @@ type CustomersPageClientProps = {
   };
 };
 
-const noticeMessages: Record<string, string> = {
-  "customer-created": "Cliente cadastrado com sucesso.",
-  "prospect-created": "Prospect cadastrado com sucesso.",
-  "customer-updated": "Cadastro atualizado com sucesso.",
-  "customer-deleted": "Cadastro excluido com sucesso.",
+const noticeMessages = {
+  "customer-created": {
+    message: "Cliente cadastrado com sucesso.",
+    animationPath: "/lottie/successfully.json",
+    animationTone: "success" as const,
+    mobileCentered: true,
+    stackedOnMobile: true,
+    bareOnMobile: true,
+    overlayOnMobile: true,
+  },
+  "prospect-created": {
+    message: "Prospect cadastrado com sucesso.",
+    animationPath: "/lottie/successfully.json",
+    animationTone: "success" as const,
+    mobileCentered: true,
+    stackedOnMobile: true,
+    bareOnMobile: true,
+    overlayOnMobile: true,
+  },
+  "customer-updated": {
+    message: "Cadastro atualizado com sucesso.",
+    animationPath: "/lottie/customer-updated.json",
+    animationTone: "info" as const,
+  },
+  "customer-deleted": {
+    message: "Cadastro excluido com sucesso.",
+    animationPath: "/lottie/customer-deleted.json",
+    animationTone: "error" as const,
+  },
 };
 
 const statusLabels = {

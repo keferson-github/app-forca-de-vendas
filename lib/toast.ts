@@ -1,5 +1,7 @@
 "use client";
 
+import { createElement } from "react";
+import { LottieToast, type LottieToastTone } from "@/components/shared/lottie-toast";
 import { toast as sonnerToast, type ExternalToast } from "sonner";
 
 const defaultToastOptions: ExternalToast = {
@@ -10,6 +12,15 @@ const defaultToastOptions: ExternalToast = {
 function withDefaults(options?: ExternalToast): ExternalToast {
   return { ...defaultToastOptions, ...options };
 }
+
+export type AnimatedToastOptions = ExternalToast & {
+  description?: string;
+  animationPath: string;
+  tone?: LottieToastTone;
+  stackedOnMobile?: boolean;
+  bareOnMobile?: boolean;
+  overlayOnMobile?: boolean;
+};
 
 export const appToast = {
   message(message: string, options?: ExternalToast) {
@@ -29,6 +40,31 @@ export const appToast = {
   },
   loading(message: string, options?: ExternalToast) {
     return sonnerToast.loading(message, withDefaults(options));
+  },
+  animated(message: string, options: AnimatedToastOptions) {
+    const {
+      description,
+      animationPath,
+      tone = "success",
+      stackedOnMobile,
+      bareOnMobile,
+      overlayOnMobile,
+      ...toastOptions
+    } = options;
+
+    return sonnerToast.custom(
+      (id) => createElement(LottieToast, {
+        title: message,
+        description,
+        animationPath,
+        tone,
+        stackedOnMobile,
+        bareOnMobile,
+        overlayOnMobile,
+        onClose: () => sonnerToast.dismiss(id),
+      }),
+      withDefaults(toastOptions),
+    );
   },
   dismiss(id?: string | number) {
     return sonnerToast.dismiss(id);
