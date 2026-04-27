@@ -14,6 +14,7 @@ type LottieToastProps = {
   description?: string;
   animationPath?: string;
   animationData?: object;
+  animationSizeClass?: string;
   tone?: LottieToastTone;
   stackedOnMobile?: boolean;
   bareOnMobile?: boolean;
@@ -33,13 +34,14 @@ export function LottieToast({
   description,
   animationPath,
   animationData: initialAnimationData,
+  animationSizeClass = "size-12",
   tone = "success",
   stackedOnMobile = false,
   bareOnMobile = false,
   overlayOnMobile = false,
   onClose,
 }: LottieToastProps) {
-  const [animationData, setAnimationData] = useState<object | null>(initialAnimationData ?? null);
+  const [fetchedAnimationData, setFetchedAnimationData] = useState<object | null>(null);
   const [mounted, setMounted] = useState(false);
   const [isRemoving, setIsRemoving] = useState(false);
   const rootRef = useRef<HTMLDivElement | null>(null);
@@ -53,13 +55,8 @@ export function LottieToast({
   }, []);
 
   useEffect(() => {
-    if (initialAnimationData) {
-      setAnimationData(initialAnimationData);
-      return undefined;
-    }
-
-    if (!animationPath) {
-      setAnimationData(null);
+    if (initialAnimationData || !animationPath) {
+      setFetchedAnimationData(null);
       return undefined;
     }
 
@@ -74,12 +71,12 @@ export function LottieToast({
         const payload = await response.json();
 
         if (isActive) {
-          setAnimationData(payload);
+          setFetchedAnimationData(payload);
         }
       })
       .catch(() => {
         if (isActive) {
-          setAnimationData(null);
+          setFetchedAnimationData(null);
         }
       });
 
@@ -87,6 +84,8 @@ export function LottieToast({
       isActive = false;
     };
   }, [animationPath, initialAnimationData]);
+
+  const resolvedAnimationData = initialAnimationData ?? fetchedAnimationData;
 
   useEffect(() => {
     if (!mounted) {
@@ -117,20 +116,20 @@ export function LottieToast({
   }, [mounted]);
 
   const animation = useMemo(() => {
-    if (!animationData) {
+    if (!resolvedAnimationData) {
       return <div className="size-12 animate-pulse rounded-full bg-muted" aria-hidden />;
     }
 
     return (
       <Lottie
-        animationData={animationData}
+        animationData={resolvedAnimationData}
         loop={false}
         autoplay
-        className="size-12"
+        className={animationSizeClass}
         aria-hidden
       />
     );
-  }, [animationData]);
+  }, [animationSizeClass, resolvedAnimationData]);
 
   return (
     <div ref={rootRef} className="relative">
@@ -138,7 +137,7 @@ export function LottieToast({
         ? createPortal(
           <div
             className={cn(
-              "pointer-events-none fixed inset-0 z-[70] bg-slate-950/30 backdrop-blur-md transition-opacity duration-320 ease-[cubic-bezier(0.22,1,0.36,1)] dark:bg-black/60 md:hidden",
+              "pointer-events-none fixed inset-0 z-[70] bg-[#FAFAFA]/78 backdrop-blur-md transition-opacity duration-320 ease-[cubic-bezier(0.22,1,0.36,1)] dark:bg-black/60 md:hidden",
               isRemoving ? "opacity-0" : "opacity-100",
             )}
             aria-hidden
@@ -149,7 +148,7 @@ export function LottieToast({
 
       {bareOnMobile ? (
         <div className="relative z-[71] flex w-[min(92vw,360px)] flex-col items-center gap-2 text-center text-popover-foreground">
-          <div className="size-16">{animation}</div>
+          <div className="size-20">{animation}</div>
           <div className="min-w-0">
             <p className="text-base font-semibold leading-tight">{title}</p>
             {description ? (
