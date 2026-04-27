@@ -15,6 +15,7 @@ import {
   MobileFloatingAction,
   MobileFloatingActionButton,
 } from "@/components/shared/mobile-floating-action";
+import { TablePagination } from "@/components/shared/table-pagination";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -61,6 +62,12 @@ export type CarrierListItem = {
 type CarriersPageClientProps = {
   carriers: CarrierListItem[];
   query: string;
+  pagination: {
+    currentPage: number;
+    pageSize: number;
+    totalItems: number;
+    totalPages: number;
+  };
 };
 
 type CarrierFormSheetProps = {
@@ -306,7 +313,7 @@ function CarrierDeleteSheet({ id, name }: { id: string; name: string }) {
   );
 }
 
-export function CarriersPageClient({ carriers, query }: CarriersPageClientProps) {
+export function CarriersPageClient({ carriers, query, pagination }: CarriersPageClientProps) {
   useNoticeToast(noticeMessages);
 
   return (
@@ -345,48 +352,64 @@ export function CarriersPageClient({ carriers, query }: CarriersPageClientProps)
           {carriers.length === 0 ? (
             <EmptyState />
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Transportadora</TableHead>
-                  <TableHead>Contato</TableHead>
-                  <TableHead>Telefone</TableHead>
-                  <TableHead>Pedidos</TableHead>
-                  <TableHead className="text-right">Acoes</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {carriers.map((carrier) => (
-                  <TableRow key={carrier.id}>
-                    <TableCell>
-                      <div className="grid gap-1">
-                        <span className="font-medium">{carrier.name}</span>
-                        <span className="text-xs text-muted-foreground">
-                          Atualizado em {new Date(carrier.updatedAt).toLocaleDateString("pt-BR")}
-                        </span>
-                      </div>
-                    </TableCell>
-                    <TableCell>{carrier.contact || "-"}</TableCell>
-                    <TableCell>{carrier.phone ? formatPhone(carrier.phone) : "-"}</TableCell>
-                    <TableCell>{carrier.ordersCount}</TableCell>
-                    <TableCell>
-                      <div className="flex justify-end gap-1">
-                        <CarrierDetailSheet carrier={carrier} />
-                        <CarrierFormSheet
-                          carrier={carrier}
-                          triggerLabel="Editar"
-                          title="Editar transportadora"
-                          description="Atualize contato, telefone e observacoes comerciais."
-                          variant="ghost"
-                          size="sm"
-                        />
-                        <CarrierDeleteSheet id={carrier.id} name={carrier.name} />
-                      </div>
-                    </TableCell>
+            <>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Transportadora</TableHead>
+                    <TableHead>Contato</TableHead>
+                    <TableHead>Telefone</TableHead>
+                    <TableHead>Pedidos</TableHead>
+                    <TableHead className="text-right">Acoes</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {carriers.map((carrier) => (
+                    <TableRow key={carrier.id}>
+                      <TableCell>
+                        <div className="grid gap-1">
+                          <span className="font-medium">{carrier.name}</span>
+                          <span className="text-xs text-muted-foreground">
+                            Atualizado em {new Date(carrier.updatedAt).toLocaleDateString("pt-BR")}
+                          </span>
+                        </div>
+                      </TableCell>
+                      <TableCell>{carrier.contact || "-"}</TableCell>
+                      <TableCell>{carrier.phone ? formatPhone(carrier.phone) : "-"}</TableCell>
+                      <TableCell>{carrier.ordersCount}</TableCell>
+                      <TableCell>
+                        <div className="flex justify-end gap-1">
+                          <CarrierDetailSheet carrier={carrier} />
+                          <CarrierFormSheet
+                            carrier={carrier}
+                            triggerLabel="Editar"
+                            title="Editar transportadora"
+                            description="Atualize contato, telefone e observacoes comerciais."
+                            variant="ghost"
+                            size="sm"
+                          />
+                          <CarrierDeleteSheet id={carrier.id} name={carrier.name} />
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+
+              <TablePagination
+                basePath="/transportadoras"
+                pageSize={pagination.pageSize}
+                currentPage={pagination.currentPage}
+                totalPages={pagination.totalPages}
+                totalItems={pagination.totalItems}
+                currentItemsCount={carriers.length}
+                params={{
+                  q: query || undefined,
+                  pageSize: String(pagination.pageSize),
+                }}
+                pageSizeOptions={[10, 50, 100]}
+              />
+            </>
           )}
         </CardContent>
       </Card>
