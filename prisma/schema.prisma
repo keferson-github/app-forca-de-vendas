@@ -114,6 +114,8 @@ model Customer {
   phone             String?
   commercialAddress String?
   deliveryAddress   String?
+  commercialAddressEnabled Boolean     @default(false)
+  deliveryAddressEnabled   Boolean     @default(false)
   isProspect        Boolean           @default(false)
   prospectStatus    ProspectStatus    @default(PROSPECT)
   createdAt         DateTime          @default(now())

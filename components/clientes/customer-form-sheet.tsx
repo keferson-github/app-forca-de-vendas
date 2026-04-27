@@ -41,6 +41,8 @@ export type CustomerListItem = {
   phone: string | null;
   commercialAddress: string | null;
   deliveryAddress: string | null;
+  commercialAddressEnabled: boolean;
+  deliveryAddressEnabled: boolean;
   isProspect: boolean;
   prospectStatus: "PROSPECT" | "QUALIFIED" | "DISQUALIFIED" | "CONVERTED";
   createdAt: string;
@@ -207,7 +209,14 @@ export function CustomerFormSheet({
   const deliveryAddressValue = values?.deliveryAddress ?? customer?.deliveryAddress ?? "";
   const hasCommercialAddressValue = commercialAddressValue.trim().length > 0;
   const hasDeliveryAddressValue = deliveryAddressValue.trim().length > 0;
-  const addressSectionsStorageKey = customer ? `customer-address-sections:${customer.id}` : null;
+  const commercialAddressEnabled =
+    values?.commercialAddressEnabled
+    ?? customer?.commercialAddressEnabled
+    ?? hasCommercialAddressValue;
+  const deliveryAddressEnabled =
+    values?.deliveryAddressEnabled
+    ?? customer?.deliveryAddressEnabled
+    ?? hasDeliveryAddressValue;
   const customerDocument = customer?.cnpjCpf ?? "";
   const cnpjOnlyField = !customer && !defaultIsProspect;
   const isProspect = values?.isProspect ?? customer?.isProspect ?? defaultIsProspect;
@@ -216,52 +225,11 @@ export function CustomerFormSheet({
     ?? customer?.prospectStatus
     ?? (defaultIsProspect ? "PROSPECT" : "CONVERTED");
 
-  function readStoredAddressSections() {
-    if (!addressSectionsStorageKey || typeof window === "undefined") {
-      return null;
-    }
-
-    try {
-      const raw = window.localStorage.getItem(addressSectionsStorageKey);
-
-      if (!raw) {
-        return null;
-      }
-
-      const parsed = JSON.parse(raw) as {
-        showCommercialAddress?: boolean;
-        showDeliveryAddress?: boolean;
-      };
-
-      return {
-        showCommercialAddress:
-          typeof parsed.showCommercialAddress === "boolean"
-            ? parsed.showCommercialAddress
-            : hasCommercialAddressValue,
-        showDeliveryAddress:
-          typeof parsed.showDeliveryAddress === "boolean"
-            ? parsed.showDeliveryAddress
-            : hasDeliveryAddressValue,
-      };
-    } catch {
-      return null;
-    }
-  }
-
-  function resolveAddressSectionsState() {
-    const stored = readStoredAddressSections();
-
-    return {
-      showCommercialAddress: stored?.showCommercialAddress ?? hasCommercialAddressValue,
-      showDeliveryAddress: stored?.showDeliveryAddress ?? hasDeliveryAddressValue,
-    };
-  }
-
   const [showCommercialAddress, setShowCommercialAddress] = useState(
-    () => resolveAddressSectionsState().showCommercialAddress
+    () => commercialAddressEnabled
   );
   const [showDeliveryAddress, setShowDeliveryAddress] = useState(
-    () => resolveAddressSectionsState().showDeliveryAddress
+    () => deliveryAddressEnabled
   );
   const lastSuccessNotice = useRef<string | null>(null);
 
@@ -279,20 +247,8 @@ export function CustomerFormSheet({
   }, [onOpenChange, state.successNotice]);
 
   function resetAddressSections() {
-    const nextSectionsState = resolveAddressSectionsState();
-    setShowCommercialAddress(nextSectionsState.showCommercialAddress);
-    setShowDeliveryAddress(nextSectionsState.showDeliveryAddress);
-  }
-
-  function persistAddressSectionsState() {
-    if (!addressSectionsStorageKey || typeof window === "undefined") {
-      return;
-    }
-
-    window.localStorage.setItem(
-      addressSectionsStorageKey,
-      JSON.stringify({ showCommercialAddress, showDeliveryAddress })
-    );
+    setShowCommercialAddress(commercialAddressEnabled);
+    setShowDeliveryAddress(deliveryAddressEnabled);
   }
 
   function handleOpenChange(nextOpen: boolean) {
@@ -321,7 +277,6 @@ export function CustomerFormSheet({
           action={formAction}
           className="flex min-h-full flex-col"
           onReset={resetAddressSections}
-          onSubmit={persistAddressSectionsState}
         >
           <SheetHeader>
             <SheetTitle>{title}</SheetTitle>
@@ -330,6 +285,16 @@ export function CustomerFormSheet({
 
           <div className="grid gap-4 px-4 pb-4">
             {customer ? <input type="hidden" name="id" value={values?.id || customer.id} /> : null}
+            <input
+              type="hidden"
+              name="commercialAddressEnabled"
+              value={showCommercialAddress ? "true" : "false"}
+            />
+            <input
+              type="hidden"
+              name="deliveryAddressEnabled"
+              value={showDeliveryAddress ? "true" : "false"}
+            />
 
             <div className="grid gap-2">
               <Label htmlFor={`${customer?.id ?? "new"}-name`}>Nome do cliente</Label>

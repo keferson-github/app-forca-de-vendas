@@ -102,6 +102,8 @@ export default async function ClientesPage(props: { searchParams: SearchParams }
         phone: customer.phone,
         commercialAddress: customer.commercialAddress,
         deliveryAddress: customer.deliveryAddress,
+        commercialAddressEnabled: customer.commercialAddressEnabled,
+        deliveryAddressEnabled: customer.deliveryAddressEnabled,
         isProspect: customer.isProspect,
         prospectStatus: customer.prospectStatus,
         createdAt: customer.createdAt.toISOString(),

@@ -1,0 +1,20 @@
+# Guidance for Using the Official PostgreSQL Documentation
+
+During the development of this project, the developer must use the official **PostgreSQL** documentation as the main source of technical reference.
+
+The official documentation should be used to validate database configuration, SQL syntax, data types, indexes, constraints, transactions, roles, permissions, performance optimization, backup strategies, replication, security practices, and other PostgreSQL-related resources.
+
+## Recommendations for the Developer
+
+- Consult the official PostgreSQL documentation whenever there are questions about database behavior or implementation.
+- Prioritize the best practices recommended by the official PostgreSQL documentation.
+- Avoid implementing database solutions based only on random examples found on the internet.
+- Check whether the features being used are compatible with the PostgreSQL version adopted in the project.
+- Use the documentation as a reference for technical decisions related to schema design, queries, indexing, and performance.
+- Validate database changes carefully before applying them to production environments.
+
+## Objective
+
+Ensure that the project is developed following best practices, updated standards, and officially supported PostgreSQL resources.
+
+[Consult the official PostgreSQL documentation during the development of the project:](https://www.postgresql.org/docs/)

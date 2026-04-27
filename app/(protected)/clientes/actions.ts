@@ -17,6 +17,8 @@ export type CustomerFormValues = {
   phone: string;
   commercialAddress: string;
   deliveryAddress: string;
+  commercialAddressEnabled: boolean;
+  deliveryAddressEnabled: boolean;
   isProspect: boolean;
   prospectStatus: (typeof prospectStatuses)[number];
 };
@@ -172,6 +174,8 @@ const customerSchema = z.object({
     }, "Informe um telefone completo com DDD."),
   commercialAddress: z.string().trim().optional(),
   deliveryAddress: z.string().trim().optional(),
+  commercialAddressEnabled: z.boolean(),
+  deliveryAddressEnabled: z.boolean(),
   isProspect: z.boolean(),
   prospectStatus: z.enum(prospectStatuses),
 });
@@ -213,6 +217,12 @@ function getCustomerFormValues(formData: FormData): CustomerFormValues {
     phone: getTextValue(formData, "phone"),
     commercialAddress: getTextValue(formData, "commercialAddress"),
     deliveryAddress: getTextValue(formData, "deliveryAddress"),
+    commercialAddressEnabled:
+      formData.get("commercialAddressEnabled") === "on"
+      || formData.get("commercialAddressEnabled") === "true",
+    deliveryAddressEnabled:
+      formData.get("deliveryAddressEnabled") === "on"
+      || formData.get("deliveryAddressEnabled") === "true",
     isProspect: formData.get("isProspect") === "on" || formData.get("isProspect") === "true",
     prospectStatus: getProspectStatus(getTextValue(formData, "prospectStatus")),
   };
@@ -230,6 +240,8 @@ function parseCustomerForm(formData: FormData) {
     phone: values.phone,
     commercialAddress: values.commercialAddress,
     deliveryAddress: values.deliveryAddress,
+    commercialAddressEnabled: values.commercialAddressEnabled,
+    deliveryAddressEnabled: values.deliveryAddressEnabled,
     isProspect: values.isProspect,
     prospectStatus: values.prospectStatus,
   });
@@ -249,6 +261,8 @@ function customerPayload(data: z.infer<typeof customerSchema>) {
     phone: nullable(normalizedPhone),
     commercialAddress: nullable(data.commercialAddress),
     deliveryAddress: nullable(data.deliveryAddress),
+    commercialAddressEnabled: data.commercialAddressEnabled,
+    deliveryAddressEnabled: data.deliveryAddressEnabled,
     isProspect: data.isProspect,
     prospectStatus: data.isProspect ? data.prospectStatus : "CONVERTED",
   };
