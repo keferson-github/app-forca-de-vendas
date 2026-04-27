@@ -75,9 +75,15 @@ type CarrierFormSheetProps = {
 
 const initialState: CarrierFormState = {};
 
-const noticeMessages: Record<string, string> = {
-  "carrier-created": "Transportadora cadastrada com sucesso.",
-  "carrier-updated": "Transportadora atualizada com sucesso.",
+const noticeMessages = {
+  "carrier-created": {
+    message: "Transportadora cadastrada com sucesso.",
+    preset: "success-celebration" as const,
+  },
+  "carrier-updated": {
+    message: "Transportadora atualizada com sucesso.",
+    preset: "success-celebration" as const,
+  },
   "carrier-deleted": "Transportadora excluida com sucesso.",
 };
 
@@ -191,7 +197,7 @@ function CarrierFormSheet({
 
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="grid gap-2">
-                <Label htmlFor={`${carrier?.id ?? "new"}-contact`}>Contato</Label>
+                <Label htmlFor={`${carrier?.id ?? "new"}-contact`}>Responsável</Label>
                 <Input
                   id={`${carrier?.id ?? "new"}-contact`}
                   name="contact"
