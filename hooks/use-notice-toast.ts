@@ -7,9 +7,10 @@ import { appToast } from "@/lib/toast";
 type NoticeToastVariant = "message" | "success" | "error" | "info" | "warning";
 type NoticeAnimatedTone = "success" | "info" | "warning" | "error";
 
-type NoticeToastConfig = {
+export type NoticeToastConfig = {
   message: string;
   variant?: NoticeToastVariant;
+  preset?: "success-celebration";
   animationPath?: string;
   animationTone?: NoticeAnimatedTone;
   description?: string;
@@ -48,6 +49,13 @@ export function useNoticeToast(
     const config: NoticeToastConfig = typeof noticeConfig === "string"
       ? { message: noticeConfig, variant }
       : { ...noticeConfig, variant: noticeConfig.variant ?? variant };
+
+    if (config.preset === "success-celebration") {
+      appToast.successCelebration(config.message, {
+        description: config.description,
+      });
+      return;
+    }
 
     if (config.animationPath) {
       const classNames = [

@@ -2,6 +2,7 @@
 
 import { createElement } from "react";
 import { LottieToast, type LottieToastTone } from "@/components/shared/lottie-toast";
+import { SuccessCelebrationToast } from "@/components/shared/success-celebration-toast";
 import { toast as sonnerToast, type ExternalToast } from "sonner";
 
 const defaultToastOptions: ExternalToast = {
@@ -20,6 +21,10 @@ export type AnimatedToastOptions = ExternalToast & {
   stackedOnMobile?: boolean;
   bareOnMobile?: boolean;
   overlayOnMobile?: boolean;
+};
+
+export type SuccessCelebrationToastOptions = ExternalToast & {
+  description?: string;
 };
 
 export const appToast = {
@@ -64,6 +69,21 @@ export const appToast = {
         onClose: () => sonnerToast.dismiss(id),
       }),
       withDefaults(toastOptions),
+    );
+  },
+  successCelebration(message: string, options?: SuccessCelebrationToastOptions) {
+    const { description, ...toastOptions } = options ?? {};
+
+    return sonnerToast.custom(
+      (id) => createElement(SuccessCelebrationToast, {
+        title: message,
+        description,
+        onClose: () => sonnerToast.dismiss(id),
+      }),
+      withDefaults({
+        className: "toast-mobile-centered toast-mobile-bare",
+        ...toastOptions,
+      }),
     );
   },
   dismiss(id?: string | number) {

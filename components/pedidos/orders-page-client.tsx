@@ -133,9 +133,15 @@ type CustomerLookupFieldProps = {
 const initialState: OrderFormState = {};
 const UNASSIGNED_CARRIER_VALUE = "__none__";
 
-const noticeMessages: Record<string, string> = {
-  "order-created": "Pedido registrado com sucesso.",
-  "order-updated": "Pedido atualizado com sucesso.",
+const noticeMessages = {
+  "order-created": {
+    message: "Pedido registrado com sucesso.",
+    preset: "success-celebration" as const,
+  },
+  "order-updated": {
+    message: "Pedido atualizado com sucesso.",
+    preset: "success-celebration" as const,
+  },
 };
 
 const statusLabels: Record<OrderListItem["status"], string> = {

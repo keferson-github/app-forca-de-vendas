@@ -43,21 +43,11 @@ type CustomersPageClientProps = {
 const noticeMessages = {
   "customer-created": {
     message: "Cliente cadastrado com sucesso.",
-    animationPath: "/lottie/successfully.json",
-    animationTone: "success" as const,
-    mobileCentered: true,
-    stackedOnMobile: true,
-    bareOnMobile: true,
-    overlayOnMobile: true,
+    preset: "success-celebration" as const,
   },
   "prospect-created": {
     message: "Prospect cadastrado com sucesso.",
-    animationPath: "/lottie/successfully.json",
-    animationTone: "success" as const,
-    mobileCentered: true,
-    stackedOnMobile: true,
-    bareOnMobile: true,
-    overlayOnMobile: true,
+    preset: "success-celebration" as const,
   },
   "customer-updated": {
     message: "Cadastro atualizado com sucesso.",
