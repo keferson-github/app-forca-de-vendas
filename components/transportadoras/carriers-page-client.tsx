@@ -84,7 +84,10 @@ const noticeMessages = {
     message: "Transportadora atualizada com sucesso.",
     preset: "success-celebration" as const,
   },
-  "carrier-deleted": "Transportadora excluida com sucesso.",
+  "carrier-deleted": {
+    message: "Transportadora excluida com sucesso.",
+    preset: "success-celebration" as const,
+  },
 };
 
 function onlyDigits(value: string) {

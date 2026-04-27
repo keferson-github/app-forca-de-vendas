@@ -145,7 +145,10 @@ const noticeMessages = {
     message: "Produto atualizado com sucesso.",
     preset: "success-celebration" as const,
   },
-  "product-deleted": "Produto excluído com sucesso.",
+  "product-deleted": {
+    message: "Produto excluído com sucesso.",
+    preset: "success-celebration" as const,
+  },
 };
 
 function generateProductCode() {

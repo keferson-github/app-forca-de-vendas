@@ -51,13 +51,11 @@ const noticeMessages = {
   },
   "customer-updated": {
     message: "Cadastro atualizado com sucesso.",
-    animationPath: "/lottie/customer-updated.json",
-    animationTone: "info" as const,
+    preset: "success-celebration" as const,
   },
   "customer-deleted": {
     message: "Cadastro excluido com sucesso.",
-    animationPath: "/lottie/customer-deleted.json",
-    animationTone: "error" as const,
+    preset: "success-celebration" as const,
   },
 };
 
