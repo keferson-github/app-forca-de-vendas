@@ -44,7 +44,7 @@ export function SiteHeader() {
         </div>
         <div className="ml-auto flex items-center gap-2">
           <AnimatedThemeToggler
-            className="inline-flex size-9 items-center justify-center rounded-md text-foreground transition-colors hover:bg-accent hover:text-accent-foreground [&_svg]:size-4"
+            className="text-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
             aria-label="Alternar tema claro ou escuro"
           />
         </div>
