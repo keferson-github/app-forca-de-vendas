@@ -7,9 +7,11 @@ import { prisma } from "@/lib/prisma";
 type SearchParams = Promise<{
   q?: string;
   page?: string;
+  pageSize?: string;
 }>;
 
-const PAGE_SIZE = 12;
+const PAGE_SIZE_DEFAULT = 10;
+const PAGE_SIZE_OPTIONS = [10, 50, 100] as const;
 
 function parsePage(value?: string) {
   const parsed = Number(value ?? "1");
@@ -19,6 +21,19 @@ function parsePage(value?: string) {
   }
 
   return Math.floor(parsed);
+}
+
+function parsePageSize(value?: string) {
+  const parsed = Number(value ?? PAGE_SIZE_DEFAULT);
+
+  if (!Number.isFinite(parsed) || parsed < 1) {
+    return PAGE_SIZE_DEFAULT;
+  }
+
+  const normalized = Math.floor(parsed);
+  return PAGE_SIZE_OPTIONS.includes(normalized as (typeof PAGE_SIZE_OPTIONS)[number])
+    ? normalized
+    : PAGE_SIZE_DEFAULT;
 }
 
 function buildWhere(userId: string, query: string) {
@@ -65,20 +80,21 @@ export default async function ProdutosPage(props: { searchParams: SearchParams }
   }
 
   const requestedPage = parsePage(searchParams.page);
+  const pageSize = parsePageSize(searchParams.pageSize);
   const query = (searchParams.q ?? "").trim();
   const where = buildWhere(session.user.id, query);
 
   try {
     const totalFiltered = await prisma.product.count({ where });
 
-    const totalPages = Math.max(1, Math.ceil(totalFiltered / PAGE_SIZE));
+    const totalPages = Math.max(1, Math.ceil(totalFiltered / pageSize));
     const currentPage = Math.min(requestedPage, totalPages);
 
     const products = await prisma.product.findMany({
       where,
       orderBy: [{ updatedAt: "desc" }, { createdAt: "desc" }, { id: "desc" }],
-      skip: (currentPage - 1) * PAGE_SIZE,
-      take: PAGE_SIZE,
+      skip: (currentPage - 1) * pageSize,
+      take: pageSize,
       include: {
         _count: {
           select: {
@@ -106,7 +122,7 @@ export default async function ProdutosPage(props: { searchParams: SearchParams }
         query={query}
         pagination={{
           currentPage,
-          pageSize: PAGE_SIZE,
+          pageSize,
           totalItems: totalFiltered,
           totalPages,
         }}

@@ -1,3 +1,6 @@
+"use client";
+
+import { useRouter } from "next/navigation";
 import {
   Pagination,
   PaginationContent,
@@ -7,6 +10,13 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from "@/components/ui/pagination";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 type TablePaginationProps = {
   basePath: string;
@@ -16,6 +26,8 @@ type TablePaginationProps = {
   totalItems: number;
   currentItemsCount: number;
   params?: Record<string, string | undefined>;
+  pageSizeOptions?: number[];
+  pageSizeParamKey?: string;
 };
 
 function buildHref(
@@ -72,7 +84,10 @@ export function TablePagination({
   totalItems,
   currentItemsCount,
   params,
+  pageSizeOptions,
+  pageSizeParamKey = "pageSize",
 }: TablePaginationProps) {
+  const router = useRouter();
   const hasPagination = totalPages > 1;
   const hasPreviousPage = currentPage > 1;
   const hasNextPage = currentPage < totalPages;
@@ -81,12 +96,37 @@ export function TablePagination({
   const nextHref = buildHref(basePath, Math.min(totalPages, currentPage + 1), params);
   const firstVisibleItem = totalItems === 0 ? 0 : (currentPage - 1) * pageSize + 1;
   const lastVisibleItem = totalItems === 0 ? 0 : firstVisibleItem + currentItemsCount - 1;
+  const showPageSizeSelector = Boolean(pageSizeOptions?.length);
+
+  const handlePageSizeChange = (value: string) => {
+    const nextParams = { ...params, [pageSizeParamKey]: value };
+    router.push(buildHref(basePath, 1, nextParams));
+  };
 
   return (
     <div className="mt-6 grid gap-3 rounded-2xl bg-muted/30 px-4 py-4 shadow-[var(--shadow-soft)]">
-      <p className="text-center text-sm text-muted-foreground">
-        Mostrando {firstVisibleItem}-{lastVisibleItem} de {totalItems} item(ns)
-      </p>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <p className="text-sm text-muted-foreground">
+          Mostrando {firstVisibleItem}-{lastVisibleItem} de {totalItems} item(ns)
+        </p>
+        {showPageSizeSelector ? (
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <span>Itens por pagina</span>
+            <Select value={String(pageSize)} onValueChange={handlePageSizeChange}>
+              <SelectTrigger className="h-8 w-[110px] bg-background">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent align="end">
+                {pageSizeOptions?.map((option) => (
+                  <SelectItem key={option} value={String(option)}>
+                    {option} itens
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        ) : null}
+      </div>
 
       {hasPagination ? (
         <Pagination>

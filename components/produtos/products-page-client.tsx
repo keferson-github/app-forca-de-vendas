@@ -827,16 +827,7 @@ export function ProductsPageClient({ products, query, pagination }: ProductsPage
                     </TableCell>
                   </>
                 )}
-                footer={
-                  products.length > 1 ? (
-                    <TableRow>
-                      <TableCell colSpan={2}>Totais</TableCell>
-                      <TableCell className="text-center">{totalLinkedItems} item(ns)</TableCell>
-                      <TableCell className="text-right">{formatCurrency(totalCatalogValue)}</TableCell>
-                      <TableCell />
-                    </TableRow>
-                  ) : null
-                }
+                footer={null}
               />
 
               <TablePagination
@@ -846,7 +837,11 @@ export function ProductsPageClient({ products, query, pagination }: ProductsPage
                 totalPages={pagination.totalPages}
                 totalItems={pagination.totalItems}
                 currentItemsCount={products.length}
-                params={{ q: query || undefined }}
+                params={{
+                  q: query || undefined,
+                  pageSize: String(pagination.pageSize),
+                }}
+                pageSizeOptions={[10, 50, 100]}
               />
             </>
           )}
