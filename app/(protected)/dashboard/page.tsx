@@ -318,6 +318,35 @@ export default async function DashboardPage(props: { searchParams: SearchParams 
     },
   ] satisfies OperationalRow[];
 
+  const crmTotal = data.modules.crmNotesCount + data.modules.contactsCount;
+  const moduleCards = [
+    {
+      key: "crm",
+      label: "CRM e contatos",
+      value: crmTotal,
+      summary: `${data.modules.crmNotesCount} anotacoes e ${data.modules.contactsCount} contatos cadastrados.`,
+      icon: IconNotes,
+      color: "#14b8a6",
+    },
+    {
+      key: "documents",
+      label: "Documentos",
+      value: data.modules.documentsCount,
+      summary: "Declaracoes e documentos gerados a partir de pedidos.",
+      icon: IconFileDescription,
+      color: "#38bdf8",
+    },
+    {
+      key: "whatsapp",
+      label: "WhatsApp",
+      value: data.modules.dispatchSentCount,
+      summary: `${data.modules.dispatchFailedCount} falha(s) registrada(s) no envio via Evolution API.`,
+      icon: IconMessageCircle,
+      color: "#f59e0b",
+    },
+  ];
+  const moduleMax = Math.max(1, ...moduleCards.map((card) => card.value));
+
   return (
     <div
       className="flex flex-col gap-4 py-4 md:gap-6 md:py-6"
@@ -401,81 +430,45 @@ export default async function DashboardPage(props: { searchParams: SearchParams 
       <OperationalTable rows={sectionLinks} />
 
       <div className="grid gap-4 px-4 lg:grid-cols-3 lg:px-6">
-        <Card>
-          <CardHeader>
-            <CardDescription className="flex items-center gap-2">
-              <IconNotes className="size-4" />
-              CRM e contatos
-            </CardDescription>
-            <CardTitle className="text-2xl">
-              <NumberTicker
-                value={data.modules.crmNotesCount + data.modules.contactsCount}
-                locale="pt-BR"
-                className="tracking-normal text-inherit"
-              />
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="text-sm text-muted-foreground">
-            <NumberTicker
-              value={data.modules.crmNotesCount}
-              locale="pt-BR"
-              delay={0.05}
-              className="text-sm font-medium tracking-normal text-foreground"
-            />{" "}
-            anotacoes e{" "}
-            <NumberTicker
-              value={data.modules.contactsCount}
-              locale="pt-BR"
-              delay={0.1}
-              className="text-sm font-medium tracking-normal text-foreground"
-            />{" "}
-            contatos cadastrados.
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardDescription className="flex items-center gap-2">
-              <IconFileDescription className="size-4" />
-              Documentos
-            </CardDescription>
-            <CardTitle className="text-2xl">
-              <NumberTicker
-                value={data.modules.documentsCount}
-                locale="pt-BR"
-                delay={0.1}
-                className="tracking-normal text-inherit"
-              />
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="text-sm text-muted-foreground">
-            Declaracoes e documentos gerados a partir de pedidos.
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardDescription className="flex items-center gap-2">
-              <IconMessageCircle className="size-4" />
-              WhatsApp
-            </CardDescription>
-            <CardTitle className="text-2xl">
-              <NumberTicker
-                value={data.modules.dispatchSentCount}
-                locale="pt-BR"
-                delay={0.15}
-                className="tracking-normal text-inherit"
-              />
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="text-sm text-muted-foreground">
-            <NumberTicker
-              value={data.modules.dispatchFailedCount}
-              locale="pt-BR"
-              delay={0.2}
-              className="text-sm font-medium tracking-normal text-foreground"
-            />{" "}
-            falha(s) registrada(s) no envio via Evolution API.
-          </CardContent>
-        </Card>
+        {moduleCards.map((card) => {
+          const percent = Math.min(100, Math.round((card.value / moduleMax) * 100));
+          const Icon = card.icon;
+
+          return (
+            <Card key={card.key} className="overflow-hidden">
+              <CardHeader className="flex flex-row items-start justify-between gap-4">
+                <div className="grid gap-2">
+                  <CardDescription className="flex items-center gap-2">
+                    <Icon className="size-4" />
+                    {card.label}
+                  </CardDescription>
+                  <CardTitle className="text-2xl">
+                    <NumberTicker
+                      value={card.value}
+                      locale="pt-BR"
+                      className="tracking-normal text-inherit"
+                    />
+                  </CardTitle>
+                </div>
+                <div
+                  className="relative grid size-16 place-items-center rounded-full"
+                  style={
+                    {
+                      background: `conic-gradient(${card.color} ${percent}%, rgba(148,163,184,0.2) 0)`,
+                    } as React.CSSProperties
+                  }
+                >
+                  <div className="grid size-12 place-items-center rounded-full bg-card">
+                    <span className="text-xs font-semibold text-foreground">{percent}%</span>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="text-sm text-muted-foreground">
+                {card.summary}
+              </CardContent>
+            </Card>
+          );
+        })}
       </div>
     </div>
   );
