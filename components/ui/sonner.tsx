@@ -23,7 +23,7 @@ const Toaster = ({ ...props }: ToasterProps) => {
       toastOptions={{
         classNames: {
           toast:
-            "group toast scale-100 opacity-100 transition-[opacity,transform] duration-180 ease-out data-[mounted=false]:scale-[0.92] data-[mounted=false]:opacity-0 data-[mounted=true]:scale-100 data-[mounted=true]:opacity-100 data-[removed=true]:scale-[0.96] data-[removed=true]:opacity-0 group-[.toaster]:bg-popover/98 group-[.toaster]:text-popover-foreground group-[.toaster]:shadow-[var(--shadow-surface-strong)] group-[.toaster]:backdrop-blur-sm",
+            "group toast opacity-100 transition-opacity duration-260 ease-[cubic-bezier(0.22,1,0.36,1)] data-[mounted=false]:opacity-0 data-[mounted=true]:opacity-100 data-[removed=true]:opacity-0 group-[.toaster]:bg-popover/98 group-[.toaster]:text-popover-foreground group-[.toaster]:shadow-[var(--shadow-surface-strong)] group-[.toaster]:backdrop-blur-sm",
           description: "group-[.toast]:text-muted-foreground",
           actionButton:
             "group-[.toast]:bg-primary group-[.toast]:text-primary-foreground",

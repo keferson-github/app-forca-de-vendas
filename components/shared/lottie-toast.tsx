@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import Lottie from "lottie-react";
 import { X } from "lucide-react";
@@ -39,6 +39,8 @@ export function LottieToast({
 }: LottieToastProps) {
   const [animationData, setAnimationData] = useState<object | null>(null);
   const [mounted, setMounted] = useState(false);
+  const [isRemoving, setIsRemoving] = useState(false);
+  const rootRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     setMounted(true);
@@ -74,6 +76,34 @@ export function LottieToast({
     };
   }, [animationPath]);
 
+  useEffect(() => {
+    if (!mounted) {
+      return undefined;
+    }
+
+    const toastElement = rootRef.current?.closest("[data-sonner-toast]") as HTMLElement | null;
+
+    if (!toastElement) {
+      return undefined;
+    }
+
+    const syncRemovingState = () => {
+      setIsRemoving(toastElement.dataset.removed === "true");
+    };
+
+    syncRemovingState();
+
+    const observer = new MutationObserver(syncRemovingState);
+    observer.observe(toastElement, {
+      attributes: true,
+      attributeFilter: ["data-removed"],
+    });
+
+    return () => {
+      observer.disconnect();
+    };
+  }, [mounted]);
+
   const animation = useMemo(() => {
     if (!animationData) {
       return <div className="size-12 animate-pulse rounded-full bg-muted" aria-hidden />;
@@ -91,11 +121,14 @@ export function LottieToast({
   }, [animationData]);
 
   return (
-    <div className="relative">
+    <div ref={rootRef} className="relative">
       {overlayOnMobile && mounted
         ? createPortal(
           <div
-            className="pointer-events-none fixed inset-0 z-[70] bg-black/45 backdrop-blur-[1px] md:hidden"
+            className={cn(
+              "pointer-events-none fixed inset-0 z-[70] bg-black/45 backdrop-blur-[1px] transition-opacity duration-320 ease-[cubic-bezier(0.22,1,0.36,1)] md:hidden",
+              isRemoving ? "opacity-0" : "opacity-100",
+            )}
             aria-hidden
           />,
           document.body,
