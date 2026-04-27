@@ -81,7 +81,7 @@ export const appToast = {
         onClose: () => sonnerToast.dismiss(id),
       }),
       withDefaults({
-        className: "toast-success-centered toast-mobile-bare",
+        className: "toast-success-centered toast-mobile-bare toast-success-fast-exit",
         ...toastOptions,
       }),
     );

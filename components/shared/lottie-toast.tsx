@@ -140,7 +140,7 @@ export function LottieToast({
           <div
             className={cn(
               "pointer-events-none fixed inset-0 z-[70] bg-[#FAFAFA]/82 backdrop-blur-sm transition-opacity duration-320 ease-[cubic-bezier(0.22,1,0.36,1)] dark:bg-black/62",
-              isRemoving ? "opacity-0" : "opacity-100",
+              isRemoving ? "opacity-0 md:duration-180" : "opacity-100",
             )}
             aria-hidden
           />,

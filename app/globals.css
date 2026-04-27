@@ -203,14 +203,21 @@ body {
   z-index: 71 !important;
 }
 
+@media (min-width: 768px) {
+  .toast-success-fast-exit[data-removed="true"] {
+    transition-duration: 140ms !important;
+  }
+}
+
 @media (max-width: 767px) {
   .toast-success-centered {
     inset: auto !important;
-    top: auto !important;
-    left: auto !important;
+    top: 50% !important;
+    left: 50% !important;
     right: auto !important;
     bottom: auto !important;
     margin: 0 !important;
+    transform: translate(-50%, -50%) !important;
     height: auto !important;
     width: min(92vw, 360px) !important;
   }
