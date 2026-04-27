@@ -1,25 +1,15 @@
 import type { Prisma } from "@prisma/client";
 import { auth } from "@/auth";
 import { OrdersPageClient } from "@/components/pedidos/orders-page-client";
+import { parsePage, parsePageSize } from "@/lib/pagination";
 import { prisma } from "@/lib/prisma";
 
 type SearchParams = Promise<{
   open?: string;
   q?: string;
   page?: string;
+  pageSize?: string;
 }>;
-
-const PAGE_SIZE = 12;
-
-function parsePage(value?: string) {
-  const parsed = Number(value ?? "1");
-
-  if (!Number.isFinite(parsed) || parsed < 1) {
-    return 1;
-  }
-
-  return Math.floor(parsed);
-}
 
 function buildWhere(userId: string, query: string) {
   const where: Prisma.OrderWhereInput = {
@@ -58,18 +48,19 @@ export default async function PedidosPage(props: { searchParams: SearchParams })
   const openNewOrder = searchParams.open === "new-order";
   const query = (searchParams.q ?? "").trim();
   const requestedPage = parsePage(searchParams.page);
+  const pageSize = parsePageSize(searchParams.pageSize);
   const where = buildWhere(session.user.id, query);
 
   const totalFiltered = await prisma.order.count({ where });
 
-  const totalPages = Math.max(1, Math.ceil(totalFiltered / PAGE_SIZE));
+  const totalPages = Math.max(1, Math.ceil(totalFiltered / pageSize));
   const currentPage = Math.min(requestedPage, totalPages);
 
   const orders = await prisma.order.findMany({
     where,
     orderBy: [{ updatedAt: "desc" }, { createdAt: "desc" }, { id: "desc" }],
-    skip: (currentPage - 1) * PAGE_SIZE,
-    take: PAGE_SIZE,
+    skip: (currentPage - 1) * pageSize,
+    take: pageSize,
     include: {
       customer: {
         select: {
@@ -132,7 +123,7 @@ export default async function PedidosPage(props: { searchParams: SearchParams })
       query={query}
       pagination={{
         currentPage,
-        pageSize: PAGE_SIZE,
+        pageSize,
         totalItems: totalFiltered,
         totalPages,
       }}

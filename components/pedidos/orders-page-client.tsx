@@ -721,7 +721,11 @@ export function OrdersPageClient({
                 totalPages={pagination.totalPages}
                 totalItems={pagination.totalItems}
                 currentItemsCount={orders.length}
-                params={{ q: query || undefined }}
+                params={{
+                  q: query || undefined,
+                  pageSize: String(pagination.pageSize),
+                }}
+                pageSizeOptions={[10, 50, 100]}
               />
             </>
           )}

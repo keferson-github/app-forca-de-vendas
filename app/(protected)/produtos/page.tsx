@@ -2,6 +2,7 @@ import type { Prisma } from "@prisma/client";
 import { auth } from "@/auth";
 import { SectionPlaceholder } from "@/components/layout/section-placeholder";
 import { ProductsPageClient } from "@/components/produtos/products-page-client";
+import { parsePage, parsePageSize } from "@/lib/pagination";
 import { prisma } from "@/lib/prisma";
 
 type SearchParams = Promise<{
@@ -9,32 +10,6 @@ type SearchParams = Promise<{
   page?: string;
   pageSize?: string;
 }>;
-
-const PAGE_SIZE_DEFAULT = 10;
-const PAGE_SIZE_OPTIONS = [10, 50, 100] as const;
-
-function parsePage(value?: string) {
-  const parsed = Number(value ?? "1");
-
-  if (!Number.isFinite(parsed) || parsed < 1) {
-    return 1;
-  }
-
-  return Math.floor(parsed);
-}
-
-function parsePageSize(value?: string) {
-  const parsed = Number(value ?? PAGE_SIZE_DEFAULT);
-
-  if (!Number.isFinite(parsed) || parsed < 1) {
-    return PAGE_SIZE_DEFAULT;
-  }
-
-  const normalized = Math.floor(parsed);
-  return PAGE_SIZE_OPTIONS.includes(normalized as (typeof PAGE_SIZE_OPTIONS)[number])
-    ? normalized
-    : PAGE_SIZE_DEFAULT;
-}
 
 function buildWhere(userId: string, query: string) {
   const where: Prisma.ProductWhereInput = {
