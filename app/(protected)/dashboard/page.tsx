@@ -53,6 +53,9 @@ const MONTH_LABELS = [
   "Dez",
 ];
 
+const DASHBOARD_FONT_FAMILY =
+  '"Inter", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+
 function startOfDay(date: Date) {
   return new Date(date.getFullYear(), date.getMonth(), date.getDate());
 }
@@ -227,7 +230,10 @@ export default async function DashboardPage(props: { searchParams: SearchParams 
 
   if (!data) {
     return (
-      <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
+      <div
+        className="flex flex-col gap-4 py-4 md:gap-6 md:py-6"
+        style={{ fontFamily: DASHBOARD_FONT_FAMILY }}
+      >
         <div className="px-4 lg:px-6">
           <div className="flex flex-col gap-2">
             <Badge variant="outline" className="w-fit">
@@ -313,7 +319,10 @@ export default async function DashboardPage(props: { searchParams: SearchParams 
   ] satisfies OperationalRow[];
 
   return (
-    <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
+    <div
+      className="flex flex-col gap-4 py-4 md:gap-6 md:py-6"
+      style={{ fontFamily: DASHBOARD_FONT_FAMILY }}
+    >
       <div className="px-4 lg:px-6">
         <div className="flex flex-col gap-2">
           <Badge variant="outline" className="w-fit">

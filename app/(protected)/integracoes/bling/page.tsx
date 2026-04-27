@@ -17,6 +17,9 @@ type SearchParams = Promise<{
   bling?: string;
 }>;
 
+const INTEGRACOES_FONT_FAMILY =
+  '"Inter", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+
 function formatDate(date?: Date | null) {
   if (!date) {
     return "Não informado";
@@ -65,7 +68,10 @@ export default async function BlingIntegrationPage(props: {
   const isConnected = Boolean(connection);
 
   return (
-    <div className="flex flex-col gap-4 p-4 lg:p-6">
+    <div
+      className="flex flex-col gap-4 p-4 lg:p-6"
+      style={{ fontFamily: INTEGRACOES_FONT_FAMILY }}
+    >
       <div className="flex flex-col justify-between gap-3 md:flex-row md:items-end">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Integração Bling</h1>

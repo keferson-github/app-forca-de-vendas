@@ -66,6 +66,9 @@ const statusLabels = {
   CONVERTED: "Convertido",
 };
 
+const CUSTOMERS_FONT_FAMILY =
+  '"Inter", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+
 function EmptyState() {
   return (
     <div className="grid min-h-[280px] place-items-center px-4 py-12 text-center">
@@ -110,7 +113,10 @@ export function CustomersPageClient({
   const queryParam = query ? `&q=${encodeURIComponent(query)}` : "";
 
   return (
-    <div className="flex flex-col gap-4 p-4 pb-24 md:pb-4 lg:p-6">
+    <div
+      className="flex flex-col gap-4 p-4 pb-24 md:pb-4 lg:p-6"
+      style={{ fontFamily: CUSTOMERS_FONT_FAMILY }}
+    >
       <div className="flex flex-col justify-between gap-4 md:flex-row md:items-end">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Clientes</h1>

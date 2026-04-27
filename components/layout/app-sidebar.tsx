@@ -50,6 +50,9 @@ type AppSidebarProps = React.ComponentProps<typeof Sidebar> & {
   };
 };
 
+const SIDEBAR_FONT_FAMILY =
+  '"Inter", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+
 const primaryItems: NavItem[] = [
   { title: "Dashboard", url: "/dashboard", icon: IconLayoutDashboard },
   { title: "Clientes", url: "/clientes", icon: IconUsers },
@@ -151,7 +154,12 @@ export function AppSidebar({ user, ...props }: AppSidebarProps) {
   }
 
   return (
-    <Sidebar collapsible="icon" className="dark" {...props}>
+    <Sidebar
+      collapsible="icon"
+      className="dark"
+      style={{ fontFamily: SIDEBAR_FONT_FAMILY }}
+      {...props}
+    >
       <SidebarHeader>
         <SidebarMenu>
           <SidebarMenuItem>

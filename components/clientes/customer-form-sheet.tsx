@@ -75,6 +75,12 @@ const statusLabels = {
   CONVERTED: "Convertido",
 };
 
+type ProspectStatus = keyof typeof statusLabels;
+
+function isProspectStatus(value: string): value is ProspectStatus {
+  return value in statusLabels;
+}
+
 function onlyDigits(value: string) {
   return value.replace(/\D/g, "");
 }
@@ -219,8 +225,8 @@ export function CustomerFormSheet({
     ?? hasDeliveryAddressValue;
   const customerDocument = customer?.cnpjCpf ?? "";
   const cnpjOnlyField = !customer && !defaultIsProspect;
-  const isProspect = values?.isProspect ?? customer?.isProspect ?? defaultIsProspect;
-  const prospectStatus =
+  const initialIsProspect = values?.isProspect ?? customer?.isProspect ?? defaultIsProspect;
+  const initialProspectStatus =
     values?.prospectStatus
     ?? customer?.prospectStatus
     ?? (defaultIsProspect ? "PROSPECT" : "CONVERTED");
@@ -230,6 +236,10 @@ export function CustomerFormSheet({
   );
   const [showDeliveryAddress, setShowDeliveryAddress] = useState(
     () => deliveryAddressEnabled
+  );
+  const [isProspect, setIsProspect] = useState(() => initialIsProspect);
+  const [prospectStatus, setProspectStatus] = useState<ProspectStatus>(
+    () => initialProspectStatus
   );
   const lastSuccessNotice = useRef<string | null>(null);
 
@@ -249,6 +259,8 @@ export function CustomerFormSheet({
   function resetAddressSections() {
     setShowCommercialAddress(commercialAddressEnabled);
     setShowDeliveryAddress(deliveryAddressEnabled);
+    setIsProspect(initialIsProspect);
+    setProspectStatus(initialProspectStatus);
   }
 
   function handleOpenChange(nextOpen: boolean) {
@@ -295,6 +307,8 @@ export function CustomerFormSheet({
               name="deliveryAddressEnabled"
               value={showDeliveryAddress ? "true" : "false"}
             />
+            <input type="hidden" name="isProspect" value={isProspect ? "true" : "false"} />
+            <input type="hidden" name="prospectStatus" value={prospectStatus} />
 
             <div className="grid gap-2">
               <Label htmlFor={`${customer?.id ?? "new"}-name`}>Nome do cliente</Label>
@@ -420,12 +434,22 @@ export function CustomerFormSheet({
 
             <div className="grid gap-4 rounded-lg bg-muted/45 p-3 sm:grid-cols-[1fr_180px]">
               <label className="flex items-center gap-2 text-sm">
-                <Checkbox name="isProspect" defaultChecked={isProspect} />
+                <Checkbox
+                  checked={isProspect}
+                  onCheckedChange={(checked) => setIsProspect(checked === true)}
+                />
                 Marcar como prospect
               </label>
               <div className="grid gap-2">
                 <Label>Status</Label>
-                <Select name="prospectStatus" defaultValue={prospectStatus}>
+                <Select
+                  value={prospectStatus}
+                  onValueChange={(value) => {
+                    if (isProspectStatus(value)) {
+                      setProspectStatus(value);
+                    }
+                  }}
+                >
                   <SelectTrigger className="w-full">
                     <SelectValue placeholder="Status" />
                   </SelectTrigger>

@@ -16,6 +16,9 @@ type AuthShellProps = {
 const authImage =
   "https://img.freepik.com/fotos-gratis/conceito-tecnologico-com-elemento-futurista_23-2151910926.jpg";
 
+const AUTH_FONT_FAMILY =
+  '"Inter", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+
 export function AuthShell({ children }: AuthShellProps) {
   const pathname = usePathname();
   const isRegister = pathname === "/register";
@@ -65,7 +68,10 @@ export function AuthShell({ children }: AuthShellProps) {
   return (
     <LayoutGroup>
       {/* Mobile Version */}
-      <main className="relative flex min-h-screen flex-col justify-center overflow-hidden bg-black sm:hidden">
+      <main
+        className="relative flex min-h-screen flex-col justify-center overflow-hidden bg-black sm:hidden"
+        style={{ fontFamily: AUTH_FONT_FAMILY }}
+      >
         <div className="absolute inset-0 z-0">
           <Image
             src={authImage}
@@ -128,7 +134,10 @@ export function AuthShell({ children }: AuthShellProps) {
       </main>
 
       {/* Desktop Version */}
-      <main className="relative hidden min-h-screen overflow-hidden bg-[#f3f5f9] p-4 sm:block sm:p-6 lg:grid lg:place-items-center lg:p-10">
+      <main
+        className="relative hidden min-h-screen overflow-hidden bg-[#f3f5f9] p-4 sm:block sm:p-6 lg:grid lg:place-items-center lg:p-10"
+        style={{ fontFamily: AUTH_FONT_FAMILY }}
+      >
         <div className="absolute inset-y-0 left-0 hidden w-[58%] lg:block">
           <Image
             src={authImage}

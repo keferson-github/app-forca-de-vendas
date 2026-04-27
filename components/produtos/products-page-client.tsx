@@ -151,6 +151,9 @@ const noticeMessages = {
   },
 };
 
+const PRODUCTS_FONT_FAMILY =
+  '"Inter", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+
 function generateProductCode() {
   const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
   let suffix = "";
@@ -717,7 +720,10 @@ export function ProductsPageClient({ products, query, pagination }: ProductsPage
   const totalLinkedItems = products.reduce((total, product) => total + product.itemsCount, 0);
 
   return (
-    <div className="flex flex-col gap-4 p-4 pb-24 md:pb-4 lg:p-6">
+    <div
+      className="flex flex-col gap-4 p-4 pb-24 md:pb-4 lg:p-6"
+      style={{ fontFamily: PRODUCTS_FONT_FAMILY }}
+    >
       <div className="flex flex-col justify-between gap-4 md:flex-row md:items-end">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Produtos</h1>
