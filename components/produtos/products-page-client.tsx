@@ -228,7 +228,7 @@ function ProductImage({
 
   if (!src) {
     return (
-      <div className={`flex ${ratioClassName} w-full items-center justify-center rounded-md bg-muted`}>
+      <div className={`flex ${ratioClassName} w-full items-center justify-center rounded-[5px] bg-muted`}>
         <ImageIcon className="size-6 text-muted-foreground" />
       </div>
     );
@@ -240,7 +240,7 @@ function ProductImage({
     <img
       src={src}
       alt={alt}
-      className={`${ratioClassName} w-full rounded-md bg-muted object-cover`}
+      className={`${ratioClassName} w-full rounded-[5px] bg-muted object-cover`}
       loading="lazy"
       referrerPolicy="no-referrer"
     />
@@ -249,7 +249,7 @@ function ProductImage({
 
 function ProductListThumbnail({ src, alt }: { src?: string | null; alt: string }) {
   return (
-    <div className="relative h-16 w-24 shrink-0 overflow-hidden rounded-xl bg-gradient-to-br from-muted to-muted/55 shadow-[var(--shadow-soft)] md:h-14 md:w-20">
+    <div className="relative h-16 w-24 shrink-0 overflow-hidden rounded-[5px] bg-gradient-to-br from-muted to-muted/55 shadow-[var(--shadow-soft)] md:h-14 md:w-20">
       {src ? (
         // Dynamic external image URLs are user-provided and may not be present in Next image allowlists.
         // eslint-disable-next-line @next/next/no-img-element
