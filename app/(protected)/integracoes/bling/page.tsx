@@ -93,7 +93,14 @@ export default async function BlingIntegrationPage(props: {
             Gerencie a conexão da sua conta e acompanhe o status da sincronização.
           </p>
         </div>
-        <Badge variant={isConnected ? "default" : "outline"} className="w-fit">
+        <Badge
+          variant="outline"
+          className={`w-fit border ${
+            isConnected
+              ? "border-green-600 bg-green-600 text-white"
+              : "border-black bg-black text-white"
+          }`}
+        >
           {isConnected ? "Conectado" : "Não conectado"}
         </Badge>
       </div>
