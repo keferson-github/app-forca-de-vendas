@@ -11,7 +11,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { extractBlingCompanyId } from "@/lib/bling";
+import { resolveBlingCompanyId } from "@/lib/bling";
 import { prisma } from "@/lib/prisma";
 
 type SearchParams = Promise<{
@@ -71,7 +71,7 @@ export default async function BlingIntegrationPage(props: {
   let displayCompanyId = connection?.companyId ?? null;
 
   if (connection && !displayCompanyId) {
-    const extractedCompanyId = extractBlingCompanyId(connection.accessToken);
+    const extractedCompanyId = await resolveBlingCompanyId(connection.accessToken);
     if (extractedCompanyId) {
       await prisma.blingConnection.update({
         where: { userId: session.user.id },

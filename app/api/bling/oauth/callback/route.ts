@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import {
   exchangeBlingAuthorizationCode,
-  extractBlingCompanyId,
+  resolveBlingCompanyId,
 } from "@/lib/bling";
 import { prisma } from "@/lib/prisma";
 
@@ -30,7 +30,7 @@ export async function GET(request: Request) {
 
   try {
     const token = await exchangeBlingAuthorizationCode(code);
-    const companyId = extractBlingCompanyId(token.access_token);
+    const companyId = await resolveBlingCompanyId(token.access_token);
     await prisma.$transaction([
       prisma.blingOAuthState.update({
         where: { id: oauthState.id },

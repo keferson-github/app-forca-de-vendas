@@ -5,6 +5,8 @@ import { prisma } from "@/lib/prisma";
 const BLING_AUTHORIZE_URL = "https://www.bling.com.br/Api/v3/oauth/authorize";
 const BLING_TOKEN_URL = "https://www.bling.com.br/Api/v3/oauth/token";
 const BLING_API_BASE_URL = "https://api.bling.com.br/Api/v3";
+const BLING_ENABLE_JWT_HEADER_VALUE = "1";
+const BLING_COMPANY_ME_PATH = "/empresas/me";
 
 type BlingTokenResponse = {
   access_token: string;
@@ -17,10 +19,17 @@ type BlingTokenResponse = {
 type BlingJwtPayload = {
   companyId?: unknown;
   company_id?: unknown;
+  idEmpresa?: unknown;
+  empresaId?: unknown;
+  organizationId?: unknown;
+  id?: unknown;
   empresa?: {
     id?: unknown;
   };
   organization?: {
+    id?: unknown;
+  };
+  data?: {
     id?: unknown;
   };
 };
@@ -89,12 +98,77 @@ function getBasicAuthorizationHeader() {
   return `Basic ${Buffer.from(`${clientId}:${clientSecret}`, "utf8").toString("base64")}`;
 }
 
+function getBlingJwtHeaders() {
+  return {
+    "enable-jwt": BLING_ENABLE_JWT_HEADER_VALUE,
+  };
+}
+
+function toCompanyId(value: unknown) {
+  if (typeof value === "string" || typeof value === "number") {
+    return String(value);
+  }
+
+  return null;
+}
+
+function getNestedId(value: unknown) {
+  if (!value || typeof value !== "object") {
+    return undefined;
+  }
+
+  return (value as Record<string, unknown>).id;
+}
+
+function deepSearchCompanyId(value: unknown): string | null {
+  if (!value || typeof value !== "object") {
+    return null;
+  }
+
+  const queue: unknown[] = [value];
+  const visited = new Set<unknown>();
+
+  while (queue.length > 0) {
+    const current = queue.shift();
+    if (!current || visited.has(current) || typeof current !== "object") {
+      continue;
+    }
+
+    visited.add(current);
+    const record = current as Record<string, unknown>;
+
+    const direct =
+      record.companyId ??
+      record.company_id ??
+      record.idEmpresa ??
+      record.empresaId ??
+      record.organizationId ??
+      getNestedId(record.company) ??
+      getNestedId(record.empresa) ??
+      getNestedId(record.organization);
+
+    const parsed = toCompanyId(direct);
+    if (parsed) {
+      return parsed;
+    }
+
+    for (const child of Object.values(record)) {
+      if (child && typeof child === "object") {
+        queue.push(child);
+      }
+    }
+  }
+
+  return null;
+}
+
 async function requestBlingToken(params: URLSearchParams) {
   const response = await fetch(BLING_TOKEN_URL, {
     method: "POST",
     headers: {
       Authorization: getBasicAuthorizationHeader(),
       "Content-Type": "application/x-www-form-urlencoded",
+      ...getBlingJwtHeaders(),
     },
     body: params,
     cache: "no-store",
@@ -154,53 +228,17 @@ export function extractBlingCompanyId(accessToken: string) {
     const companyId =
       decoded.companyId ??
       decoded.company_id ??
-      (decoded as Record<string, unknown>).idEmpresa ??
-      (decoded as Record<string, unknown>).empresaId ??
-      (decoded as Record<string, unknown>).organizationId ??
+      decoded.idEmpresa ??
+      decoded.empresaId ??
+      decoded.organizationId ??
       decoded.empresa?.id ??
-      decoded.organization?.id;
+      decoded.organization?.id ??
+      decoded.data?.id;
 
-    if (typeof companyId === "string" || typeof companyId === "number") {
-      return String(companyId);
+    const parsed = toCompanyId(companyId);
+    if (parsed) {
+      return parsed;
     }
-
-    const deepSearchCompanyId = (value: unknown): string | null => {
-      if (!value || typeof value !== "object") {
-        return null;
-      }
-
-      const queue: unknown[] = [value];
-      const visited = new Set<unknown>();
-
-      while (queue.length > 0) {
-        const current = queue.shift();
-        if (!current || visited.has(current) || typeof current !== "object") {
-          continue;
-        }
-
-        visited.add(current);
-        const record = current as Record<string, unknown>;
-
-        const direct =
-          record.companyId ??
-          record.company_id ??
-          record.idEmpresa ??
-          record.empresaId ??
-          record.organizationId;
-
-        if (typeof direct === "string" || typeof direct === "number") {
-          return String(direct);
-        }
-
-        for (const child of Object.values(record)) {
-          if (child && typeof child === "object") {
-            queue.push(child);
-          }
-        }
-      }
-
-      return null;
-    };
 
     return deepSearchCompanyId(decoded);
   } catch {
@@ -208,14 +246,61 @@ export function extractBlingCompanyId(accessToken: string) {
   }
 }
 
+async function fetchBlingCompanyIdFromApi(accessToken: string) {
+  const response = await fetch(`${BLING_API_BASE_URL}${BLING_COMPANY_ME_PATH}`, {
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      Accept: "application/json",
+      ...getBlingJwtHeaders(),
+    },
+    cache: "no-store",
+  });
+
+  if (!response.ok) {
+    return null;
+  }
+
+  const body = await response.json().catch(() => null);
+  if (!body) {
+    return null;
+  }
+
+  const record = body as Record<string, unknown>;
+  const direct =
+    record.companyId ??
+    record.company_id ??
+    record.idEmpresa ??
+    record.empresaId ??
+    record.organizationId ??
+    (record.data as Record<string, unknown> | undefined)?.id;
+  const parsed = toCompanyId(direct);
+  if (parsed) {
+    return parsed;
+  }
+
+  return deepSearchCompanyId(body);
+}
+
+export async function resolveBlingCompanyId(accessToken: string) {
+  const fromToken = extractBlingCompanyId(accessToken);
+  if (fromToken) {
+    return fromToken;
+  }
+
+  return fetchBlingCompanyIdFromApi(accessToken);
+}
+
 export async function saveBlingConnection(userId: string, token: BlingTokenResponse) {
+  const companyId = await resolveBlingCompanyId(token.access_token);
+
   return prisma.blingConnection.upsert({
     where: { userId },
     create: {
       userId,
       accessToken: token.access_token,
       refreshToken: token.refresh_token,
-      companyId: extractBlingCompanyId(token.access_token),
+      companyId,
       tokenType: token.token_type ?? "Bearer",
       scope: token.scope,
       expiresAt: getBlingTokenExpiresAt(token.expires_in),
@@ -223,7 +308,7 @@ export async function saveBlingConnection(userId: string, token: BlingTokenRespo
     update: {
       accessToken: token.access_token,
       refreshToken: token.refresh_token,
-      companyId: extractBlingCompanyId(token.access_token),
+      companyId,
       tokenType: token.token_type ?? "Bearer",
       scope: token.scope,
       expiresAt: getBlingTokenExpiresAt(token.expires_in),
@@ -260,6 +345,7 @@ export async function blingRequest<T>(
     headers: {
       Authorization: `Bearer ${accessToken}`,
       "Content-Type": "application/json",
+      ...getBlingJwtHeaders(),
       ...init.headers,
     },
     cache: "no-store",
