@@ -116,6 +116,16 @@ export default async function BlingIntegrationPage(props: {
           Não foi possível concluir a autorização do Bling. Gere um novo acesso e tente novamente.
         </div>
       ) : null}
+      {searchParams.bling === "disconnected" ? (
+        <div className="rounded-md bg-green-600/10 px-4 py-3 text-sm text-green-700 shadow-[var(--shadow-soft)] dark:text-green-300">
+          Integração com o Bling desconectada com sucesso.
+        </div>
+      ) : null}
+      {searchParams.bling === "disconnect-error" ? (
+        <div className="rounded-md bg-destructive/10 px-4 py-3 text-sm text-destructive shadow-[var(--shadow-soft)]">
+          Não foi possível desconectar do Bling agora. Tente novamente.
+        </div>
+      ) : null}
 
       <div className="grid gap-4 lg:grid-cols-2">
         <Card>
@@ -125,15 +135,23 @@ export default async function BlingIntegrationPage(props: {
               Conexão da conta
             </CardTitle>
             <CardDescription>
-              Autorize ou renove o acesso da sua conta Bling neste sistema.
+              Autorize, renove ou desconecte o acesso da sua conta Bling neste sistema.
             </CardDescription>
             <CardAction>
-              <Button asChild size="sm">
-                <Link href="/api/bling/oauth/start">
-                  <IconExternalLink />
-                  Conectar
-                </Link>
-              </Button>
+              {isConnected ? (
+                <form action="/api/bling/oauth/disconnect" method="post">
+                  <Button type="submit" size="sm" variant="outline">
+                    Desconectar
+                  </Button>
+                </form>
+              ) : (
+                <Button asChild size="sm">
+                  <Link href="/api/bling/oauth/start">
+                    <IconExternalLink />
+                    Conectar
+                  </Link>
+                </Button>
+              )}
             </CardAction>
           </CardHeader>
           <CardContent className="grid gap-3 text-sm">
