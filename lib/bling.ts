@@ -146,18 +146,63 @@ export function extractBlingCompanyId(accessToken: string) {
 
   try {
     const normalized = payload.replace(/-/g, "+").replace(/_/g, "/");
+    const paddingLength = (4 - (normalized.length % 4)) % 4;
+    const paddedPayload = normalized.padEnd(normalized.length + paddingLength, "=");
     const decoded = JSON.parse(
-      Buffer.from(normalized, "base64").toString("utf8")
+      Buffer.from(paddedPayload, "base64").toString("utf8")
     ) as BlingJwtPayload;
     const companyId =
       decoded.companyId ??
       decoded.company_id ??
+      (decoded as Record<string, unknown>).idEmpresa ??
+      (decoded as Record<string, unknown>).empresaId ??
+      (decoded as Record<string, unknown>).organizationId ??
       decoded.empresa?.id ??
       decoded.organization?.id;
 
-    return typeof companyId === "string" || typeof companyId === "number"
-      ? String(companyId)
-      : null;
+    if (typeof companyId === "string" || typeof companyId === "number") {
+      return String(companyId);
+    }
+
+    const deepSearchCompanyId = (value: unknown): string | null => {
+      if (!value || typeof value !== "object") {
+        return null;
+      }
+
+      const queue: unknown[] = [value];
+      const visited = new Set<unknown>();
+
+      while (queue.length > 0) {
+        const current = queue.shift();
+        if (!current || visited.has(current) || typeof current !== "object") {
+          continue;
+        }
+
+        visited.add(current);
+        const record = current as Record<string, unknown>;
+
+        const direct =
+          record.companyId ??
+          record.company_id ??
+          record.idEmpresa ??
+          record.empresaId ??
+          record.organizationId;
+
+        if (typeof direct === "string" || typeof direct === "number") {
+          return String(direct);
+        }
+
+        for (const child of Object.values(record)) {
+          if (child && typeof child === "object") {
+            queue.push(child);
+          }
+        }
+      }
+
+      return null;
+    };
+
+    return deepSearchCompanyId(decoded);
   } catch {
     return null;
   }

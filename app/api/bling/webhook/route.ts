@@ -39,12 +39,31 @@ export async function POST(request: Request) {
     );
   }
 
-  const connection = event.companyId
+  let connection = event.companyId
     ? await prisma.blingConnection.findFirst({
         where: { companyId: event.companyId },
         select: { userId: true },
       })
     : null;
+
+  // Fallback para conexoes sem companyId preenchido no OAuth.
+  if (!connection && event.companyId) {
+    const pendingConnections = await prisma.blingConnection.findMany({
+      where: { companyId: null },
+      orderBy: { connectedAt: "desc" },
+      take: 2,
+      select: { userId: true },
+    });
+
+    if (pendingConnections.length === 1) {
+      const [pendingConnection] = pendingConnections;
+      await prisma.blingConnection.update({
+        where: { userId: pendingConnection.userId },
+        data: { companyId: event.companyId },
+      });
+      connection = { userId: pendingConnection.userId };
+    }
+  }
 
   await prisma.blingWebhookEvent.upsert({
     where: { eventId: event.eventId },

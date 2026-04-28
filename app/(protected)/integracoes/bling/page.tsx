@@ -11,6 +11,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { extractBlingCompanyId } from "@/lib/bling";
 import { prisma } from "@/lib/prisma";
 
 type SearchParams = Promise<{
@@ -46,6 +47,7 @@ export default async function BlingIntegrationPage(props: {
       where: { userId: session.user.id },
       select: {
         companyId: true,
+        accessToken: true,
         connectedAt: true,
         updatedAt: true,
         expiresAt: true,
@@ -66,6 +68,18 @@ export default async function BlingIntegrationPage(props: {
   ]);
 
   const isConnected = Boolean(connection);
+  let displayCompanyId = connection?.companyId ?? null;
+
+  if (connection && !displayCompanyId) {
+    const extractedCompanyId = extractBlingCompanyId(connection.accessToken);
+    if (extractedCompanyId) {
+      await prisma.blingConnection.update({
+        where: { userId: session.user.id },
+        data: { companyId: extractedCompanyId },
+      });
+      displayCompanyId = extractedCompanyId;
+    }
+  }
 
   return (
     <div
@@ -118,7 +132,7 @@ export default async function BlingIntegrationPage(props: {
           <CardContent className="grid gap-3 text-sm">
             <div className="grid gap-1 text-muted-foreground">
               <div>Conectado em: {formatDate(connection?.connectedAt)}</div>
-              <div>Empresa Bling: {connection?.companyId ?? "Não identificada"}</div>
+              <div>Empresa Bling: {displayCompanyId ?? "Não identificada"}</div>
               <div>Atualizado em: {formatDate(connection?.updatedAt)}</div>
               <div>Expira em: {formatDate(connection?.expiresAt)}</div>
             </div>
