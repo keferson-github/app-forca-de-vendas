@@ -46,6 +46,68 @@ function isDatabaseUnavailableError(error: unknown) {
     || error.message.includes("Error in PostgreSQL connection");
 }
 
+type ProductForList = Prisma.ProductGetPayload<{
+  include: {
+    _count: {
+      select: {
+        orderItems: true;
+      };
+    };
+  };
+}>;
+
+function mapProductToListItem(product: ProductForList) {
+  return {
+    id: product.id,
+    code: product.code,
+    name: product.name,
+    category: product.category,
+    subcategory: product.subcategory,
+    price: Number(product.price),
+    imageUrl: product.imageUrl,
+    description: product.description,
+    stockQuantity: Number(product.stockQuantity),
+    createdAt: product.createdAt.toISOString(),
+    updatedAt: product.updatedAt.toISOString(),
+  };
+}
+
+async function getProductsPageData(params: {
+  userId: string;
+  where: Prisma.ProductWhereInput;
+  requestedPage: number;
+  pageSize: number;
+}) {
+  const totalFiltered = await prisma.product.count({ where: params.where });
+
+  const totalPages = Math.max(1, Math.ceil(totalFiltered / params.pageSize));
+  const currentPage = Math.min(params.requestedPage, totalPages);
+
+  const products = await prisma.product.findMany({
+    where: params.where,
+    orderBy: [{ updatedAt: "desc" }, { createdAt: "desc" }, { id: "desc" }],
+    skip: (currentPage - 1) * params.pageSize,
+    take: params.pageSize,
+    include: {
+      _count: {
+        select: {
+          orderItems: true,
+        },
+      },
+    },
+  });
+
+  return {
+    products: products.map(mapProductToListItem),
+    pagination: {
+      currentPage,
+      pageSize: params.pageSize,
+      totalItems: totalFiltered,
+      totalPages,
+    },
+  };
+}
+
 export default async function ProdutosPage(props: { searchParams: SearchParams }) {
   const searchParams = await props.searchParams;
   const session = await auth();
@@ -58,51 +120,15 @@ export default async function ProdutosPage(props: { searchParams: SearchParams }
   const pageSize = parsePageSize(searchParams.pageSize);
   const query = (searchParams.q ?? "").trim();
   const where = buildWhere(session.user.id, query);
+  let data: Awaited<ReturnType<typeof getProductsPageData>>;
 
   try {
-    const totalFiltered = await prisma.product.count({ where });
-
-    const totalPages = Math.max(1, Math.ceil(totalFiltered / pageSize));
-    const currentPage = Math.min(requestedPage, totalPages);
-
-    const products = await prisma.product.findMany({
+    data = await getProductsPageData({
+      userId: session.user.id,
       where,
-      orderBy: [{ updatedAt: "desc" }, { createdAt: "desc" }, { id: "desc" }],
-      skip: (currentPage - 1) * pageSize,
-      take: pageSize,
-      include: {
-        _count: {
-          select: {
-            orderItems: true,
-          },
-        },
-      },
+      requestedPage,
+      pageSize,
     });
-
-    return (
-      <ProductsPageClient
-        products={products.map((product) => ({
-          id: product.id,
-          code: product.code,
-          name: product.name,
-          category: product.category,
-          subcategory: product.subcategory,
-          price: Number(product.price),
-          imageUrl: product.imageUrl,
-          description: product.description,
-          createdAt: product.createdAt.toISOString(),
-          updatedAt: product.updatedAt.toISOString(),
-          itemsCount: product._count.orderItems,
-        }))}
-        query={query}
-        pagination={{
-          currentPage,
-          pageSize,
-          totalItems: totalFiltered,
-          totalPages,
-        }}
-      />
-    );
   } catch (error) {
     if (!isDatabaseUnavailableError(error)) {
       throw error;
@@ -115,4 +141,10 @@ export default async function ProdutosPage(props: { searchParams: SearchParams }
       />
     );
   }
+
+  return <ProductsPage products={data.products} query={query} pagination={data.pagination} />;
+}
+
+function ProductsPage(props: Parameters<typeof ProductsPageClient>[0]) {
+  return <ProductsPageClient {...props} />;
 }

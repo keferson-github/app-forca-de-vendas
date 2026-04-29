@@ -46,7 +46,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { TableCell, TableRow } from "@/components/ui/table";
+import { TableCell } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
 import { useNoticeToast } from "@/hooks/use-notice-toast";
 import { useSheetSlideGsap } from "@/hooks/use-sheet-slide-gsap";
@@ -69,9 +69,9 @@ export type ProductListItem = {
   price: number;
   imageUrl: string | null;
   description: string | null;
+  stockQuantity: number;
   createdAt: string;
   updatedAt: string;
-  itemsCount: number;
 };
 
 type ProductsPageClientProps = {
@@ -170,6 +170,12 @@ function formatCurrency(value: number) {
     style: "currency",
     currency: "BRL",
     maximumFractionDigits: 2,
+  }).format(value);
+}
+
+function formatStock(value: number) {
+  return new Intl.NumberFormat("pt-BR", {
+    maximumFractionDigits: 3,
   }).format(value);
 }
 
@@ -576,7 +582,7 @@ function ProductMobileCard({ product }: { product: ProductListItem }) {
           </p>
           <div className="flex justify-end">
             <Badge variant="outline" className="shrink-0 text-[10px]">
-              {product.itemsCount} item(ns)
+              Estoque: {formatStock(product.stockQuantity)}
             </Badge>
           </div>
         </div>
@@ -640,7 +646,7 @@ function ProductDetailSheet({
                       {product.code}
                     </Badge>
                     <Badge variant="outline" className="text-xs">
-                      {product.itemsCount} item(ns)
+                      Estoque: {formatStock(product.stockQuantity)}
                     </Badge>
                   </div>
                   <h3 className="line-clamp-2 text-sm font-semibold">{product.name}</h3>
@@ -693,8 +699,10 @@ function ProductDetailSheet({
             </p>
           </div>
           <div className="grid gap-1 rounded-lg bg-muted/45 p-3">
-            <p className="text-xs font-medium text-muted-foreground">Quantidade de item(ns)</p>
-            <p className="text-sm font-medium text-foreground">{product.itemsCount} item(ns)</p>
+            <p className="text-xs font-medium text-muted-foreground">Estoque disponível</p>
+            <p className="text-sm font-medium text-foreground">
+              {formatStock(product.stockQuantity)}
+            </p>
           </div>
           <div className="grid gap-1 rounded-lg bg-muted/45 p-3">
             <p className="text-xs font-medium text-muted-foreground">Data de criação do produto</p>
@@ -716,8 +724,6 @@ function ProductDetailSheet({
 
 export function ProductsPageClient({ products, query, pagination }: ProductsPageClientProps) {
   useNoticeToast(noticeMessages);
-  const totalCatalogValue = products.reduce((total, product) => total + product.price, 0);
-  const totalLinkedItems = products.reduce((total, product) => total + product.itemsCount, 0);
 
   return (
     <div
@@ -782,7 +788,7 @@ export function ProductsPageClient({ products, query, pagination }: ProductsPage
                 columns={[
                   { id: "product", label: "Produto", className: "w-[420px]" },
                   { id: "code", label: "Código" },
-                  { id: "items", label: "Itens", className: "text-center" },
+                  { id: "stock", label: "Estoque", className: "text-center" },
                   { id: "price", label: "Preço", className: "text-right" },
                   { id: "actions", label: "Ações", className: "text-right" },
                 ]}
@@ -807,7 +813,9 @@ export function ProductsPageClient({ products, query, pagination }: ProductsPage
                     <TableCell>
                       <Badge variant="secondary">{product.code}</Badge>
                     </TableCell>
-                    <TableCell className="text-center">{product.itemsCount}</TableCell>
+                    <TableCell className="text-center">
+                      {formatStock(product.stockQuantity)}
+                    </TableCell>
                     <TableCell className="text-right font-medium">
                       {formatCurrency(product.price)}
                     </TableCell>
