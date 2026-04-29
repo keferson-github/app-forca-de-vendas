@@ -11,6 +11,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { auth } from "@/auth";
+import { syncConfirmedOrdersToBling } from "@/lib/bling-sync";
 import { buildNoticeUrl } from "@/lib/notice";
 import { prisma } from "@/lib/prisma";
 
@@ -181,19 +182,20 @@ async function createOrderWithUniqueNumber(
 ) {
   for (let attempt = 0; attempt < 3; attempt += 1) {
     try {
-      await prisma.$transaction(async (transaction) => {
+      const createdOrderId = await prisma.$transaction(async (transaction) => {
         const orderNumber = await getNextOrderNumber(transaction);
 
-        await transaction.order.create({
+        const createdOrder = await transaction.order.create({
           data: {
             userId,
             orderNumber,
             ...data,
           },
         });
-      });
 
-      return;
+        return createdOrder.id;
+      });
+      return createdOrderId;
     } catch (error) {
       if (
         error instanceof Prisma.PrismaClientKnownRequestError
@@ -206,6 +208,8 @@ async function createOrderWithUniqueNumber(
       throw error;
     }
   }
+
+  throw new Error("Nao foi possivel gerar numero unico para o pedido.");
 }
 
 export async function createOrderAction(
@@ -232,7 +236,16 @@ export async function createOrderAction(
     return { error: relationError, values };
   }
 
-  await createOrderWithUniqueNumber(userId, orderPayload(parsed.data));
+  const createdOrderId = await createOrderWithUniqueNumber(userId, orderPayload(parsed.data));
+
+  try {
+    await syncConfirmedOrdersToBling(userId, {
+      orderId: createdOrderId,
+      limit: 1,
+    });
+  } catch (error) {
+    console.error("Falha ao sincronizar pedido automaticamente com o Bling", error);
+  }
 
   revalidatePath("/pedidos");
   redirect(buildNoticeUrl("/pedidos", "order-created"));
@@ -276,6 +289,15 @@ export async function updateOrderAction(
 
   if (updated.count === 0) {
     return { error: "Pedido não encontrado ou sem permissão para editar.", values };
+  }
+
+  try {
+    await syncConfirmedOrdersToBling(userId, {
+      orderId: parsed.data.id,
+      limit: 1,
+    });
+  } catch (error) {
+    console.error("Falha ao sincronizar pedido automaticamente com o Bling", error);
   }
 
   revalidatePath("/pedidos");

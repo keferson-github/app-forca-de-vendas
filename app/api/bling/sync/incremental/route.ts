@@ -1,6 +1,20 @@
 import { NextResponse } from "next/server";
+import { auth } from "@/auth";
 import { syncProductsFromBlingIncremental } from "@/lib/bling-sync";
 import { prisma } from "@/lib/prisma";
+
+function hasValidCronSecret(request: Request) {
+  const secret = process.env.CRON_SECRET?.trim();
+  if (!secret) {
+    return false;
+  }
+
+  const provided =
+    request.headers.get("x-cron-secret")?.trim() ??
+    request.headers.get("x-cron-key")?.trim();
+
+  return Boolean(provided && provided === secret);
+}
 
 /**
  * Endpoint para sincronização incremental de produtos (Bling -> App).
@@ -8,18 +22,22 @@ import { prisma } from "@/lib/prisma";
  * Exemplo: GET /api/bling/sync/incremental?minutes=10
  */
 export async function GET(request: Request) {
-  // Opcional: Adicionar uma chave de segurança via Header para evitar chamadas externas
-  // const authHeader = request.headers.get("x-cron-key");
-  // if (authHeader !== process.env.CRON_SECRET) return new Response("Unauthorized", { status: 401 });
-
   const { searchParams } = new URL(request.url);
   const minutes = parseInt(searchParams.get("minutes") || "15", 10);
+  const isCronRequest = hasValidCronSecret(request);
+
+  const session = isCronRequest ? null : await auth();
+  const sessionUserId = session?.user?.id ?? null;
+  if (!isCronRequest && !sessionUserId) {
+    return NextResponse.json({ error: "Nao autenticado." }, { status: 401 });
+  }
 
   try {
-    // Buscar todas as conexões ativas do Bling
-    const connections = await prisma.blingConnection.findMany({
-      select: { userId: true },
-    });
+    const connections: Array<{ userId: string }> = isCronRequest
+      ? await prisma.blingConnection.findMany({
+          select: { userId: true },
+        })
+      : [{ userId: sessionUserId! }];
 
     const results = [];
 

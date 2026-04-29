@@ -368,6 +368,14 @@ async function syncOrderToBling(orderId: string) {
     return { synced: false, reason: "Pedido nao encontrado ou nao confirmado." };
   }
 
+  if (order.items.length === 0) {
+    await prisma.order.update({
+      where: { id: order.id },
+      data: { lastBlingError: "Pedido sem itens para envio ao Bling." },
+    });
+    return { synced: false, reason: "Pedido sem itens para envio ao Bling." };
+  }
+
   const payload = {
     numeroLoja: String(order.orderNumber),
     data: order.createdAt.toISOString().slice(0, 10),
@@ -623,7 +631,7 @@ export async function syncProductsFromBlingIncremental(userId: string, minutesLo
     limite: "100",
   });
 
-  const response = await blingRequest<{ data: any[] }>(userId, `/produtos?${params.toString()}`);
+  const response = await blingRequest<{ data: unknown[] }>(userId, `/produtos?${params.toString()}`);
   const blingProducts = response.data || [];
 
   const results = {
@@ -639,8 +647,9 @@ export async function syncProductsFromBlingIncremental(userId: string, minutesLo
       const snapshot = extractBlingProductFromBody(item);
       if (!snapshot) continue;
 
-      // Buscar saldo de estoque atualizado (opcional, mas recomendado)
-      const stock = await getBlingStockBalance(userId, snapshot.blingProductId!);
+      const stock = snapshot.blingProductId
+        ? await getBlingStockBalance(userId, snapshot.blingProductId)
+        : null;
       
       const identifiers = { 
         blingProductId: snapshot.blingProductId, 
@@ -660,7 +669,7 @@ export async function syncProductsFromBlingIncremental(userId: string, minutesLo
       } else {
         results.failed++;
       }
-    } catch (error) {
+    } catch {
       results.failed++;
     }
   }
@@ -686,7 +695,7 @@ export async function syncProductsFromBlingFull(userId: string) {
 
   while (hasMore) {
     try {
-      const response = await blingRequest<{ data: any[] }>(userId, `/produtos?pagina=${pagina}&limite=${limite}`);
+      const response = await blingRequest<{ data: unknown[] }>(userId, `/produtos?pagina=${pagina}&limite=${limite}`);
       const blingProducts = response.data || [];
 
       if (blingProducts.length === 0) {
@@ -705,8 +714,14 @@ export async function syncProductsFromBlingFull(userId: string) {
             code: snapshot.code 
           };
 
-          // No full sync, o estoque pode ser consultado depois ou ja vir no snapshot
-          const applied = await applyBlingProductSnapshot(userId, identifiers, snapshot);
+          const stock = snapshot.blingProductId
+            ? await getBlingStockBalance(userId, snapshot.blingProductId)
+            : null;
+
+          const applied = await applyBlingProductSnapshot(userId, identifiers, {
+            ...snapshot,
+            stockQuantity: stock ?? snapshot.stockQuantity,
+          });
 
           if (applied) {
             const existsLocally = await getProductByIdentifiers(userId, identifiers);
