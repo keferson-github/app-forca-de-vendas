@@ -12,6 +12,8 @@ type PasswordFieldProps = {
   placeholder?: string;
   required?: boolean;
   autoComplete?: string;
+  value?: string;
+  onChange?: React.ChangeEventHandler<HTMLInputElement>;
   inputClassName?: string;
   toggleClassName?: string;
 };
@@ -22,6 +24,8 @@ export function PasswordField({
   placeholder,
   required,
   autoComplete,
+  value,
+  onChange,
   inputClassName,
   toggleClassName,
 }: PasswordFieldProps) {
@@ -36,6 +40,8 @@ export function PasswordField({
         placeholder={placeholder}
         required={required}
         autoComplete={autoComplete}
+        value={value}
+        onChange={onChange}
         className={`w-full pr-12 ${inputClassName ?? ""}`}
       />
       <div className="absolute inset-y-0 right-0 flex items-center pr-1.5">

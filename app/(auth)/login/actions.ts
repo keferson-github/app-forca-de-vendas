@@ -17,6 +17,15 @@ const loginSchema = z.object({
   rememberMe: z.boolean(),
 });
 
+function parseRememberMe(value: FormDataEntryValue | null): boolean {
+  if (typeof value !== "string") {
+    return false;
+  }
+
+  const normalizedValue = value.trim().toLowerCase();
+  return normalizedValue === "on" || normalizedValue === "true" || normalizedValue === "1";
+}
+
 export async function loginAction(
   _state: LoginState,
   formData: FormData
@@ -24,7 +33,7 @@ export async function loginAction(
   const validated = loginSchema.safeParse({
     email: formData.get("email"),
     password: formData.get("password"),
-    rememberMe: formData.get("rememberMe") === "on",
+    rememberMe: parseRememberMe(formData.get("rememberMe")),
   });
 
   if (!validated.success) {
