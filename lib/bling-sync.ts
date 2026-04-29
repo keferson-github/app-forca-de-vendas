@@ -119,6 +119,8 @@ function extractBlingProductFromBody(body: unknown) {
     return null;
   }
 
+  const stock = asRecord(product.estoque);
+
   return {
     blingProductId: toStringValue(product.id),
     code: toStringValue(product.codigo) ?? toStringValue(product.code),
@@ -131,6 +133,8 @@ function extractBlingProductFromBody(body: unknown) {
     stockQuantity:
       toNumberValue(product.saldoVirtualTotal) ??
       toNumberValue(product.saldoFisicoTotal) ??
+      toNumberValue(stock?.saldoVirtualTotal) ??
+      toNumberValue(stock?.saldoFisicoTotal) ??
       toNumberValue(product.quantidade) ??
       toNumberValue(product.estoque) ??
       null,
@@ -255,25 +259,64 @@ async function getBlingProductDetails(userId: string, blingProductId: string) {
   return blingRequest<BlingApiResponse>(userId, `/produtos/${blingProductId}`);
 }
 
-async function getBlingStockBalance(userId: string, blingProductId: string) {
-  const endpoints = [
-    `/estoques/saldos?produto=${blingProductId}`,
-    `/estoques/saldos?idProduto=${blingProductId}`,
-  ];
+function extractBlingStockBalancesFromBody(body: unknown) {
+  const balances = new Map<string, number>();
+  const data = asRecord(body)?.data;
 
-  for (const endpoint of endpoints) {
+  if (!Array.isArray(data)) {
+    return balances;
+  }
+
+  for (const item of data) {
+    const record = asRecord(item);
+    if (!record) {
+      continue;
+    }
+
+    const product = asRecord(record.produto);
+    const productId = toStringValue(product?.id) ?? toStringValue(record.idProduto);
+    const quantity =
+      toNumberValue(record.saldoVirtualTotal) ??
+      toNumberValue(record.saldoFisicoTotal) ??
+      extractStockFromBody(record);
+
+    if (productId && quantity !== null) {
+      balances.set(productId, quantity);
+    }
+  }
+
+  return balances;
+}
+
+async function getBlingStockBalances(userId: string, blingProductIds: string[]) {
+  const uniqueIds = Array.from(new Set(blingProductIds.filter(Boolean)));
+  const balances = new Map<string, number>();
+
+  for (let index = 0; index < uniqueIds.length; index += 100) {
+    const chunk = uniqueIds.slice(index, index + 100);
+    const params = new URLSearchParams();
+    for (const id of chunk) {
+      params.append("idsProdutos[]", id);
+    }
+
     try {
-      const response = await blingRequest<BlingApiResponse>(userId, endpoint);
-      const quantity = extractStockFromBody(response);
-      if (quantity !== null) {
-        return quantity;
+      const response = await blingRequest<BlingApiResponse>(
+        userId,
+        `/estoques/saldos?${params.toString()}`
+      );
+      for (const [productId, quantity] of extractBlingStockBalancesFromBody(response)) {
+        balances.set(productId, quantity);
       }
     } catch {
       continue;
     }
   }
 
-  return null;
+  return balances;
+}
+
+async function getBlingStockBalance(userId: string, blingProductId: string) {
+  return (await getBlingStockBalances(userId, [blingProductId])).get(blingProductId) ?? null;
 }
 
 async function applyBlingProductSnapshot(
@@ -633,6 +676,17 @@ export async function syncProductsFromBlingIncremental(userId: string, minutesLo
 
   const response = await blingRequest<{ data: unknown[] }>(userId, `/produtos?${params.toString()}`);
   const blingProducts = response.data || [];
+  const snapshots = blingProducts
+    .map((item) => extractBlingProductFromBody(item))
+    .filter((snapshot): snapshot is NonNullable<ReturnType<typeof extractBlingProductFromBody>> =>
+      Boolean(snapshot)
+    );
+  const stockBalances = await getBlingStockBalances(
+    userId,
+    snapshots
+      .map((snapshot) => snapshot.blingProductId)
+      .filter((id): id is string => Boolean(id))
+  );
 
   const results = {
     processed: 0,
@@ -641,14 +695,11 @@ export async function syncProductsFromBlingIncremental(userId: string, minutesLo
     failed: 0,
   };
 
-  for (const item of blingProducts) {
+  for (const snapshot of snapshots) {
     results.processed++;
     try {
-      const snapshot = extractBlingProductFromBody(item);
-      if (!snapshot) continue;
-
       const stock = snapshot.blingProductId
-        ? await getBlingStockBalance(userId, snapshot.blingProductId)
+        ? stockBalances.get(snapshot.blingProductId) ?? null
         : null;
       
       const identifiers = { 
@@ -697,25 +748,33 @@ export async function syncProductsFromBlingFull(userId: string) {
     try {
       const response = await blingRequest<{ data: unknown[] }>(userId, `/produtos?pagina=${pagina}&limite=${limite}`);
       const blingProducts = response.data || [];
+      const snapshots = blingProducts
+        .map((item) => extractBlingProductFromBody(item))
+        .filter((snapshot): snapshot is NonNullable<ReturnType<typeof extractBlingProductFromBody>> =>
+          Boolean(snapshot)
+        );
+      const stockBalances = await getBlingStockBalances(
+        userId,
+        snapshots
+          .map((snapshot) => snapshot.blingProductId)
+          .filter((id): id is string => Boolean(id))
+      );
 
       if (blingProducts.length === 0) {
         hasMore = false;
         break;
       }
 
-      for (const item of blingProducts) {
+      for (const snapshot of snapshots) {
         results.processed++;
         try {
-          const snapshot = extractBlingProductFromBody(item);
-          if (!snapshot) continue;
-
           const identifiers = { 
             blingProductId: snapshot.blingProductId, 
             code: snapshot.code 
           };
 
           const stock = snapshot.blingProductId
-            ? await getBlingStockBalance(userId, snapshot.blingProductId)
+            ? stockBalances.get(snapshot.blingProductId) ?? null
             : null;
 
           const applied = await applyBlingProductSnapshot(userId, identifiers, {
