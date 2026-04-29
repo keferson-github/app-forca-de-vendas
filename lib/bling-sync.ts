@@ -51,6 +51,72 @@ function toDecimal(value: unknown, scale = 3) {
   return new Prisma.Decimal(parsed.toFixed(scale));
 }
 
+function extractUrlFromImageEntry(value: unknown) {
+  if (typeof value === "string" && value.trim()) {
+    return value.trim();
+  }
+
+  const record = asRecord(value);
+  if (!record) {
+    return null;
+  }
+
+  return (
+    toStringValue(record.linkMiniatura) ??
+    toStringValue(record.link) ??
+    toStringValue(record.url) ??
+    toStringValue(record.imagemURL) ??
+    null
+  );
+}
+
+function extractBlingImageUrlFromBody(body: unknown) {
+  const record = deepFindFirst(body, (candidate) => {
+    if (
+      candidate.imagemURL !== undefined ||
+      candidate.midia !== undefined ||
+      candidate.imagens !== undefined
+    ) {
+      return candidate;
+    }
+
+    return null;
+  });
+  const product = asRecord(record);
+  if (!product) {
+    return null;
+  }
+
+  const directImageUrl = toStringValue(product.imagemURL);
+  if (directImageUrl) {
+    return directImageUrl;
+  }
+
+  const media = asRecord(product.midia);
+  const images = asRecord(media?.imagens) ?? asRecord(product.imagens);
+  const candidates = [
+    images?.internas,
+    images?.externas,
+    images?.imagensURL,
+    product.imagensURL,
+  ];
+
+  for (const candidate of candidates) {
+    if (!Array.isArray(candidate)) {
+      continue;
+    }
+
+    for (const image of candidate) {
+      const imageUrl = extractUrlFromImageEntry(image);
+      if (imageUrl) {
+        return imageUrl;
+      }
+    }
+  }
+
+  return null;
+}
+
 function normalizeEventName(event: string) {
   return event.normalize("NFD").replace(/\p{Diacritic}/gu, "").toLowerCase();
 }
@@ -125,6 +191,7 @@ function extractBlingProductFromBody(body: unknown) {
     blingProductId: toStringValue(product.id),
     code: toStringValue(product.codigo) ?? toStringValue(product.code),
     name: toStringValue(product.nome) ?? toStringValue(product.name),
+    imageUrl: extractBlingImageUrlFromBody(body),
     price:
       toNumberValue(product.preco) ??
       toNumberValue(product.valor) ??
@@ -328,6 +395,7 @@ async function applyBlingProductSnapshot(
     name: string | null;
     price: number | null;
     stockQuantity: number | null;
+    imageUrl?: string | null;
   }
 ) {
   const product = await getProductByIdentifiers(userId, identifiers);
@@ -341,6 +409,7 @@ async function applyBlingProductSnapshot(
     if (snapshot.blingProductId) payload.blingProductId = snapshot.blingProductId;
     if (snapshot.code) payload.code = snapshot.code;
     if (snapshot.name) payload.name = snapshot.name;
+    if (snapshot.imageUrl) payload.imageUrl = snapshot.imageUrl;
     if (snapshot.price !== null) {
       payload.price = new Prisma.Decimal(snapshot.price.toFixed(2));
     }
@@ -383,6 +452,7 @@ async function applyBlingProductSnapshot(
       blingProductId: snapshot.blingProductId,
       code: snapshot.code,
       name: snapshot.name,
+      imageUrl: snapshot.imageUrl,
       price: new Prisma.Decimal((snapshot.price ?? 0).toFixed(2)),
       stockQuantity: new Prisma.Decimal((snapshot.stockQuantity ?? 0).toFixed(3)),
       category: "ACESSORIOS", // Default para novos produtos vindos do Bling
@@ -802,6 +872,56 @@ export async function syncProductsFromBlingFull(userId: string) {
     } catch (error) {
       console.error(`Erro na pagina ${pagina} do Full Sync:`, error);
       hasMore = false;
+    }
+  }
+
+  return results;
+}
+
+export async function syncProductImagesFromBling(userId: string, limit = 25) {
+  const products = await prisma.product.findMany({
+    where: {
+      userId,
+      blingProductId: { not: null },
+      imageUrl: null,
+    },
+    orderBy: [{ updatedAt: "desc" }, { createdAt: "desc" }],
+    take: limit,
+    select: {
+      id: true,
+      blingProductId: true,
+    },
+  });
+
+  const results = {
+    processed: 0,
+    updated: 0,
+    failed: 0,
+  };
+
+  for (const product of products) {
+    results.processed++;
+
+    if (!product.blingProductId) {
+      results.failed++;
+      continue;
+    }
+
+    try {
+      const details = await getBlingProductDetails(userId, product.blingProductId);
+      const imageUrl = extractBlingImageUrlFromBody(details);
+
+      if (!imageUrl) {
+        continue;
+      }
+
+      await prisma.product.update({
+        where: { id: product.id },
+        data: { imageUrl },
+      });
+      results.updated++;
+    } catch {
+      results.failed++;
     }
   }
 
