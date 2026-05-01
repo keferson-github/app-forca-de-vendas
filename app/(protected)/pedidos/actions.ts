@@ -4,6 +4,7 @@ import {
   DeliveryType,
   FreightType,
   OrderOperation,
+  OrderStatus,
   Prisma,
   PaymentTerm,
 } from "@prisma/client";
@@ -11,7 +12,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { auth } from "@/auth";
-import { syncConfirmedOrdersToBling } from "@/lib/bling-sync";
+import { billConfirmedOrderInBling, syncConfirmedOrdersToBling } from "@/lib/bling-sync";
 import { buildNoticeUrl } from "@/lib/notice";
 import { prisma } from "@/lib/prisma";
 
@@ -38,6 +39,24 @@ export type OrderFormState = {
   values?: OrderFormValues;
 };
 
+export type OrderItemFormValues = {
+  orderId: string;
+  itemId: string;
+  productId: string;
+  quantity: string;
+  discount: string;
+  unitPrice: string;
+};
+
+export type OrderItemFormState = {
+  error?: string;
+  values?: OrderItemFormValues;
+};
+
+export type OrderStatusFormState = {
+  error?: string;
+};
+
 const orderSchema = z.object({
   id: z.string().optional(),
   customerId: z.string().trim().min(1, "Selecione o cliente do pedido."),
@@ -51,6 +70,46 @@ const orderSchema = z.object({
   deliveryType: z.enum(deliveryTypeValues),
   notes: z.string().trim().optional(),
   customerOrderNumber: z.string().trim().optional(),
+});
+
+const orderItemSchema = z.object({
+  orderId: z.string().trim().min(1, "Pedido não identificado."),
+  itemId: z.string().trim().optional(),
+  productId: z.string().trim().min(1, "Selecione um produto para adicionar."),
+  quantity: z
+    .string()
+    .trim()
+    .min(1, "Informe a quantidade.")
+    .refine((value) => {
+      const parsed = Number(value.replace(",", "."));
+      return Number.isInteger(parsed) && parsed > 0;
+    }, "A quantidade deve ser um número inteiro maior que zero."),
+  discount: z
+    .string()
+    .trim()
+    .optional()
+    .refine((value) => {
+      if (!value) {
+        return true;
+      }
+
+      const normalized = value.replace("%", "").replace(",", ".").trim();
+      const parsed = Number(normalized);
+      return Number.isFinite(parsed) && parsed >= 0 && parsed <= 100;
+    }, "Desconto inválido. Use um valor entre 0 e 100."),
+  unitPrice: z
+    .string()
+    .trim()
+    .optional()
+    .refine((value) => {
+      if (!value) {
+        return true;
+      }
+
+      const normalized = value.replace(/[R$\s]/g, "").replace(/\./g, "").replace(",", ".");
+      const parsed = Number(normalized);
+      return Number.isFinite(parsed) && parsed > 0;
+    }, "Preço unitário inválido."),
 });
 
 function nullable(value?: string) {
@@ -70,6 +129,40 @@ async function requireUserId() {
 function getTextValue(formData: FormData, field: string) {
   const value = formData.get(field);
   return typeof value === "string" ? value : "";
+}
+
+function parseDecimalInput(value: string) {
+  const normalized = value
+    .trim()
+    .replace(/[R$\s]/g, "")
+    .replace(/\./g, "")
+    .replace(",", ".");
+
+  if (!normalized) {
+    return null;
+  }
+
+  const parsed = Number(normalized);
+  if (!Number.isFinite(parsed)) {
+    return null;
+  }
+
+  return parsed;
+}
+
+function parseDiscountValue(value?: string) {
+  if (!value) {
+    return 0;
+  }
+
+  const normalized = value.replace("%", "").replace(",", ".").trim();
+  const parsed = Number(normalized);
+
+  if (!Number.isFinite(parsed)) {
+    return 0;
+  }
+
+  return Math.min(Math.max(parsed, 0), 100);
 }
 
 function getEnumValue<TValue extends string>(
@@ -113,6 +206,32 @@ function parseOrderForm(formData: FormData) {
     deliveryType: values.deliveryType,
     notes: values.notes,
     customerOrderNumber: values.customerOrderNumber,
+  });
+
+  return { values, parsed };
+}
+
+function getOrderItemFormValues(formData: FormData): OrderItemFormValues {
+  return {
+    orderId: getTextValue(formData, "orderId"),
+    itemId: getTextValue(formData, "itemId"),
+    productId: getTextValue(formData, "productId"),
+    quantity: getTextValue(formData, "quantity"),
+    discount: getTextValue(formData, "discount"),
+    unitPrice: getTextValue(formData, "unitPrice"),
+  };
+}
+
+function parseOrderItemForm(formData: FormData) {
+  const values = getOrderItemFormValues(formData);
+
+  const parsed = orderItemSchema.safeParse({
+    orderId: values.orderId,
+    itemId: values.itemId || undefined,
+    productId: values.productId,
+    quantity: values.quantity,
+    discount: values.discount || undefined,
+    unitPrice: values.unitPrice || undefined,
   });
 
   return { values, parsed };
@@ -163,6 +282,62 @@ async function validateRelations(userId: string, customerId: string, carrierId?:
   return null;
 }
 
+async function getOrderForUser(userId: string, orderId: string) {
+  return prisma.order.findFirst({
+    where: {
+      id: orderId,
+      userId,
+    },
+    select: {
+      id: true,
+      userId: true,
+      status: true,
+    },
+  });
+}
+
+async function recalculateOrderTotal(
+  transaction: Prisma.TransactionClient,
+  orderId: string,
+) {
+  const aggregate = await transaction.orderItem.aggregate({
+    where: { orderId },
+    _sum: { totalPrice: true },
+  });
+
+  await transaction.order.update({
+    where: { id: orderId },
+    data: {
+      total: aggregate._sum.totalPrice ?? new Prisma.Decimal(0),
+    },
+  });
+}
+
+async function syncOrderIfConfirmed(userId: string, orderId: string) {
+  const order = await prisma.order.findFirst({
+    where: {
+      id: orderId,
+      userId,
+    },
+    select: {
+      status: true,
+    },
+  });
+
+  if (!order || order.status !== ("CONFIRMED" satisfies OrderStatus)) {
+    return;
+  }
+
+  try {
+    await syncConfirmedOrdersToBling(userId, {
+      orderId,
+      limit: 1,
+    });
+  } catch (error) {
+    console.error("Falha ao sincronizar pedido confirmado com o Bling", error);
+  }
+}
+
 async function getNextOrderNumber(transaction: Prisma.TransactionClient) {
   const lastOrder = await transaction.order.findFirst({
     orderBy: {
@@ -189,6 +364,7 @@ async function createOrderWithUniqueNumber(
           data: {
             userId,
             orderNumber,
+            status: "DRAFT",
             ...data,
           },
         });
@@ -236,16 +412,7 @@ export async function createOrderAction(
     return { error: relationError, values };
   }
 
-  const createdOrderId = await createOrderWithUniqueNumber(userId, orderPayload(parsed.data));
-
-  try {
-    await syncConfirmedOrdersToBling(userId, {
-      orderId: createdOrderId,
-      limit: 1,
-    });
-  } catch (error) {
-    console.error("Falha ao sincronizar pedido automaticamente com o Bling", error);
-  }
+  await createOrderWithUniqueNumber(userId, orderPayload(parsed.data));
 
   revalidatePath("/pedidos");
   redirect(buildNoticeUrl("/pedidos", "order-created"));
@@ -291,14 +458,7 @@ export async function updateOrderAction(
     return { error: "Pedido não encontrado ou sem permissão para editar.", values };
   }
 
-  try {
-    await syncConfirmedOrdersToBling(userId, {
-      orderId: parsed.data.id,
-      limit: 1,
-    });
-  } catch (error) {
-    console.error("Falha ao sincronizar pedido automaticamente com o Bling", error);
-  }
+  await syncOrderIfConfirmed(userId, parsed.data.id);
 
   revalidatePath("/pedidos");
   redirect(buildNoticeUrl("/pedidos", "order-updated"));
@@ -342,4 +502,365 @@ export async function deleteOrderAction(
 
   revalidatePath("/pedidos");
   redirect(buildNoticeUrl("/pedidos", "order-deleted"));
+}
+
+export async function addOrderItemAction(
+  _state: OrderItemFormState,
+  formData: FormData,
+): Promise<OrderItemFormState> {
+  const userId = await requireUserId();
+  const { values, parsed } = parseOrderItemForm(formData);
+
+  if (!parsed.success) {
+    return {
+      error: parsed.error.issues[0]?.message ?? "Dados inválidos.",
+      values,
+    };
+  }
+
+  const quantity = Number(parsed.data.quantity.replace(",", "."));
+  const discount = parseDiscountValue(parsed.data.discount);
+  const unitPriceValue = parsed.data.unitPrice ? parseDecimalInput(parsed.data.unitPrice) : null;
+
+  if (unitPriceValue !== null && unitPriceValue <= 0) {
+    return { error: "Preço unitário inválido.", values };
+  }
+
+  const [order, product] = await Promise.all([
+    getOrderForUser(userId, parsed.data.orderId),
+    prisma.product.findFirst({
+      where: {
+        id: parsed.data.productId,
+        userId,
+      },
+      select: {
+        id: true,
+        code: true,
+        name: true,
+        price: true,
+        stockQuantity: true,
+      },
+    }),
+  ]);
+
+  if (!order) {
+    return { error: "Pedido não encontrado ou sem permissão para edição.", values };
+  }
+
+  if (order.status !== ("DRAFT" satisfies OrderStatus)) {
+    return { error: "Somente pedidos em rascunho permitem inclusão de itens.", values };
+  }
+
+  if (!product) {
+    return { error: "Produto não encontrado para o item.", values };
+  }
+
+  if (new Prisma.Decimal(quantity).greaterThan(product.stockQuantity)) {
+    return {
+      error: `Estoque insuficiente para ${product.code} - ${product.name}.`,
+      values,
+    };
+  }
+
+  const unitPriceDecimal = new Prisma.Decimal(
+    (unitPriceValue ?? Number(product.price)).toFixed(2),
+  );
+  const discountDecimal = new Prisma.Decimal(discount.toFixed(2));
+  const gross = unitPriceDecimal.mul(quantity);
+  const discountAmount = gross.mul(discountDecimal).div(100);
+  const totalPrice = gross.sub(discountAmount);
+
+  await prisma.$transaction(async (transaction) => {
+    await transaction.orderItem.create({
+      data: {
+        orderId: order.id,
+        productId: product.id,
+        projectNameCode: `${product.code} - ${product.name}`,
+        quantity,
+        discount: discountDecimal,
+        unitPrice: unitPriceDecimal,
+        totalPrice,
+        operation: "VENDA",
+      },
+    });
+
+    await recalculateOrderTotal(transaction, order.id);
+  });
+
+  revalidatePath("/pedidos");
+  redirect(buildNoticeUrl("/pedidos", "order-item-added"));
+}
+
+export async function updateOrderItemAction(
+  _state: OrderItemFormState,
+  formData: FormData,
+): Promise<OrderItemFormState> {
+  const userId = await requireUserId();
+  const { values, parsed } = parseOrderItemForm(formData);
+
+  if (!parsed.success) {
+    return {
+      error: parsed.error.issues[0]?.message ?? "Dados inválidos.",
+      values,
+    };
+  }
+
+  if (!parsed.data.itemId) {
+    return { error: "Item não identificado.", values };
+  }
+
+  const quantity = Number(parsed.data.quantity.replace(",", "."));
+  const discount = parseDiscountValue(parsed.data.discount);
+  const unitPriceValue = parsed.data.unitPrice ? parseDecimalInput(parsed.data.unitPrice) : null;
+
+  if (unitPriceValue !== null && unitPriceValue <= 0) {
+    return { error: "Preço unitário inválido.", values };
+  }
+
+  const order = await getOrderForUser(userId, parsed.data.orderId);
+
+  if (!order) {
+    return { error: "Pedido não encontrado ou sem permissão para edição.", values };
+  }
+
+  if (order.status !== ("DRAFT" satisfies OrderStatus)) {
+    return { error: "Somente pedidos em rascunho permitem editar itens.", values };
+  }
+
+  const existingItem = await prisma.orderItem.findFirst({
+    where: {
+      id: parsed.data.itemId,
+      orderId: parsed.data.orderId,
+      order: {
+        userId,
+      },
+    },
+    select: {
+      id: true,
+      productId: true,
+      product: {
+        select: {
+          id: true,
+          code: true,
+          name: true,
+          price: true,
+          stockQuantity: true,
+        },
+      },
+    },
+  });
+
+  if (!existingItem) {
+    return { error: "Item do pedido não encontrado.", values };
+  }
+
+  if (!existingItem.productId || !existingItem.product) {
+    return { error: "Item sem produto vinculado não pode ser editado por este fluxo.", values };
+  }
+
+  if (new Prisma.Decimal(quantity).greaterThan(existingItem.product.stockQuantity)) {
+    return {
+      error: `Estoque insuficiente para ${existingItem.product.code} - ${existingItem.product.name}.`,
+      values,
+    };
+  }
+
+  const unitPriceDecimal = new Prisma.Decimal(
+    (unitPriceValue ?? Number(existingItem.product.price)).toFixed(2),
+  );
+  const discountDecimal = new Prisma.Decimal(discount.toFixed(2));
+  const gross = unitPriceDecimal.mul(quantity);
+  const discountAmount = gross.mul(discountDecimal).div(100);
+  const totalPrice = gross.sub(discountAmount);
+
+  await prisma.$transaction(async (transaction) => {
+    await transaction.orderItem.update({
+      where: {
+        id: existingItem.id,
+      },
+      data: {
+        quantity,
+        discount: discountDecimal,
+        unitPrice: unitPriceDecimal,
+        totalPrice,
+      },
+    });
+
+    await recalculateOrderTotal(transaction, order.id);
+  });
+
+  revalidatePath("/pedidos");
+  redirect(buildNoticeUrl("/pedidos", "order-item-updated"));
+}
+
+export async function deleteOrderItemAction(
+  _state: OrderStatusFormState,
+  formData: FormData,
+): Promise<OrderStatusFormState> {
+  const userId = await requireUserId();
+  const orderId = String(formData.get("orderId") ?? "");
+  const itemId = String(formData.get("itemId") ?? "");
+
+  if (!orderId || !itemId) {
+    return { error: "Item não identificado para remoção." };
+  }
+
+  const order = await getOrderForUser(userId, orderId);
+
+  if (!order) {
+    return { error: "Pedido não encontrado ou sem permissão para edição." };
+  }
+
+  if (order.status !== ("DRAFT" satisfies OrderStatus)) {
+    return { error: "Somente pedidos em rascunho permitem remover itens." };
+  }
+
+  await prisma.$transaction(async (transaction) => {
+    await transaction.orderItem.deleteMany({
+      where: {
+        id: itemId,
+        orderId,
+      },
+    });
+
+    await recalculateOrderTotal(transaction, orderId);
+  });
+
+  revalidatePath("/pedidos");
+  redirect(buildNoticeUrl("/pedidos", "order-item-deleted"));
+}
+
+export async function confirmOrderAction(
+  _state: OrderStatusFormState,
+  formData: FormData,
+): Promise<OrderStatusFormState> {
+  const userId = await requireUserId();
+  const orderId = String(formData.get("orderId") ?? "");
+
+  if (!orderId) {
+    return { error: "Pedido não identificado para confirmação." };
+  }
+
+  const orderSnapshot = await prisma.order.findFirst({
+    where: {
+      id: orderId,
+      userId,
+    },
+    select: {
+      id: true,
+      status: true,
+      items: {
+        select: {
+          id: true,
+          quantity: true,
+          productId: true,
+          product: {
+            select: {
+              id: true,
+              code: true,
+              name: true,
+            },
+          },
+        },
+      },
+    },
+  });
+
+  if (!orderSnapshot) {
+    return { error: "Pedido não encontrado ou sem permissão para confirmar." };
+  }
+
+  if (orderSnapshot.status === ("CONFIRMED" satisfies OrderStatus)) {
+    return { error: "Este pedido já está confirmado." };
+  }
+
+  if (orderSnapshot.status === ("CANCELLED" satisfies OrderStatus)) {
+    return { error: "Pedidos cancelados não podem ser confirmados." };
+  }
+
+  if (orderSnapshot.items.length === 0) {
+    return { error: "Adicione ao menos um item antes de confirmar o pedido." };
+  }
+
+  const itemsWithoutProduct = orderSnapshot.items.filter((item) => !item.productId);
+  if (itemsWithoutProduct.length > 0) {
+    return { error: "Há itens sem produto vinculado. Ajuste os itens antes da confirmação." };
+  }
+
+  try {
+    await prisma.$transaction(async (transaction) => {
+      for (const item of orderSnapshot.items) {
+        if (!item.productId || !item.product) {
+          throw new Error("Há itens sem produto vinculado.");
+        }
+
+        const updated = await transaction.product.updateMany({
+          where: {
+            id: item.productId,
+            userId,
+            stockQuantity: {
+              gte: new Prisma.Decimal(item.quantity),
+            },
+          },
+          data: {
+            stockQuantity: {
+              decrement: new Prisma.Decimal(item.quantity),
+            },
+          },
+        });
+
+        if (updated.count === 0) {
+          throw new Error(`Estoque insuficiente para ${item.product.code} - ${item.product.name}.`);
+        }
+      }
+
+      await recalculateOrderTotal(transaction, orderId);
+
+      await transaction.order.update({
+        where: {
+          id: orderId,
+        },
+        data: {
+          status: "CONFIRMED",
+          approvedAt: new Date(),
+        },
+      });
+    });
+  } catch (error) {
+    return {
+      error: error instanceof Error
+        ? error.message
+        : "Não foi possível confirmar o pedido no momento.",
+    };
+  }
+
+  await syncOrderIfConfirmed(userId, orderId);
+
+  revalidatePath("/pedidos");
+  redirect(buildNoticeUrl("/pedidos", "order-confirmed"));
+}
+
+export async function billOrderAction(
+  _state: OrderStatusFormState,
+  formData: FormData,
+): Promise<OrderStatusFormState> {
+  const userId = await requireUserId();
+  const orderId = String(formData.get("orderId") ?? "");
+
+  if (!orderId) {
+    return { error: "Pedido não identificado para faturamento." };
+  }
+
+  const result = await billConfirmedOrderInBling(userId, orderId, {
+    maxAttempts: 2,
+  });
+
+  if (!result.billed) {
+    return {
+      error: result.reason ?? "Não foi possível faturar o pedido no Bling.",
+    };
+  }
+
+  revalidatePath("/pedidos");
+  redirect(buildNoticeUrl("/pedidos", "order-billed"));
 }

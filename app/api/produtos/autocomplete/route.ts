@@ -33,6 +33,7 @@ export async function GET(request: Request) {
       code: true,
       name: true,
       price: true,
+      stockQuantity: true,
     },
   });
 
@@ -42,6 +43,7 @@ export async function GET(request: Request) {
       code: product.code,
       name: product.name,
       price: Number(product.price),
+      stockQuantity: Number(product.stockQuantity),
     })),
   });
 }

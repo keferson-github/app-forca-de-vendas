@@ -1,14 +1,23 @@
 "use client";
 
 import { useActionState, useRef, useState } from "react";
-import { Eye, Pencil, Plus, Search, ShoppingCart, Trash2 } from "lucide-react";
+import { CheckCircle2, Eye, MessageCircle, Pencil, Plus, Search, ShoppingCart, Trash2 } from "lucide-react";
+import { IconFileTypePdf } from "@tabler/icons-react";
 import {
+  addOrderItemAction,
+  billOrderAction,
+  confirmOrderAction,
   createOrderAction,
+  deleteOrderItemAction,
   deleteOrderAction,
+  type OrderItemFormState,
+  type OrderStatusFormState,
   updateOrderAction,
+  updateOrderItemAction,
   type OrderFormState,
 } from "@/app/(protected)/pedidos/actions";
 import { SubmitButton } from "@/components/auth/submit-button";
+import { OrderPdfTemplate } from "@/components/pedidos/order-pdf-template";
 import { ConfirmActionDialog } from "@/components/shared/confirm-action-dialog";
 import { DataTable } from "@/components/shared/data-table";
 import { GlobalSearchForm } from "@/components/shared/global-search-form";
@@ -50,6 +59,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { useNoticeToast } from "@/hooks/use-notice-toast";
 import { useSheetSlideGsap } from "@/hooks/use-sheet-slide-gsap";
+import { appToast } from "@/lib/toast";
 
 type OrderAutocompleteCustomer = {
   id: string;
@@ -57,6 +67,14 @@ type OrderAutocompleteCustomer = {
   companyName: string | null;
   customerCode: string | null;
   phone: string | null;
+};
+
+type OrderAutocompleteProduct = {
+  id: string;
+  code: string;
+  name: string;
+  price: number;
+  stockQuantity: number;
 };
 
 export type CarrierOption = {
@@ -70,6 +88,11 @@ export type OrderListItem = {
   customerId: string;
   customerName: string;
   customerCompany: string | null;
+  customerCode: string | null;
+  customerCnpjCpf: string | null;
+  customerPhone: string | null;
+  customerCommercialAddress: string | null;
+  customerDeliveryAddress: string | null;
   carrierId: string | null;
   carrierName: string | null;
   operation: "VENDA";
@@ -96,8 +119,24 @@ export type OrderListItem = {
   notes: string | null;
   customerOrderNumber: string | null;
   total: number;
+  approvedAt: string | null;
+  billedAt: string | null;
+  lastBlingSyncAt: string | null;
+  lastBlingError: string | null;
   createdAt: string;
   updatedAt: string;
+  items: Array<{
+    id: string;
+    productId: string | null;
+    productCode: string | null;
+    productName: string | null;
+    description: string;
+    quantity: number;
+    discount: number;
+    unitPrice: number;
+    totalPrice: number;
+    operation: "VENDA";
+  }>;
   itemsCount: number;
 };
 
@@ -133,6 +172,8 @@ type CustomerLookupFieldProps = {
 };
 
 const initialState: OrderFormState = {};
+const initialItemState: OrderItemFormState = {};
+const initialStatusState: OrderStatusFormState = {};
 const UNASSIGNED_CARRIER_VALUE = "__none__";
 
 const noticeMessages = {
@@ -148,10 +189,36 @@ const noticeMessages = {
     message: "Pedido excluído com sucesso.",
     preset: "success-celebration" as const,
   },
+  "order-item-added": {
+    message: "Item adicionado ao pedido.",
+    preset: "success-celebration" as const,
+  },
+  "order-item-updated": {
+    message: "Item do pedido atualizado.",
+    preset: "success-celebration" as const,
+  },
+  "order-item-deleted": {
+    message: "Item removido do pedido.",
+    preset: "success-celebration" as const,
+  },
+  "order-confirmed": {
+    message: "Pedido confirmado e enviado para sincronização com Bling.",
+    preset: "success-celebration" as const,
+  },
+  "order-billed": {
+    message: "Pedido faturado com sucesso no Bling.",
+    preset: "success-celebration" as const,
+  },
 };
 
 const statusLabels: Record<OrderListItem["status"], string> = {
   DRAFT: "Rascunho",
+  CONFIRMED: "Confirmado",
+  CANCELLED: "Cancelado",
+};
+
+const mobileStatusLabels: Record<OrderListItem["status"], string> = {
+  DRAFT: "Em digitacao",
   CONFIRMED: "Confirmado",
   CANCELLED: "Cancelado",
 };
@@ -220,6 +287,34 @@ function parseCustomerAutocompletePayload(payload: unknown): OrderAutocompleteCu
   });
 }
 
+function parseProductAutocompletePayload(payload: unknown): OrderAutocompleteProduct[] {
+  if (!payload || typeof payload !== "object") {
+    return [];
+  }
+
+  const { items } = payload as { items?: unknown };
+
+  if (!Array.isArray(items)) {
+    return [];
+  }
+
+  return items.filter((item): item is OrderAutocompleteProduct => {
+    if (!item || typeof item !== "object") {
+      return false;
+    }
+
+    const typedItem = item as Record<string, unknown>;
+
+    return (
+      typeof typedItem.id === "string"
+      && typeof typedItem.code === "string"
+      && typeof typedItem.name === "string"
+      && typeof typedItem.price === "number"
+      && typeof typedItem.stockQuantity === "number"
+    );
+  });
+}
+
 function getCustomerSearchLabel(customer: OrderAutocompleteCustomer) {
   if (!customer.companyName) {
     return customer.name;
@@ -269,6 +364,40 @@ function formatCurrency(value: number) {
 
 function formatDate(value: string) {
   return new Date(value).toLocaleDateString("pt-BR");
+}
+
+function getProductSearchLabel(product: OrderAutocompleteProduct) {
+  return `${product.code} - ${product.name}`;
+}
+
+function formatDateTime(value: string | null) {
+  if (!value) {
+    return "Pendente";
+  }
+
+  return new Date(value).toLocaleString("pt-BR");
+}
+
+function formatPhoneToWa(value: string | null) {
+  if (!value) {
+    return null;
+  }
+
+  const onlyDigits = value.replace(/\D/g, "");
+
+  if (!onlyDigits) {
+    return null;
+  }
+
+  if (onlyDigits.startsWith("55")) {
+    return onlyDigits;
+  }
+
+  return `55${onlyDigits}`;
+}
+
+function formatMoneyInput(value: number) {
+  return value.toFixed(2).replace(".", ",");
 }
 
 function CustomerLookupField({ inputId, selectedCustomer, onSelect }: CustomerLookupFieldProps) {
@@ -597,12 +726,15 @@ function OrderDetailSheet({ order }: { order: OrderListItem }) {
             <DetailRow label="Atualizado em" value={formatDate(order.updatedAt)} />
           </div>
         </dl>
+        <div className="px-4 pb-6">
+          <OrderItemsPanel order={order} />
+        </div>
       </SheetContent>
     </Sheet>
   );
 }
 
-function OrderDeleteDialog({ order }: { order: OrderListItem }) {
+function OrderDeleteDialog({ order, compact = false }: { order: OrderListItem; compact?: boolean }) {
   return (
     <ConfirmActionDialog
       action={deleteOrderAction}
@@ -618,7 +750,11 @@ function OrderDeleteDialog({ order }: { order: OrderListItem }) {
       pendingLabel="Excluindo..."
       confirmVariant="destructive"
       trigger={
-        <Button variant="ghost" size="icon-sm" aria-label={`Excluir pedido ${order.orderNumber}`}>
+        <Button
+          variant={compact ? "outline" : "ghost"}
+          size="icon-sm"
+          aria-label={`Excluir pedido ${order.orderNumber}`}
+        >
           <Trash2 />
         </Button>
       }
@@ -650,6 +786,122 @@ export function OrdersPageClient({
   pagination,
 }: OrdersPageClientProps) {
   useNoticeToast(noticeMessages);
+  const pdfTemplateRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  const [pdfGeneratingOrderId, setPdfGeneratingOrderId] = useState<string | null>(null);
+
+  async function handleDownloadPdf(order: OrderListItem) {
+    const templateElement = pdfTemplateRefs.current[order.id];
+
+    if (!templateElement) {
+      appToast.error("Nao foi possivel carregar o template do pedido para PDF.");
+      return;
+    }
+
+    setPdfGeneratingOrderId(order.id);
+    const loadingToastId = appToast.loading(`Gerando PDF do pedido #${order.orderNumber}...`);
+
+    try {
+      const [{ default: html2canvas }, jspdfModule] = await Promise.all([
+        import("html2canvas"),
+        import("jspdf"),
+      ]);
+
+      const canvas = await html2canvas(templateElement, {
+        backgroundColor: "#ffffff",
+        scale: 2,
+        useCORS: true,
+        windowWidth: templateElement.scrollWidth,
+        windowHeight: templateElement.scrollHeight,
+      });
+
+      const imageData = canvas.toDataURL("image/png");
+      const pdf = new jspdfModule.jsPDF({
+        orientation: "portrait",
+        unit: "mm",
+        format: "a4",
+      });
+
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      const pageHeight = pdf.internal.pageSize.getHeight();
+      const imageHeight = (canvas.height * pageWidth) / canvas.width;
+
+      let position = 0;
+      let remainingHeight = imageHeight;
+
+      pdf.addImage(imageData, "PNG", 0, position, pageWidth, imageHeight);
+      remainingHeight -= pageHeight;
+
+      while (remainingHeight > 0) {
+        position = remainingHeight - imageHeight;
+        pdf.addPage();
+        pdf.addImage(imageData, "PNG", 0, position, pageWidth, imageHeight);
+        remainingHeight -= pageHeight;
+      }
+
+      pdf.save(`pedido-${order.orderNumber}.pdf`);
+      appToast.success(`PDF do pedido #${order.orderNumber} gerado com sucesso.`);
+    } catch (error) {
+      console.error("Falha ao gerar PDF do pedido", error);
+      appToast.error("Nao foi possivel gerar o PDF do pedido.");
+    } finally {
+      appToast.dismiss(loadingToastId);
+      setPdfGeneratingOrderId(null);
+    }
+  }
+
+  function handleOpenWhatsapp(order: OrderListItem) {
+    const phone = formatPhoneToWa(order.customerPhone);
+
+    if (!phone) {
+      appToast.error("Cliente sem telefone valido para WhatsApp.");
+      return;
+    }
+
+    const message = encodeURIComponent(
+      `Pedido #${order.orderNumber}\\nCliente: ${order.customerName}\\nTotal: ${formatCurrency(order.total)}\\nPagto.: ${paymentTermLabels[order.paymentTerm]}`,
+    );
+
+    window.open(`https://wa.me/${phone}?text=${message}`, "_blank", "noopener,noreferrer");
+  }
+
+  function renderCoreOrderActions(order: OrderListItem, compact = false) {
+    return (
+      <div className={`flex items-center gap-1.5 ${compact ? "justify-between" : "justify-end"}`}>
+        <OrderBillingAction order={order} compact={compact} />
+        <OrderFormSheet
+          key={`edit-${order.id}-${order.updatedAt}`}
+          carriers={carriers}
+          order={order}
+          triggerLabel="Editar"
+          title={`Editar pedido #${order.orderNumber}`}
+          description="Atualize os dados principais do pedido registrado."
+          variant="ghost"
+          size={compact ? "icon-sm" : "sm"}
+          trigger={(
+            <Button
+              variant={compact ? "outline" : "ghost"}
+              size="icon-sm"
+              aria-label={`Editar pedido ${order.orderNumber}`}
+            >
+              <Pencil />
+            </Button>
+          )}
+        />
+        <Button
+          variant={compact ? "outline" : "ghost"}
+          size="icon-sm"
+          aria-label={`Gerar PDF do pedido ${order.orderNumber}`}
+          disabled={pdfGeneratingOrderId === order.id}
+          onClick={() => {
+            void handleDownloadPdf(order);
+          }}
+        >
+          <IconFileTypePdf className={`size-4 ${compact ? "text-amber-700" : "text-amber-600"}`} />
+        </Button>
+        <OrderDeleteDialog order={order} compact={compact} />
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col gap-4 p-4 pb-24 md:pb-4 lg:p-6">
@@ -657,7 +909,7 @@ export function OrdersPageClient({
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Pedidos</h1>
           <p className="max-w-2xl text-sm text-muted-foreground">
-            Registre e acompanhe pedidos comerciais com dados de cliente, frete e faturamento.
+            Registre pedidos, gere PDF no template comercial e compartilhe rapidamente no WhatsApp.
           </p>
         </div>
         <div className="hidden flex-wrap gap-2 md:flex">
@@ -676,7 +928,9 @@ export function OrdersPageClient({
         <CardHeader className="gap-4">
           <div>
             <CardTitle>Lista de pedidos</CardTitle>
-            <CardDescription>Busque por número, cliente, empresa recebedora e observações.</CardDescription>
+            <CardDescription>
+              Estrutura exibida por cliente, emissao, faturamento, despacho e pagamento.
+            </CardDescription>
           </div>
 
           <GlobalSearchForm
@@ -691,60 +945,120 @@ export function OrdersPageClient({
             <EmptyState />
           ) : (
             <>
-              <DataTable
-                hideOnMobile={false}
-                columns={[
-                  { id: "order", label: "Pedido" },
-                  { id: "customer", label: "Cliente" },
-                  { id: "status", label: "Status" },
-                  { id: "items", label: "Itens", className: "text-center" },
-                  { id: "total", label: "Total", className: "text-right" },
-                  { id: "actions", label: "Acoes", className: "text-right" },
-                ]}
-                data={orders}
-                getRowKey={(order) => order.id}
-                renderRow={(order) => (
-                  <>
-                    <TableCell>
-                      <div className="grid gap-1">
-                        <span className="font-medium">#{order.orderNumber}</span>
-                        <span className="text-xs text-muted-foreground">
-                          Atualizado em {new Date(order.updatedAt).toLocaleDateString("pt-BR")}
-                        </span>
+              <div className="grid gap-3 md:hidden">
+                {orders.map((order) => (
+                  <div
+                    key={`mobile-order-card-${order.id}`}
+                    className="rounded-xl border border-border/80 bg-card p-3 shadow-[0_1px_2px_rgba(15,23,42,0.06)]"
+                  >
+                    <div className="grid grid-cols-[68px_minmax(0,1fr)] gap-3">
+                      <div className="flex items-center justify-center rounded-lg bg-muted/55 text-3xl font-bold tracking-tight text-foreground/90">
+                        {order.orderNumber}
                       </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="grid gap-1">
+                      <div className="grid gap-1.5">
+                        <p className="text-base font-semibold leading-tight tracking-tight uppercase">
+                          {order.customerName}
+                        </p>
+                        <p className="text-sm leading-none">
+                          <span className="font-medium text-muted-foreground">Codigo do pedido:</span>{" "}
+                          <span className="font-semibold">{order.orderNumber}</span>
+                        </p>
+                        <p className="text-sm leading-none">
+                          <span className="font-medium text-muted-foreground">Total do pedido:</span>{" "}
+                          <span className="font-semibold">{formatCurrency(order.total)}</span>
+                        </p>
+                        <p className="text-sm leading-none">
+                          <span className="font-medium text-muted-foreground">Emissao:</span>{" "}
+                          <span>{formatDateTime(order.createdAt)}</span>
+                        </p>
+                        <p className="text-sm leading-none">
+                          <span className="font-medium text-muted-foreground">Faturamento:</span>{" "}
+                          <span>{formatDateTime(order.billedAt)}</span>
+                        </p>
+                        <p className="text-sm leading-none">
+                          <span className="font-medium text-muted-foreground">Despacho:</span>{" "}
+                          <span>{formatDateTime(order.approvedAt)}</span>
+                        </p>
+                        <p className="text-sm leading-none">
+                          <span className="font-medium text-muted-foreground">Pagto.:</span>{" "}
+                          <span>{paymentTermLabels[order.paymentTerm]}</span>
+                        </p>
+                        <p
+                          className={`text-sm font-semibold ${
+                            order.status === "DRAFT" ? "text-destructive" : "text-emerald-700"
+                          }`}
+                        >
+                          {mobileStatusLabels[order.status]}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="mt-3 border-t border-border/70 pt-3">
+                      {renderCoreOrderActions(order, true)}
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="hidden md:block">
+                <DataTable
+                  hideOnMobile={false}
+                  columns={[
+                    { id: "order", label: "Pedido" },
+                    { id: "customer", label: "Nome do cliente" },
+                    { id: "customerCode", label: "Codigo do cliente" },
+                    { id: "total", label: "Valor total do pedido", className: "text-right" },
+                    { id: "issuedAt", label: "Data e hora de emissao" },
+                    { id: "billing", label: "Faturamento" },
+                    { id: "dispatch", label: "Despacho" },
+                    { id: "payment", label: "Pagto." },
+                    { id: "actions", label: "Acoes", className: "text-right" },
+                  ]}
+                  data={orders}
+                  getRowKey={(order) => order.id}
+                  renderRow={(order) => (
+                    <>
+                      <TableCell>
+                        <div className="grid gap-1">
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium">#{order.orderNumber}</span>
+                            {order.billedAt ? <Badge variant="secondary">Faturado</Badge> : null}
+                          </div>
+                          <span className="text-xs text-muted-foreground">
+                            {order.itemsCount} item(ns)
+                          </span>
+                        </div>
+                      </TableCell>
+                      <TableCell>
                         <span className="font-medium">{order.customerName}</span>
-                        <span className="text-xs text-muted-foreground">
-                          {order.receivingCompany || order.customerCompany || "Sem empresa informada"}
-                        </span>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={statusVariants[order.status]}>{statusLabels[order.status]}</Badge>
-                    </TableCell>
-                    <TableCell className="text-center">{order.itemsCount}</TableCell>
-                    <TableCell className="text-right font-medium">{formatCurrency(order.total)}</TableCell>
-                    <TableCell>
-                      <div className="flex justify-end gap-1">
-                        <OrderDetailSheet order={order} />
-                        <OrderFormSheet
-                          key={`edit-${order.id}-${order.updatedAt}`}
-                          carriers={carriers}
-                          order={order}
-                          triggerLabel="Editar"
-                          title={`Editar pedido #${order.orderNumber}`}
-                          description="Atualize os dados principais do pedido registrado."
-                          variant="ghost"
-                          size="sm"
-                        />
-                        <OrderDeleteDialog order={order} />
-                      </div>
-                    </TableCell>
-                  </>
-                )}
-              />
+                      </TableCell>
+                      <TableCell>
+                        {order.customerCode || "Nao informado"}
+                      </TableCell>
+                      <TableCell className="text-right font-medium">{formatCurrency(order.total)}</TableCell>
+                      <TableCell>{formatDateTime(order.createdAt)}</TableCell>
+                      <TableCell>{formatDateTime(order.billedAt)}</TableCell>
+                      <TableCell>{formatDateTime(order.approvedAt)}</TableCell>
+                      <TableCell>{paymentTermLabels[order.paymentTerm]}</TableCell>
+                      <TableCell>
+                        <div className="flex justify-end gap-1.5">
+                          {renderCoreOrderActions(order)}
+                          <Button
+                            variant="ghost"
+                            size="icon-sm"
+                            aria-label={`Enviar pedido ${order.orderNumber} por WhatsApp`}
+                            onClick={() => {
+                              handleOpenWhatsapp(order);
+                            }}
+                          >
+                            <MessageCircle />
+                          </Button>
+                          <OrderDetailSheet order={order} />
+                        </div>
+                      </TableCell>
+                    </>
+                  )}
+                />
+              </div>
 
               <TablePagination
                 basePath="/pedidos"
@@ -780,6 +1094,295 @@ export function OrdersPageClient({
           }
         />
       </MobileFloatingAction>
+
+      <div className="pointer-events-none fixed -left-[99999px] top-0 opacity-0" aria-hidden>
+        {orders.map((order) => (
+          <OrderPdfTemplate
+            key={`order-pdf-template-${order.id}`}
+            ref={(element) => {
+              pdfTemplateRefs.current[order.id] = element;
+            }}
+            order={order}
+            paymentLabel={paymentTermLabels[order.paymentTerm]}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function OrderBillingAction({ order, compact = false }: { order: OrderListItem; compact?: boolean }) {
+  const [state, formAction] = useActionState(billOrderAction, initialStatusState);
+  const canBill = order.status === "CONFIRMED" && !order.billedAt;
+
+  if (order.billedAt) {
+    return <Badge variant="secondary">{compact ? "Faturado" : "Faturado"}</Badge>;
+  }
+
+  if (!canBill) {
+    return (
+      <Button variant="outline" size={compact ? "sm" : "sm"} disabled>
+        Faturar
+      </Button>
+    );
+  }
+
+  return (
+    <form action={formAction} className={`flex ${compact ? "flex-col items-start" : "flex-col items-end"} gap-1`}>
+      <input type="hidden" name="orderId" value={order.id} />
+      <Button type="submit" variant={state.error ? "destructive" : "outline"} size="sm">
+        {state.error ? "Tentar novamente" : "Faturar pedido"}
+      </Button>
+      {state.error ? (
+        <p className={`max-w-52 text-[11px] leading-tight text-destructive ${compact ? "text-left" : "text-right"}`}>
+          {state.error}
+        </p>
+      ) : null}
+    </form>
+  );
+}
+
+function ProductLookupField({
+  inputId,
+  selectedProduct,
+  onSelect,
+}: {
+  inputId: string;
+  selectedProduct: OrderAutocompleteProduct | null;
+  onSelect: (product: OrderAutocompleteProduct | null) => void;
+}) {
+  return (
+    <div className="grid gap-2">
+      <Label htmlFor={inputId}>Produto do estoque</Label>
+      <input type="hidden" name="productId" value={selectedProduct?.id ?? ""} />
+      <SearchInputWithAutocomplete
+        query={selectedProduct ? getProductSearchLabel(selectedProduct) : ""}
+        placeholder="Buscar por codigo ou nome do produto"
+        minChars={3}
+        autocomplete={{
+          endpoint: "/api/produtos/autocomplete",
+          loadingLabel: "Buscando produtos...",
+          emptyLabel: "Nenhum produto encontrado para a busca.",
+          getItemsFromPayload: parseProductAutocompletePayload,
+          getItemId: (item) => item.id,
+          getItemValue: getProductSearchLabel,
+          renderItem: (item) => (
+            <>
+              <span className="text-sm font-medium">{getProductSearchLabel(item)}</span>
+              <span className="text-xs text-muted-foreground">
+                Preco: {formatCurrency(item.price)} | Saldo: {item.stockQuantity}
+              </span>
+            </>
+          ),
+        }}
+        inputProps={{
+          id: inputId,
+          required: true,
+        }}
+        onValueChange={() => {
+          onSelect(null);
+        }}
+        onAutocompleteSelect={onSelect}
+      />
+      <p className="text-xs text-muted-foreground">
+        Digite ao menos 3 caracteres e selecione o produto do estoque.
+      </p>
+    </div>
+  );
+}
+
+function OrderItemRowEditor({ order, item }: { order: OrderListItem; item: OrderListItem["items"][number] }) {
+  const [state, formAction] = useActionState(updateOrderItemAction, initialItemState);
+
+  return (
+    <div className="rounded-lg border border-border/60 bg-muted/20 p-3">
+      <div className="mb-2 flex items-center justify-between gap-3">
+        <p className="text-sm font-medium">{item.description || item.productName || "Item do pedido"}</p>
+        <ConfirmActionDialog
+          action={deleteOrderItemAction}
+          hiddenFields={{ orderId: order.id, itemId: item.id }}
+          title="Remover item"
+          description="Deseja remover este item do pedido?"
+          confirmLabel="Remover item"
+          pendingLabel="Removendo..."
+          confirmVariant="destructive"
+          trigger={(
+            <Button variant="ghost" size="icon-sm" aria-label="Remover item do pedido">
+              <Trash2 />
+            </Button>
+          )}
+        />
+      </div>
+
+      <form action={formAction} className="grid gap-3">
+        <input type="hidden" name="orderId" value={order.id} />
+        <input type="hidden" name="itemId" value={item.id} />
+        <input type="hidden" name="productId" value={item.productId ?? ""} />
+        <div className="grid gap-3 sm:grid-cols-3">
+          <div className="grid gap-1">
+            <Label htmlFor={`item-${item.id}-quantity`}>Quantidade</Label>
+            <Input
+              id={`item-${item.id}-quantity`}
+              name="quantity"
+              type="number"
+              min={1}
+              step={1}
+              defaultValue={String(item.quantity)}
+              required
+            />
+          </div>
+          <div className="grid gap-1">
+            <Label htmlFor={`item-${item.id}-discount`}>Desconto (%)</Label>
+            <Input
+              id={`item-${item.id}-discount`}
+              name="discount"
+              defaultValue={formatMoneyInput(item.discount)}
+              placeholder="0,00"
+            />
+          </div>
+          <div className="grid gap-1">
+            <Label htmlFor={`item-${item.id}-unitPrice`}>Preco unitario</Label>
+            <Input
+              id={`item-${item.id}-unitPrice`}
+              name="unitPrice"
+              defaultValue={formatMoneyInput(item.unitPrice)}
+              placeholder="0,00"
+            />
+          </div>
+        </div>
+        <div className="flex items-center justify-between gap-3">
+          <p className="text-xs text-muted-foreground">
+            Total atual do item: {formatCurrency(item.totalPrice)}
+          </p>
+          <SubmitButton className="sm:w-auto">Atualizar item</SubmitButton>
+        </div>
+        {state.error ? (
+          <p className="rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive">
+            {state.error}
+          </p>
+        ) : null}
+      </form>
+    </div>
+  );
+}
+
+function OrderItemsPanel({ order }: { order: OrderListItem }) {
+  const [selectedProduct, setSelectedProduct] = useState<OrderAutocompleteProduct | null>(null);
+  const [lookupVersion, setLookupVersion] = useState(0);
+  const [addState, addItemAction] = useActionState(addOrderItemAction, initialItemState);
+  const [confirmState, confirmAction] = useActionState(confirmOrderAction, initialStatusState);
+
+  function handleResetAddForm(formElement: HTMLFormElement) {
+    formElement.reset();
+    setSelectedProduct(null);
+    setLookupVersion((current) => current + 1);
+  }
+
+  return (
+    <div className="grid gap-4">
+      <div className="rounded-lg border border-border/60 bg-background p-4">
+        <h3 className="text-sm font-semibold">Itens do pedido</h3>
+        <p className="mb-3 text-xs text-muted-foreground">
+          Monte o pedido com produtos do estoque já sincronizados do Bling.
+        </p>
+
+        {order.status === "DRAFT" ? (
+          <form
+            action={addItemAction}
+            className="grid gap-3"
+            onReset={(event) => {
+              handleResetAddForm(event.currentTarget);
+            }}
+          >
+            <input type="hidden" name="orderId" value={order.id} />
+            <ProductLookupField
+              key={`${order.id}-product-lookup-${lookupVersion}`}
+              inputId={`${order.id}-productId`}
+              selectedProduct={selectedProduct}
+              onSelect={setSelectedProduct}
+            />
+            <div className="grid gap-3 sm:grid-cols-3">
+              <div className="grid gap-1">
+                <Label htmlFor={`${order.id}-quantity`}>Quantidade</Label>
+                <Input id={`${order.id}-quantity`} name="quantity" type="number" min={1} step={1} defaultValue="1" required />
+              </div>
+              <div className="grid gap-1">
+                <Label htmlFor={`${order.id}-discount`}>Desconto (%)</Label>
+                <Input id={`${order.id}-discount`} name="discount" placeholder="0,00" defaultValue="0" />
+              </div>
+              <div className="grid gap-1">
+                <Label htmlFor={`${order.id}-unitPrice`}>Preco unitario</Label>
+                <Input
+                  id={`${order.id}-unitPrice`}
+                  name="unitPrice"
+                  placeholder="Ex.: 59,90"
+                />
+              </div>
+            </div>
+            <div className="flex items-center justify-end gap-2">
+              <Button type="reset" variant="outline">Limpar</Button>
+              <SubmitButton className="sm:w-auto">Adicionar item</SubmitButton>
+            </div>
+            {addState.error ? (
+              <p className="rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive">
+                {addState.error}
+              </p>
+            ) : null}
+          </form>
+        ) : (
+          <p className="text-xs text-muted-foreground">
+            Itens bloqueados para edição porque o pedido já foi confirmado.
+          </p>
+        )}
+      </div>
+
+      <div className="grid gap-2">
+        {order.items.length === 0 ? (
+          <p className="rounded-lg border border-dashed border-border px-3 py-4 text-sm text-muted-foreground">
+            Nenhum item cadastrado no pedido.
+          </p>
+        ) : (
+          order.items.map((item) => (
+            order.status === "DRAFT" ? (
+              <OrderItemRowEditor key={item.id} order={order} item={item} />
+            ) : (
+              <div key={item.id} className="rounded-lg border border-border/60 bg-muted/20 p-3">
+                <p className="text-sm font-medium">{item.description || item.productName || "Item do pedido"}</p>
+                <p className="text-xs text-muted-foreground">
+                  Quantidade: {item.quantity} | Desconto: {item.discount}% | Unitário: {formatCurrency(item.unitPrice)} | Total: {formatCurrency(item.totalPrice)}
+                </p>
+              </div>
+            )
+          ))
+        )}
+      </div>
+
+      <div className="rounded-lg border border-border/60 bg-background p-4">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="text-sm font-semibold">Resumo</p>
+            <p className="text-xs text-muted-foreground">
+              Total atual: {formatCurrency(order.total)} | Itens: {order.itemsCount}
+            </p>
+          </div>
+          {order.status === "DRAFT" ? (
+            <form action={confirmAction}>
+              <input type="hidden" name="orderId" value={order.id} />
+              <SubmitButton className="sm:w-auto">
+                <CheckCircle2 />
+                Confirmar pedido
+              </SubmitButton>
+            </form>
+          ) : (
+            <Badge variant="default">Pedido confirmado</Badge>
+          )}
+        </div>
+        {confirmState.error ? (
+          <p className="mt-3 rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive">
+            {confirmState.error}
+          </p>
+        ) : null}
+      </div>
     </div>
   );
 }

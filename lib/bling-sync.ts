@@ -544,6 +544,188 @@ async function syncOrderToBling(orderId: string) {
   }
 }
 
+type BillOrderOptions = {
+  maxAttempts?: number;
+};
+
+function resolveBlingBillingSituationId() {
+  const raw = process.env.BLING_BILLING_SITUATION_ID;
+
+  if (!raw) {
+    return 9;
+  }
+
+  const parsed = Number(raw);
+
+  if (!Number.isFinite(parsed) || parsed < 1) {
+    return 9;
+  }
+
+  return Math.floor(parsed);
+}
+
+async function markOrderBillingFailure(orderId: string, reason: string) {
+  await prisma.order.update({
+    where: { id: orderId },
+    data: {
+      lastBlingError: reason,
+    },
+  });
+}
+
+async function sendBillOrderRequestToBling(userId: string, blingOrderId: string) {
+  const situationId = resolveBlingBillingSituationId();
+  const endpoints = [
+    {
+      path: `/pedidos/vendas/${blingOrderId}/situacoes`,
+      method: "POST",
+      body: {
+        situacao: {
+          id: situationId,
+        },
+      },
+    },
+    {
+      path: `/pedidos/vendas/${blingOrderId}`,
+      method: "PATCH",
+      body: {
+        situacao: {
+          id: situationId,
+        },
+      },
+    },
+    {
+      path: `/pedidos/vendas/${blingOrderId}`,
+      method: "PUT",
+      body: {
+        situacao: {
+          id: situationId,
+        },
+      },
+    },
+  ] as const;
+
+  let lastError: unknown = null;
+
+  for (const endpoint of endpoints) {
+    try {
+      await blingRequest(userId, endpoint.path, {
+        method: endpoint.method,
+        body: JSON.stringify(endpoint.body),
+      });
+      return;
+    } catch (error) {
+      lastError = error;
+    }
+  }
+
+  throw lastError instanceof Error
+    ? lastError
+    : new Error("Falha ao faturar pedido no Bling.");
+}
+
+export async function billConfirmedOrderInBling(
+  userId: string,
+  orderId: string,
+  options?: BillOrderOptions,
+) {
+  const order = await prisma.order.findFirst({
+    where: {
+      id: orderId,
+      userId,
+    },
+    select: {
+      id: true,
+      userId: true,
+      status: true,
+      billedAt: true,
+      blingOrderId: true,
+      items: {
+        select: {
+          id: true,
+        },
+        take: 1,
+      },
+    },
+  });
+
+  if (!order) {
+    return { billed: false, reason: "Pedido nao encontrado ou sem permissao." };
+  }
+
+  if (order.status !== ("CONFIRMED" satisfies OrderStatus)) {
+    return { billed: false, reason: "Somente pedidos confirmados podem ser faturados." };
+  }
+
+  if (order.items.length === 0) {
+    return { billed: false, reason: "Pedido sem itens nao pode ser faturado." };
+  }
+
+  if (order.billedAt) {
+    return { billed: true, alreadyBilled: true };
+  }
+
+  let blingOrderId = order.blingOrderId;
+
+  if (!blingOrderId) {
+    const syncResult = await syncOrderToBling(order.id);
+    if (!syncResult.synced) {
+      return {
+        billed: false,
+        reason: syncResult.reason ?? "Falha ao sincronizar pedido com o Bling antes do faturamento.",
+      };
+    }
+
+    const refreshedOrder = await prisma.order.findUnique({
+      where: {
+        id: order.id,
+      },
+      select: {
+        blingOrderId: true,
+      },
+    });
+
+    blingOrderId = refreshedOrder?.blingOrderId ?? null;
+  }
+
+  if (!blingOrderId) {
+    return { billed: false, reason: "Pedido sem identificador no Bling para faturamento." };
+  }
+
+  const maxAttempts = Math.min(Math.max(options?.maxAttempts ?? 2, 1), 3);
+  let lastError: string | null = null;
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    try {
+      await sendBillOrderRequestToBling(userId, blingOrderId);
+
+      await prisma.order.update({
+        where: {
+          id: order.id,
+        },
+        data: {
+          billedAt: new Date(),
+          lastBlingSyncAt: new Date(),
+          lastBlingError: null,
+        },
+      });
+
+      return { billed: true, attempts: attempt };
+    } catch (error) {
+      lastError = error instanceof Error ? error.message : "Falha ao faturar pedido no Bling.";
+    }
+  }
+
+  const reason = lastError ?? "Falha ao faturar pedido no Bling.";
+  await markOrderBillingFailure(order.id, reason);
+
+  return {
+    billed: false,
+    attempts: maxAttempts,
+    reason,
+  };
+}
+
 export async function syncProductToBlingById(userId: string, productId: string) {
   const product = await prisma.product.findFirst({
     where: {
