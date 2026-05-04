@@ -1,62 +1,75 @@
 .orderPdfPage {
+  --pdf-radius: 5px;
+  --pdf-section-padding: 12px;
+  --pdf-field-padding: 8px;
+  --pdf-block-gap: 10px;
+  --pdf-border-color: #b6c1cf;
   width: 794px;
   min-height: 1123px;
   box-sizing: border-box;
-  background: #e5e7eb;
+  background: #e6e9ee;
   color: #111827;
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: "Segoe UI", Arial, Helvetica, sans-serif;
   font-size: 11px;
-  line-height: 1.2;
-  padding: 18px;
+  line-height: 1.28;
+  letter-spacing: 0.01em;
+  padding: 22px;
+  border-radius: var(--pdf-radius);
 }
 
 .section {
-  border: 1px solid #374151;
-  background: #e5e7eb;
-  padding: 8px 10px;
-  margin-bottom: 6px;
+  border: 1px solid var(--pdf-border-color);
+  background: #f3f6fb;
+  padding: var(--pdf-section-padding);
+  margin-bottom: var(--pdf-block-gap);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.62);
+  border-radius: var(--pdf-radius);
 }
 
 .sectionTight {
-  border: 1px solid #374151;
-  background: #e5e7eb;
-  padding: 6px 10px;
-  margin-bottom: 6px;
+  border: 1px solid var(--pdf-border-color);
+  background: #f3f6fb;
+  padding: var(--pdf-section-padding);
+  margin-bottom: var(--pdf-block-gap);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.62);
+  border-radius: var(--pdf-radius);
 }
 
 .headerGrid {
   display: grid;
   grid-template-columns: 160px minmax(0, 1fr);
   gap: 10px;
+  align-items: start;
 }
 
 .logoBox {
-  width: 94px;
-  height: 94px;
-  border: 1px solid #9ca3af;
-  border-radius: 10px;
-  background: #ffffff;
+  width: 132px;
+  height: 132px;
+  border: 1px solid var(--pdf-border-color);
+  border-radius: var(--pdf-radius);
+  background: #eff3f8;
   display: grid;
   place-items: center;
   overflow: hidden;
+  padding: 3px;
 }
 
 .logo {
-  width: 94px;
-  height: 94px;
-  border-radius: 10px;
+  width: 100%;
+  height: 100%;
+  border-radius: var(--pdf-radius);
   object-fit: cover;
 }
 
 .companyFields {
   display: grid;
-  gap: 4px;
+  gap: 5px;
 }
 
 .row2 {
   display: grid;
   grid-template-columns: 170px minmax(0, 1fr);
-  gap: 6px;
+  gap: 8px;
 }
 
 .row3 {
@@ -71,8 +84,28 @@
   gap: 8px;
 }
 
+.row2 > span,
+.row3 > span,
+.row4 > span {
+  border: 1px solid var(--pdf-border-color);
+  background: #eaf0f7;
+  border-radius: var(--pdf-radius);
+  padding: var(--pdf-field-padding);
+}
+
+.customerSection :is(.row2, .row3, .row4),
+.postObsSection :is(.row2, .row3, .row4) {
+  gap: 10px;
+}
+
+.customerSection :is(.row2, .row3, .row4) + :is(.row2, .row3, .row4),
+.postObsSection :is(.row2, .row3, .row4) + :is(.row2, .row3, .row4) {
+  margin-top: 10px;
+}
+
 .label {
   font-weight: 700;
+  color: #1f2937;
 }
 
 .title {
@@ -83,33 +116,48 @@
 }
 
 .subtitle {
-  margin: 0 0 4px;
+  margin: 0 0 6px;
   font-size: 18px;
   font-weight: 700;
   text-transform: uppercase;
+  letter-spacing: 0.02em;
 }
 
 .textBlock {
-  margin-top: 4px;
-  margin-bottom: 4px;
+  border: 1px solid var(--pdf-border-color);
+  margin-top: 2px;
+  margin-bottom: 8px;
+  background: #eaf0f7;
+  border-radius: var(--pdf-radius);
+  padding: var(--pdf-field-padding);
 }
 
 .itemsTable {
   width: 100%;
-  border-collapse: collapse;
-  margin-top: 4px;
+  border-collapse: separate;
+  border-spacing: 4px 6px;
+  margin-top: 6px;
+  border-radius: var(--pdf-radius);
 }
 
 .itemsTable th,
 .itemsTable td {
-  border: 1px solid #374151;
-  padding: 5px 6px;
+  border: 1px solid var(--pdf-border-color);
+  padding: var(--pdf-field-padding);
   vertical-align: top;
+  border-radius: var(--pdf-radius);
 }
 
 .itemsTable th {
   text-align: left;
   font-weight: 700;
+  background: #dce5ef;
+  color: #1f2937;
+  letter-spacing: 0.02em;
+}
+
+.itemsTable td {
+  background: #eef3f9;
 }
 
 .alignRight {
@@ -119,17 +167,23 @@
 .totalsGrid {
   display: grid;
   grid-template-columns: repeat(6, minmax(0, 1fr));
-  gap: 6px;
+  gap: 8px;
 }
 
 .totalCell {
-  border: 1px solid #4b5563;
-  padding: 6px;
+  border: 1px solid var(--pdf-border-color);
+  background: #eaf0f7;
+  padding: var(--pdf-field-padding);
+  border-radius: var(--pdf-radius);
 }
 
 .obsBox {
+  border: 1px solid var(--pdf-border-color);
   min-height: 52px;
   white-space: pre-line;
+  background: #eaf0f7;
+  padding: var(--pdf-field-padding);
+  border-radius: var(--pdf-radius);
 }
 
 .footerGrid {
@@ -139,9 +193,11 @@
 }
 
 .signCell {
-  border: 1px solid #374151;
+  border: 1px solid var(--pdf-border-color);
+  background: #eaf0f7;
   min-height: 44px;
-  padding: 6px;
+  padding: var(--pdf-field-padding);
+  border-radius: var(--pdf-radius);
 }
 
 .small {
@@ -149,5 +205,5 @@
 }
 
 .muted {
-  color: #374151;
+  color: #4b5563;
 }

@@ -160,8 +160,8 @@ export const OrderPdfTemplate = forwardRef<HTMLDivElement, OrderPdfTemplateProps
               <Image
                 src="/img/logo-esb.jpeg"
                 alt="Logo ESB"
-                width={94}
-                height={94}
+                width={132}
+                height={132}
                 className={styles.logo}
                 unoptimized
                 priority
@@ -197,7 +197,7 @@ export const OrderPdfTemplate = forwardRef<HTMLDivElement, OrderPdfTemplateProps
           </div>
         </section>
 
-        <section className={styles.section}>
+        <section className={`${styles.section} ${styles.customerSection}`}>
           <h2 className={styles.subtitle}>Dados do Cliente</h2>
           <div className={styles.row3}>
             <span><span className={styles.label}>Cliente:</span> {order.customerName}</span>
@@ -291,7 +291,7 @@ export const OrderPdfTemplate = forwardRef<HTMLDivElement, OrderPdfTemplateProps
           <span className={styles.label}>Obs.:</span> {order.notes ?? "-"}
         </section>
 
-        <section className={styles.section}>
+        <section className={`${styles.section} ${styles.postObsSection}`}>
           <div className={styles.row3}>
             <span><span className={styles.label}>Transp.:</span> {order.carrierName ?? COMPANY_TEMPLATE.name}</span>
             <span><span className={styles.label}>Repr.:</span> {COMPANY_TEMPLATE.representative}</span>
