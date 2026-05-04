@@ -218,7 +218,7 @@ const statusLabels: Record<OrderListItem["status"], string> = {
 };
 
 const mobileStatusLabels: Record<OrderListItem["status"], string> = {
-  DRAFT: "Em digitacao",
+  DRAFT: "Digitando",
   CONFIRMED: "Confirmado",
   CANCELLED: "Cancelado",
 };
@@ -932,7 +932,7 @@ export function OrdersPageClient({
           <div>
             <CardTitle>Lista de pedidos</CardTitle>
             <CardDescription>
-              Estrutura exibida por cliente, emissao, faturamento, despacho e pagamento.
+              Estrutura exibida por cliente, emissão, faturamento, despacho e pagamento.
             </CardDescription>
           </div>
 
@@ -963,7 +963,7 @@ export function OrdersPageClient({
                           {order.customerName}
                         </p>
                         <p className="text-sm leading-none">
-                          <span className="font-medium text-muted-foreground">Codigo do pedido:</span>{" "}
+                          <span className="font-medium text-muted-foreground">Código do pedido:</span>{" "}
                           <span className="font-semibold">{order.orderNumber}</span>
                         </p>
                         <p className="text-sm leading-none">
@@ -971,7 +971,7 @@ export function OrdersPageClient({
                           <span className="font-semibold">{formatCurrency(order.total)}</span>
                         </p>
                         <p className="text-sm leading-none">
-                          <span className="font-medium text-muted-foreground">Emissao:</span>{" "}
+                          <span className="font-medium text-muted-foreground">Emissão:</span>{" "}
                           <span>{formatDateTime(order.createdAt)}</span>
                         </p>
                         <p className="text-sm leading-none">
@@ -1008,13 +1008,13 @@ export function OrdersPageClient({
                   columns={[
                     { id: "order", label: "Pedido" },
                     { id: "customer", label: "Nome do cliente" },
-                    { id: "customerCode", label: "Codigo do cliente" },
+                    { id: "customerCode", label: "Código do cliente" },
                     { id: "total", label: "Valor total do pedido", className: "text-right" },
-                    { id: "issuedAt", label: "Data e hora de emissao" },
+                    { id: "issuedAt", label: "Data e hora de emissão" },
                     { id: "billing", label: "Faturamento" },
                     { id: "dispatch", label: "Despacho" },
                     { id: "payment", label: "Pagto." },
-                    { id: "actions", label: "Acoes", className: "text-right" },
+                    { id: "actions", label: "Ações", className: "text-right" },
                   ]}
                   data={orders}
                   getRowKey={(order) => order.id}
