@@ -162,72 +162,73 @@ function extractProviderErrorMessage(payload: unknown) {
 }
 
 export async function POST(request: Request) {
-  const session = await auth();
+  try {
+    const session = await auth();
 
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: "Nao autenticado." }, { status: 401 });
-  }
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: "Nao autenticado." }, { status: 401 });
+    }
 
-  const evolutionConfig = getEvolutionConfig();
+    const evolutionConfig = getEvolutionConfig();
 
-  if (!evolutionConfig) {
-    return NextResponse.json(
-      { error: "Evolution API nao configurada. Defina EVOLUTION_API_URL, EVOLUTION_INSTANCE e EVOLUTION_API_KEY." },
-      { status: 500 },
-    );
-  }
+    if (!evolutionConfig) {
+      return NextResponse.json(
+        { error: "Evolution API nao configurada. Defina EVOLUTION_API_URL, EVOLUTION_INSTANCE e EVOLUTION_API_KEY." },
+        { status: 500 },
+      );
+    }
 
-  const formData = await request.formData();
-  const orderId = String(formData.get("orderId") ?? "").trim();
-  const pdfFile = formData.get("pdfFile");
+    const formData = await request.formData();
+    const orderId = String(formData.get("orderId") ?? "").trim();
+    const pdfFile = formData.get("pdfFile");
 
-  if (!orderId) {
-    return NextResponse.json({ error: "Pedido nao identificado." }, { status: 400 });
-  }
+    if (!orderId) {
+      return NextResponse.json({ error: "Pedido nao identificado." }, { status: 400 });
+    }
 
-  if (!(pdfFile instanceof File) || pdfFile.size === 0) {
-    return NextResponse.json({ error: "Arquivo PDF nao enviado." }, { status: 400 });
-  }
+    if (!pdfFile || typeof pdfFile === "string" || pdfFile.size === 0) {
+      return NextResponse.json({ error: "Arquivo PDF nao enviado." }, { status: 400 });
+    }
 
-  if (pdfFile.size > MAX_PDF_SIZE_BYTES) {
-    return NextResponse.json({ error: "PDF excede o limite de 16MB." }, { status: 400 });
-  }
+    if (pdfFile.size > MAX_PDF_SIZE_BYTES) {
+      return NextResponse.json({ error: "PDF excede o limite de 16MB." }, { status: 400 });
+    }
 
-  const order = await prisma.order.findFirst({
-    where: {
-      id: orderId,
-      userId: session.user.id,
-    },
-    select: {
-      id: true,
-      orderNumber: true,
-      total: true,
-      paymentTerm: true,
-      customer: {
-        select: {
-          id: true,
-          phone: true,
+    const order = await prisma.order.findFirst({
+      where: {
+        id: orderId,
+        userId: session.user.id,
+      },
+      select: {
+        id: true,
+        orderNumber: true,
+        total: true,
+        paymentTerm: true,
+        customer: {
+          select: {
+            id: true,
+            phone: true,
+          },
         },
       },
-    },
-  });
+    });
 
-  if (!order) {
-    return NextResponse.json({ error: "Pedido nao encontrado." }, { status: 404 });
-  }
+    if (!order) {
+      return NextResponse.json({ error: "Pedido nao encontrado." }, { status: 404 });
+    }
 
-  const destinationPhone = normalizeWhatsAppNumber(order.customer.phone);
+    const destinationPhone = normalizeWhatsAppNumber(order.customer.phone);
 
-  if (!destinationPhone) {
-    return NextResponse.json({ error: "Cliente sem telefone valido para WhatsApp." }, { status: 400 });
-  }
+    if (!destinationPhone) {
+      return NextResponse.json({ error: "Cliente sem telefone valido para WhatsApp." }, { status: 400 });
+    }
 
-  const pdfBuffer = Buffer.from(await pdfFile.arrayBuffer());
-  const fileName = pdfFile.name?.trim() || `pedido-${order.orderNumber}.pdf`;
+    const pdfBuffer = Buffer.from(await pdfFile.arrayBuffer());
+    const fileName = pdfFile.name?.trim() || `pedido-${order.orderNumber}.pdf`;
 
   let dispatchLogId: string | null = null;
 
-  try {
+    try {
     const dispatchLog = await prisma.whatsappDispatchLog.create({
       data: {
         userId: session.user.id,
@@ -240,7 +241,7 @@ export async function POST(request: Request) {
       },
     });
     dispatchLogId = dispatchLog.id;
-  } catch (error) {
+    } catch (error) {
     // Em caso de schema/migration pendente em producao, nao bloquear envio.
     console.warn("Nao foi possivel criar log inicial de envio WhatsApp.", error);
   }
@@ -375,9 +376,17 @@ export async function POST(request: Request) {
       }
     }
 
+      return NextResponse.json(
+        { error: `Nao foi possivel enviar o pedido por WhatsApp. ${errorMessage}` },
+        { status: 502 },
+      );
+    }
+  } catch (error) {
+    console.error("Falha interna na rota /api/pedidos/whatsapp/send", error);
+    const message = error instanceof Error ? error.message : "Erro interno inesperado.";
     return NextResponse.json(
-      { error: `Nao foi possivel enviar o pedido por WhatsApp. ${errorMessage}` },
-      { status: 502 },
+      { error: `Falha interna ao processar envio WhatsApp. ${message}` },
+      { status: 500 },
     );
   }
 }
