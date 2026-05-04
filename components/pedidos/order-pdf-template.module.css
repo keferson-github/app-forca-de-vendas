@@ -1,25 +1,26 @@
 .orderPdfPage {
   width: 794px;
   min-height: 1123px;
+  box-sizing: border-box;
   background: #e5e7eb;
   color: #111827;
   font-family: Arial, Helvetica, sans-serif;
   font-size: 11px;
   line-height: 1.2;
-  padding: 16px;
+  padding: 18px;
 }
 
 .section {
   border: 1px solid #374151;
   background: #e5e7eb;
-  padding: 6px 8px;
+  padding: 8px 10px;
   margin-bottom: 6px;
 }
 
 .sectionTight {
   border: 1px solid #374151;
   background: #e5e7eb;
-  padding: 4px 8px;
+  padding: 6px 10px;
   margin-bottom: 6px;
 }
 
@@ -33,6 +34,7 @@
   width: 94px;
   height: 94px;
   border: 1px solid #9ca3af;
+  border-radius: 10px;
   background: #ffffff;
   display: grid;
   place-items: center;
@@ -42,12 +44,13 @@
 .logo {
   width: 94px;
   height: 94px;
+  border-radius: 10px;
   object-fit: cover;
 }
 
 .companyFields {
   display: grid;
-  gap: 2px;
+  gap: 4px;
 }
 
 .row2 {
@@ -88,6 +91,7 @@
 
 .textBlock {
   margin-top: 4px;
+  margin-bottom: 4px;
 }
 
 .itemsTable {
@@ -99,7 +103,7 @@
 .itemsTable th,
 .itemsTable td {
   border: 1px solid #374151;
-  padding: 3px 4px;
+  padding: 5px 6px;
   vertical-align: top;
 }
 
@@ -120,7 +124,7 @@
 
 .totalCell {
   border: 1px solid #4b5563;
-  padding: 4px;
+  padding: 6px;
 }
 
 .obsBox {
@@ -137,7 +141,7 @@
 .signCell {
   border: 1px solid #374151;
   min-height: 44px;
-  padding: 4px;
+  padding: 6px;
 }
 
 .small {

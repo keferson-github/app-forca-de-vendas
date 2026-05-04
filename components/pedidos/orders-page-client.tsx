@@ -823,20 +823,23 @@ export function OrdersPageClient({
 
       const pageWidth = pdf.internal.pageSize.getWidth();
       const pageHeight = pdf.internal.pageSize.getHeight();
-      const imageHeight = (canvas.height * pageWidth) / canvas.width;
+      const pageMargin = 6;
+      const maxWidth = pageWidth - (pageMargin * 2);
+      const maxHeight = pageHeight - (pageMargin * 2);
+      const imageAspectRatio = canvas.width / canvas.height;
 
-      let position = 0;
-      let remainingHeight = imageHeight;
+      let renderWidth = maxWidth;
+      let renderHeight = renderWidth / imageAspectRatio;
 
-      pdf.addImage(imageData, "PNG", 0, position, pageWidth, imageHeight);
-      remainingHeight -= pageHeight;
-
-      while (remainingHeight > 0) {
-        position = remainingHeight - imageHeight;
-        pdf.addPage();
-        pdf.addImage(imageData, "PNG", 0, position, pageWidth, imageHeight);
-        remainingHeight -= pageHeight;
+      if (renderHeight > maxHeight) {
+        renderHeight = maxHeight;
+        renderWidth = renderHeight * imageAspectRatio;
       }
+
+      const offsetX = (pageWidth - renderWidth) / 2;
+      const offsetY = (pageHeight - renderHeight) / 2;
+
+      pdf.addImage(imageData, "PNG", offsetX, offsetY, renderWidth, renderHeight);
 
       pdf.save(`pedido-${order.orderNumber}.pdf`);
       appToast.successCelebration(`PDF do pedido #${order.orderNumber} gerado com sucesso.`);
