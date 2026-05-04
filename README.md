@@ -34,6 +34,22 @@ e habilite os recursos desejados com seus respectivos escopos.
 A tela protegida `/integracoes/bling` inicia o fluxo OAuth e mostra as URLs
 necessarias para configurar o aplicativo no Bling.
 
+## Integracao Evolution API (WhatsApp com PDF do pedido)
+
+Configure as variaveis abaixo no ambiente:
+
+```bash
+EVOLUTION_API_URL="https://seu-servidor-evolution.com.br"
+EVOLUTION_INSTANCE="nome-da-instancia"
+EVOLUTION_API_KEY="sua-api-key"
+```
+
+Fluxo:
+
+- Na tela `/pedidos`, o botao do WhatsApp gera o PDF do pedido no frontend.
+- O App envia o PDF para a rota interna `POST /api/pedidos/whatsapp/send`.
+- O backend dispara o documento para o telefone do cliente via Evolution API (`/message/sendMedia/{instance}`).
+
 ## Padrao de notificacoes toast
 
 Para manter consistencia visual e de comportamento, o projeto usa um unico padrao para toast:

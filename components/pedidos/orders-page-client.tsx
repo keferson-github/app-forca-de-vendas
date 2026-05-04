@@ -396,6 +396,11 @@ function formatPhoneToWa(value: string | null) {
   return `55${onlyDigits}`;
 }
 
+function getFirstName(value: string) {
+  const firstName = value.trim().split(/\s+/)[0];
+  return firstName || "cliente";
+}
+
 function formatMoneyInput(value: number) {
   return value.toFixed(2).replace(".", ",");
 }
@@ -788,17 +793,15 @@ export function OrdersPageClient({
   useNoticeToast(noticeMessages);
   const pdfTemplateRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const [pdfGeneratingOrderId, setPdfGeneratingOrderId] = useState<string | null>(null);
+  const [whatsappSendingOrderId, setWhatsappSendingOrderId] = useState<string | null>(null);
 
-  async function handleDownloadPdf(order: OrderListItem) {
+  async function generateOrderPdfBlob(order: OrderListItem) {
     const templateElement = pdfTemplateRefs.current[order.id];
 
     if (!templateElement) {
       appToast.error("Nao foi possivel carregar o template do pedido para PDF.");
-      return;
+      return null;
     }
-
-    setPdfGeneratingOrderId(order.id);
-    const loadingToastId = appToast.loading(`Gerando PDF do pedido #${order.orderNumber}...`);
 
     try {
       const [{ default: html2canvas }, jspdfModule] = await Promise.all([
@@ -808,13 +811,13 @@ export function OrdersPageClient({
 
       const canvas = await html2canvas(templateElement, {
         backgroundColor: "#ffffff",
-        scale: 2,
+        scale: 1.4,
         useCORS: true,
         windowWidth: templateElement.scrollWidth,
         windowHeight: templateElement.scrollHeight,
       });
 
-      const imageData = canvas.toDataURL("image/png");
+      const imageData = canvas.toDataURL("image/jpeg", 0.82);
       const pdf = new jspdfModule.jsPDF({
         orientation: "portrait",
         unit: "mm",
@@ -839,12 +842,40 @@ export function OrdersPageClient({
       const offsetX = (pageWidth - renderWidth) / 2;
       const offsetY = (pageHeight - renderHeight) / 2;
 
-      pdf.addImage(imageData, "PNG", offsetX, offsetY, renderWidth, renderHeight);
+      pdf.addImage(imageData, "JPEG", offsetX, offsetY, renderWidth, renderHeight);
+      const pdfBlob = pdf.output("blob");
 
-      pdf.save(`pedido-${order.orderNumber}.pdf`);
-      appToast.successCelebration(`PDF do pedido #${order.orderNumber} gerado com sucesso.`);
+      if (!(pdfBlob instanceof Blob)) {
+        throw new Error("Nao foi possivel gerar o arquivo PDF.");
+      }
+
+      return pdfBlob;
     } catch (error) {
       console.error("Falha ao gerar PDF do pedido", error);
+      throw error;
+    }
+  }
+
+  async function handleDownloadPdf(order: OrderListItem) {
+    setPdfGeneratingOrderId(order.id);
+    const loadingToastId = appToast.loading(`Gerando PDF do pedido #${order.orderNumber}...`);
+
+    try {
+      const pdfBlob = await generateOrderPdfBlob(order);
+
+      if (!pdfBlob) {
+        return;
+      }
+
+      const blobUrl = URL.createObjectURL(pdfBlob);
+      const link = document.createElement("a");
+      link.href = blobUrl;
+      link.download = `pedido-${order.orderNumber}.pdf`;
+      link.click();
+      URL.revokeObjectURL(blobUrl);
+
+      appToast.successCelebration(`PDF do pedido #${order.orderNumber} gerado com sucesso.`);
+    } catch {
       appToast.error("Nao foi possivel gerar o PDF do pedido.");
     } finally {
       appToast.dismiss(loadingToastId);
@@ -852,7 +883,7 @@ export function OrdersPageClient({
     }
   }
 
-  function handleOpenWhatsapp(order: OrderListItem) {
+  async function handleOpenWhatsapp(order: OrderListItem) {
     const phone = formatPhoneToWa(order.customerPhone);
 
     if (!phone) {
@@ -860,11 +891,55 @@ export function OrdersPageClient({
       return;
     }
 
-    const message = encodeURIComponent(
-      `Pedido #${order.orderNumber}\\nCliente: ${order.customerName}\\nTotal: ${formatCurrency(order.total)}\\nPagto.: ${paymentTermLabels[order.paymentTerm]}`,
+    setWhatsappSendingOrderId(order.id);
+    const customerFirstName = getFirstName(order.customerName);
+    const loadingToastId = appToast.loading(
+      `Enviando pedido via PDF para ${customerFirstName}...`
     );
 
-    window.open(`https://wa.me/${phone}?text=${message}`, "_blank", "noopener,noreferrer");
+    try {
+      const pdfBlob = await generateOrderPdfBlob(order);
+
+      if (!pdfBlob) {
+        return;
+      }
+
+      const file = new File(
+        [pdfBlob],
+        `pedido-${order.orderNumber}.pdf`,
+        { type: "application/pdf" },
+      );
+      const payload = new FormData();
+      payload.set("orderId", order.id);
+      payload.set("pdfFile", file);
+
+      const response = await fetch("/api/pedidos/whatsapp/send", {
+        method: "POST",
+        body: payload,
+      });
+
+      const result = await response.json().catch(() => ({} as Record<string, unknown>));
+
+      if (!response.ok) {
+        const errorMessage = typeof result.error === "string"
+          ? result.error
+          : "Nao foi possivel enviar o PDF pelo WhatsApp.";
+        throw new Error(errorMessage);
+      }
+
+      appToast.successCelebration(
+        `Pedido #${order.orderNumber} enviado por WhatsApp com sucesso.`
+      );
+    } catch (error) {
+      const errorMessage = error instanceof Error
+        ? error.message
+        : "Nao foi possivel enviar o pedido por WhatsApp.";
+
+      appToast.error(errorMessage);
+    } finally {
+      appToast.dismiss(loadingToastId);
+      setWhatsappSendingOrderId(null);
+    }
   }
 
   function renderCoreOrderActions(order: OrderListItem, compact = false) {
@@ -1049,8 +1124,9 @@ export function OrdersPageClient({
                             variant="ghost"
                             size="icon-sm"
                             aria-label={`Enviar pedido ${order.orderNumber} por WhatsApp`}
+                            disabled={whatsappSendingOrderId === order.id}
                             onClick={() => {
-                              handleOpenWhatsapp(order);
+                              void handleOpenWhatsapp(order);
                             }}
                           >
                             <MessageCircle />
