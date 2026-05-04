@@ -263,3 +263,35 @@ body {
 .toast-success-fast-exit[data-removed="true"] {
   transition-duration: 140ms !important;
 }
+
+/* Form controls: remove button borders and input outlines across form UIs */
+form :is(button, [data-slot="button"], [data-slot="toggle-group-item"], [data-slot="select-trigger"]) {
+  border-width: 0 !important;
+  border-color: transparent !important;
+}
+
+form :is(
+    [data-slot="input"],
+    [data-slot="textarea"],
+    [data-slot="select-trigger"],
+    [data-slot="checkbox"]
+  ) {
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+form :is(
+    [data-slot="input"],
+    [data-slot="textarea"],
+    [data-slot="select-trigger"],
+    [data-slot="checkbox"]
+  ):focus,
+form :is(
+    [data-slot="input"],
+    [data-slot="textarea"],
+    [data-slot="select-trigger"],
+    [data-slot="checkbox"]
+  ):focus-visible {
+  outline: none !important;
+  box-shadow: none !important;
+}

@@ -594,6 +594,7 @@ function OrderFormSheet({
                 <ToggleGroup
                   type="single"
                   variant="outline"
+                  spacing={1}
                   className="grid w-full grid-cols-2 lg:max-w-sm"
                   value={selectedFreightType}
                   onValueChange={(value) => {
@@ -603,7 +604,11 @@ function OrderFormSheet({
                   }}
                 >
                   {Object.entries(freightTypeLabels).map(([value, label]) => (
-                    <ToggleGroupItem key={value} value={value} className="w-full justify-center">
+                    <ToggleGroupItem
+                      key={value}
+                      value={value}
+                      className="w-full justify-center data-[state=on]:border-black data-[state=on]:bg-black data-[state=on]:text-white dark:data-[state=on]:border-white dark:data-[state=on]:bg-white dark:data-[state=on]:text-black"
+                    >
                       {label}
                     </ToggleGroupItem>
                   ))}
@@ -615,6 +620,7 @@ function OrderFormSheet({
                 <ToggleGroup
                   type="single"
                   variant="outline"
+                  spacing={1}
                   className="grid w-full grid-cols-2 gap-1.5 lg:grid-cols-4"
                   value={selectedDeliveryType}
                   onValueChange={(value) => {
@@ -627,7 +633,7 @@ function OrderFormSheet({
                     <ToggleGroupItem
                       key={value}
                       value={value}
-                      className="w-full justify-center px-3 text-center leading-tight lg:min-h-9"
+                      className="w-full justify-center px-3 text-center leading-tight lg:min-h-9 data-[state=on]:border-black data-[state=on]:bg-black data-[state=on]:text-white dark:data-[state=on]:border-white dark:data-[state=on]:bg-white dark:data-[state=on]:text-black"
                     >
                       {label}
                     </ToggleGroupItem>
@@ -692,13 +698,21 @@ function OrderFormSheet({
   );
 }
 
-function OrderDetailSheet({ order }: { order: OrderListItem }) {
+function OrderDetailSheet({
+  order,
+  trigger,
+}: {
+  order: OrderListItem;
+  trigger?: React.ReactNode;
+}) {
   return (
     <Sheet>
       <SheetTrigger asChild>
-        <Button variant="ghost" size="icon-sm" aria-label={`Ver pedido ${order.orderNumber}`}>
-          <Eye />
-        </Button>
+        {trigger ?? (
+          <Button variant="ghost" size="icon-sm" aria-label={`Ver pedido ${order.orderNumber}`}>
+            <Eye />
+          </Button>
+        )}
       </SheetTrigger>
       <SheetContent className="w-full overflow-y-auto sm:max-w-xl">
         <SheetHeader>
@@ -945,6 +959,18 @@ export function OrdersPageClient({
   function renderCoreOrderActions(order: OrderListItem, compact = false) {
     return (
       <div className={`flex items-center gap-1.5 ${compact ? "justify-between" : "justify-end"}`}>
+        <OrderDetailSheet
+          order={order}
+          trigger={(
+            <Button
+              variant={compact ? "outline" : "ghost"}
+              size="icon-sm"
+              aria-label={`Ver pedido ${order.orderNumber}`}
+            >
+              <Eye />
+            </Button>
+          )}
+        />
         <OrderBillingAction order={order} compact={compact} />
         <OrderFormSheet
           key={`edit-${order.id}-${order.updatedAt}`}
@@ -1131,7 +1157,6 @@ export function OrdersPageClient({
                           >
                             <MessageCircle />
                           </Button>
-                          <OrderDetailSheet order={order} />
                         </div>
                       </TableCell>
                     </>
@@ -1232,11 +1257,11 @@ function ProductLookupField({
 }) {
   return (
     <div className="grid gap-2">
-      <Label htmlFor={inputId}>Produto do estoque</Label>
+      <Label htmlFor={inputId}>Produto cadastrado</Label>
       <input type="hidden" name="productId" value={selectedProduct?.id ?? ""} />
       <SearchInputWithAutocomplete
         query={selectedProduct ? getProductSearchLabel(selectedProduct) : ""}
-        placeholder="Buscar por codigo ou nome do produto"
+        placeholder="Buscar por código ou nome do produto"
         minChars={3}
         autocomplete={{
           endpoint: "/api/produtos/autocomplete",
@@ -1249,7 +1274,7 @@ function ProductLookupField({
             <>
               <span className="text-sm font-medium">{getProductSearchLabel(item)}</span>
               <span className="text-xs text-muted-foreground">
-                Preco: {formatCurrency(item.price)} | Saldo: {item.stockQuantity}
+                Preço: {formatCurrency(item.price)} | Saldo: {item.stockQuantity}
               </span>
             </>
           ),
@@ -1264,7 +1289,7 @@ function ProductLookupField({
         onAutocompleteSelect={onSelect}
       />
       <p className="text-xs text-muted-foreground">
-        Digite ao menos 3 caracteres e selecione o produto do estoque.
+        Digite ao menos 3 caracteres e selecione um produto cadastrado na página Produtos.
       </p>
     </div>
   );
@@ -1362,7 +1387,7 @@ function OrderItemsPanel({ order }: { order: OrderListItem }) {
       <div className="rounded-lg border border-border/60 bg-background p-4">
         <h3 className="text-sm font-semibold">Itens do pedido</h3>
         <p className="mb-3 text-xs text-muted-foreground">
-          Monte o pedido com produtos do estoque já sincronizados do Bling.
+          Monte o pedido com os produtos cadastrados na página Produtos do app.
         </p>
 
         {order.status === "DRAFT" ? (
