@@ -61,16 +61,16 @@ type OrderPdfTemplateProps = {
 };
 
 const COMPANY_TEMPLATE = {
-  name: "I LOVE PET & HIGIENE LTDA",
-  cnpj: "33.312.252/0001-05",
-  stateRegistration: "123.911.376.116",
-  address: "RUA JOHN HARRISON 299 SALA 804",
-  cityState: "LAPA SAO PAULO-SP",
-  cep: "05074-080",
-  site: "www.classeasaude.com.br",
-  email: "classea@classeasaude.com.br",
-  phone: "(11) 3835-9582",
-  representative: "428 - JANETE APARECIDA REMIJO",
+  name: "Fr Murakami Comercio de Pet e Produtos",
+  cnpj: "39.650.450/0001-58",
+  stateRegistration: "136.388.418.117",
+  address: "Rua Emilio Colella, 481, Parque Sao Domingos",
+  cityState: "SAO PAULO - SP",
+  cep: "05126-130",
+  site: "",
+  email: "marco@trevisansap.com.br",
+  phone: "(11) 98238-9315",
+  representative: "",
 };
 
 function formatNumber(value: number, digits = 2) {
@@ -168,17 +168,14 @@ export const OrderPdfTemplate = forwardRef<HTMLDivElement, OrderPdfTemplateProps
               />
             </div>
             <div className={styles.companyFields}>
-              <div className={styles.row2}>
-                <span className={styles.label}>Emitente</span>
-                <span>{COMPANY_TEMPLATE.name}</span>
+              <div className={styles.headerInfoRow}>
+                <span><span className={styles.label}>Emitente:</span> {COMPANY_TEMPLATE.name}</span>
               </div>
-              <div className={styles.row2}>
-                <span className={styles.label}>CNPJ / IE</span>
-                <span>{COMPANY_TEMPLATE.cnpj} / {COMPANY_TEMPLATE.stateRegistration}</span>
+              <div className={styles.headerInfoRow}>
+                <span><span className={styles.label}>CNPJ / IE:</span> {COMPANY_TEMPLATE.cnpj} / {COMPANY_TEMPLATE.stateRegistration}</span>
               </div>
-              <div className={styles.row2}>
-                <span className={styles.label}>Endereco</span>
-                <span>{COMPANY_TEMPLATE.address} - {COMPANY_TEMPLATE.cityState} - CEP {COMPANY_TEMPLATE.cep}</span>
+              <div className={styles.headerInfoRow}>
+                <span><span className={styles.label}>Endereco:</span> {COMPANY_TEMPLATE.address} - {COMPANY_TEMPLATE.cityState} - CEP {COMPANY_TEMPLATE.cep}</span>
               </div>
               <div className={styles.row3}>
                 <span><span className={styles.label}>Site:</span> {COMPANY_TEMPLATE.site}</span>

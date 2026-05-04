@@ -69,6 +69,18 @@
   gap: 5px;
 }
 
+.headerInfoRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.headerInfoRow > span {
+  border: 1px solid var(--pdf-border-color);
+  background: #eaf0f7;
+  border-radius: var(--pdf-radius);
+  padding: var(--pdf-field-padding);
+}
+
 .row2 {
   display: grid;
   grid-template-columns: 170px minmax(0, 1fr);
