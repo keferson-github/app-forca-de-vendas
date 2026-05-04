@@ -839,7 +839,7 @@ export function OrdersPageClient({
       }
 
       pdf.save(`pedido-${order.orderNumber}.pdf`);
-      appToast.success(`PDF do pedido #${order.orderNumber} gerado com sucesso.`);
+      appToast.successCelebration(`PDF do pedido #${order.orderNumber} gerado com sucesso.`);
     } catch (error) {
       console.error("Falha ao gerar PDF do pedido", error);
       appToast.error("Nao foi possivel gerar o PDF do pedido.");
