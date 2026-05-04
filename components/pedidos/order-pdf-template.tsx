@@ -27,6 +27,7 @@ export type OrderPdfData = {
   customerDeliveryAddress: string | null;
   customerOrderNumber: string | null;
   carrierName: string | null;
+  operation: "VENDA";
   status: "DRAFT" | "CONFIRMED" | "CANCELLED";
   paymentTerm:
     | "DAYS_14"
@@ -127,6 +128,18 @@ function getAddressParts(address: string | null) {
   };
 }
 
+const deliveryTypeLabels: Record<OrderPdfData["deliveryType"], string> = {
+  ENTREGA: "Entrega",
+  ENTREGA_FATURA: "Entrega com fatura",
+  ENCOMENDA: "Encomenda",
+  RETIRADA: "Retirada",
+};
+
+const freightTypeLabels: Record<OrderPdfData["freightType"], string> = {
+  CIF: "CIF",
+  FOB: "FOB",
+};
+
 export const OrderPdfTemplate = forwardRef<HTMLDivElement, OrderPdfTemplateProps>(
   ({ order, paymentLabel }, ref) => {
     const issueDate = formatDate(order.createdAt);
@@ -223,6 +236,10 @@ export const OrderPdfTemplate = forwardRef<HTMLDivElement, OrderPdfTemplateProps
             <span><span className={styles.label}>E-mail:</span> -</span>
             <span><span className={styles.label}>End. Entrega:</span> {isSameDeliveryAddress ? "O MESMO" : "ALTERADO"}</span>
           </div>
+          <div className={styles.row2}>
+            <span><span className={styles.label}>Endereco comercial:</span> {order.customerCommercialAddress ?? "-"}</span>
+            <span><span className={styles.label}>Endereco de entrega:</span> {order.customerDeliveryAddress ?? "-"}</span>
+          </div>
         </section>
 
         <section className={styles.section}>
@@ -252,7 +269,7 @@ export const OrderPdfTemplate = forwardRef<HTMLDivElement, OrderPdfTemplateProps
                 </tr>
               ) : order.items.map((item) => (
                 <tr key={item.id}>
-                  <td>{order.status === "DRAFT" ? "00" : "80"}</td>
+                  <td>{item.operation}</td>
                   <td>{item.productCode ?? "-"}</td>
                   <td>{item.description || item.productName || "-"}</td>
                   <td>{formatNumber(item.discount, 0)}</td>
@@ -291,6 +308,11 @@ export const OrderPdfTemplate = forwardRef<HTMLDivElement, OrderPdfTemplateProps
 
         <section className={`${styles.section} ${styles.postObsSection}`}>
           <div className={styles.row3}>
+            <span><span className={styles.label}>ID do pedido:</span> {order.id}</span>
+            <span><span className={styles.label}>Operacao:</span> {order.operation}</span>
+            <span><span className={styles.label}>Status tecnico:</span> {order.status}</span>
+          </div>
+          <div className={styles.row3}>
             <span><span className={styles.label}>Transp.:</span> {order.carrierName ?? COMPANY_TEMPLATE.name}</span>
             <span><span className={styles.label}>Repr.:</span> {COMPANY_TEMPLATE.representative}</span>
             <span><span className={styles.label}>Cond. Pagto:</span> {paymentLabel}</span>
@@ -317,6 +339,11 @@ export const OrderPdfTemplate = forwardRef<HTMLDivElement, OrderPdfTemplateProps
             <span><span className={styles.label}>% Comissao:</span> -</span>
             <span><span className={styles.label}>Conferido em:</span> ___/___/___</span>
             <span><span className={styles.label}>Financeiro em:</span> ___/___/___</span>
+          </div>
+          <div className={styles.row3}>
+            <span><span className={styles.label}>Frete (tipo):</span> {freightTypeLabels[order.freightType]}</span>
+            <span><span className={styles.label}>Entrega (tipo):</span> {deliveryTypeLabels[order.deliveryType]}</span>
+            <span><span className={styles.label}>Recebimento:</span> {order.receivingCompany ?? "-"}</span>
           </div>
           <div className={styles.row2}>
             <span><span className={styles.label}>Status do pedido:</span> {orderStatusLabel}</span>
