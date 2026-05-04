@@ -207,8 +207,9 @@ export const OrderPdfTemplate = forwardRef<HTMLDivElement, OrderPdfTemplateProps
             <span><span className={styles.label}>Pedido Cliente N°:</span> {order.customerOrderNumber ?? "-"}</span>
           </div>
           <div className={styles.row2}>
-            <span className={styles.label}>Endereco de entrega</span>
-            <span>{customerAddress}</span>
+            <span className={styles.rowFull}>
+              <span className={styles.label}>Endereco de entrega:</span> {customerAddress}
+            </span>
           </div>
           <div className={styles.row4}>
             <span><span className={styles.label}>Bairro:</span> {customerAddressParts.district}</span>

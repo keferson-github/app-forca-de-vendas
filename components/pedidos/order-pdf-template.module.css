@@ -108,6 +108,10 @@
   padding: var(--pdf-field-padding);
 }
 
+.rowFull {
+  grid-column: 1 / -1;
+}
+
 .customerSection :is(.row2, .row3, .row4),
 .postObsSection :is(.row2, .row3, .row4) {
   gap: 10px;
