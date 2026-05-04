@@ -225,17 +225,25 @@ export async function POST(request: Request) {
   const pdfBuffer = Buffer.from(await pdfFile.arrayBuffer());
   const fileName = pdfFile.name?.trim() || `pedido-${order.orderNumber}.pdf`;
 
-  const dispatchLog = await prisma.whatsappDispatchLog.create({
-    data: {
-      userId: session.user.id,
-      orderId: order.id,
-      destinationPhone: destinationPhone,
-      status: "PENDING",
-    },
-    select: {
-      id: true,
-    },
-  });
+  let dispatchLogId: string | null = null;
+
+  try {
+    const dispatchLog = await prisma.whatsappDispatchLog.create({
+      data: {
+        userId: session.user.id,
+        orderId: order.id,
+        destinationPhone: destinationPhone,
+        status: "PENDING",
+      },
+      select: {
+        id: true,
+      },
+    });
+    dispatchLogId = dispatchLog.id;
+  } catch (error) {
+    // Em caso de schema/migration pendente em producao, nao bloquear envio.
+    console.warn("Nao foi possivel criar log inicial de envio WhatsApp.", error);
+  }
 
   let providerPayload: unknown = null;
   let providerResponseText: string | null = null;
@@ -251,21 +259,26 @@ export async function POST(request: Request) {
     let orderDocumentId: string | null = null;
 
     if (documentUrl) {
-      const document = await prisma.orderDocument.create({
-        data: {
-          userId: session.user.id,
-          orderId: order.id,
-          type: "DECLARACAO_CONTEUDO",
-          fileName,
-          fileUrl: documentUrl,
-          generatedByUserId: session.user.id,
-        },
-        select: {
-          id: true,
-        },
-      });
+      try {
+        const document = await prisma.orderDocument.create({
+          data: {
+            userId: session.user.id,
+            orderId: order.id,
+            type: "DECLARACAO_CONTEUDO",
+            fileName,
+            fileUrl: documentUrl,
+            generatedByUserId: session.user.id,
+          },
+          select: {
+            id: true,
+          },
+        });
 
-      orderDocumentId = document.id;
+        orderDocumentId = document.id;
+      } catch (error) {
+        // Nao impedir envio caso tabela de documentos nao exista ainda.
+        console.warn("Nao foi possivel persistir documento do pedido.", error);
+      }
     }
 
     const mediaSource = isHttpUrl(documentUrl)
@@ -308,21 +321,27 @@ export async function POST(request: Request) {
       );
     }
 
-    await prisma.whatsappDispatchLog.update({
-      where: {
-        id: dispatchLog.id,
-      },
-      data: {
-        orderDocumentId,
-        status: "SENT",
-        sentAt: new Date(),
-        providerMessageId: extractProviderMessageId(providerPayload),
-        providerPayload: providerPayload
-          ? (providerPayload as Prisma.InputJsonValue)
-          : undefined,
-        errorMessage: null,
-      },
-    });
+    if (dispatchLogId) {
+      try {
+        await prisma.whatsappDispatchLog.update({
+          where: {
+            id: dispatchLogId,
+          },
+          data: {
+            orderDocumentId,
+            status: "SENT",
+            sentAt: new Date(),
+            providerMessageId: extractProviderMessageId(providerPayload),
+            providerPayload: providerPayload
+              ? (providerPayload as Prisma.InputJsonValue)
+              : undefined,
+            errorMessage: null,
+          },
+        });
+      } catch (error) {
+        console.warn("Nao foi possivel atualizar log de envio WhatsApp (SENT).", error);
+      }
+    }
 
     return NextResponse.json({
       success: true,
@@ -335,20 +354,26 @@ export async function POST(request: Request) {
       ? error.message
       : "Falha ao enviar PDF do pedido via Evolution API.";
 
-    await prisma.whatsappDispatchLog.update({
-      where: {
-        id: dispatchLog.id,
-      },
-      data: {
-        status: "FAILED",
-        errorMessage,
-        providerPayload: providerPayload
-          ? (providerPayload as Prisma.InputJsonValue)
-          : providerResponseText
-            ? ({ raw: providerResponseText } as Prisma.InputJsonValue)
-            : undefined,
-      },
-    });
+    if (dispatchLogId) {
+      try {
+        await prisma.whatsappDispatchLog.update({
+          where: {
+            id: dispatchLogId,
+          },
+          data: {
+            status: "FAILED",
+            errorMessage,
+            providerPayload: providerPayload
+              ? (providerPayload as Prisma.InputJsonValue)
+              : providerResponseText
+                ? ({ raw: providerResponseText } as Prisma.InputJsonValue)
+                : undefined,
+          },
+        });
+      } catch (logError) {
+        console.warn("Nao foi possivel atualizar log de envio WhatsApp (FAILED).", logError);
+      }
+    }
 
     return NextResponse.json(
       { error: `Nao foi possivel enviar o pedido por WhatsApp. ${errorMessage}` },
