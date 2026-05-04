@@ -43,8 +43,11 @@
 }
 
 .logoBox {
-  width: 132px;
-  height: 132px;
+  width: 100%;
+  max-width: 160px;
+  aspect-ratio: 1 / 1;
+  height: auto;
+  box-sizing: border-box;
   border: 1px solid var(--pdf-border-color);
   border-radius: var(--pdf-radius);
   background: #eff3f8;
