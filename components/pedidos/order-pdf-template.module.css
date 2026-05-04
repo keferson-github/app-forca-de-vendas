@@ -142,6 +142,10 @@
   letter-spacing: 0.02em;
 }
 
+.customerTitle {
+  margin-bottom: 10px;
+}
+
 .textBlock {
   border: 1px solid var(--pdf-border-color);
   margin-top: 2px;

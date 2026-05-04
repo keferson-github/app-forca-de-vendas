@@ -195,7 +195,7 @@ export const OrderPdfTemplate = forwardRef<HTMLDivElement, OrderPdfTemplateProps
         </section>
 
         <section className={`${styles.section} ${styles.customerSection}`}>
-          <h2 className={styles.subtitle}>Dados do Cliente</h2>
+          <h2 className={`${styles.subtitle} ${styles.customerTitle}`}>Dados do Cliente</h2>
           <div className={styles.row3}>
             <span><span className={styles.label}>Cliente:</span> {order.customerName}</span>
             <span><span className={styles.label}>Codigo:</span> {order.customerCode ?? "-"}</span>
