@@ -16,6 +16,15 @@ function parseLimit(value: string | null) {
   return Math.min(Math.floor(parsed), 100);
 }
 
+function parseForce(value: string | null) {
+  if (!value) {
+    return false;
+  }
+
+  const normalized = value.trim().toLowerCase();
+  return normalized === "1" || normalized === "true" || normalized === "yes";
+}
+
 function hasValidCronSecret(request: Request) {
   const secret = process.env.CRON_SECRET?.trim();
   if (!secret) {
@@ -32,6 +41,7 @@ function hasValidCronSecret(request: Request) {
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const limit = parseLimit(searchParams.get("limit"));
+  const force = parseForce(searchParams.get("force"));
   const isCronRequest = hasValidCronSecret(request);
   const session = isCronRequest ? null : await auth();
   const sessionUserId = session?.user?.id ?? null;
@@ -48,7 +58,7 @@ export async function GET(request: Request) {
 
   const details = [];
   for (const connection of connections) {
-    const result = await syncProductImagesFromBling(connection.userId, limit);
+    const result = await syncProductImagesFromBling(connection.userId, { limit, force });
     details.push({
       userId: connection.userId,
       ...result,

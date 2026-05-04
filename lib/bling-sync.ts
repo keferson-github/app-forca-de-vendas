@@ -1,3 +1,7 @@
+import { randomUUID } from "node:crypto";
+import { mkdir, writeFile } from "node:fs/promises";
+import path from "node:path";
+import { BlobAccessError, BlobStoreNotFoundError, put } from "@vercel/blob";
 import { Prisma, type OrderStatus } from "@prisma/client";
 import { blingRequest } from "@/lib/bling";
 import { prisma } from "@/lib/prisma";
@@ -7,6 +11,331 @@ type UnknownRecord = Record<string, unknown>;
 type BlingApiResponse = {
   data?: unknown;
 };
+
+const PRODUCT_IMAGE_MAX_SIZE_BYTES = 10 * 1024 * 1024;
+const BLOB_TOKEN_PATTERN = /^vercel_blob_rw_[A-Za-z0-9_-]+$/;
+const BLING_TEMPORARY_IMAGE_HOST_PATTERN = /(^|\.)s3\.amazonaws\.com$/i;
+
+function getBlobToken() {
+  const rawToken = process.env.BLOB_READ_WRITE_TOKEN;
+
+  if (!rawToken) {
+    return null;
+  }
+
+  const normalizedToken = rawToken.trim().replace(/^['"]|['"]$/g, "");
+  if (!normalizedToken || !BLOB_TOKEN_PATTERN.test(normalizedToken)) {
+    return null;
+  }
+
+  return normalizedToken;
+}
+
+function isManagedImagePath(imageUrl: string) {
+  return imageUrl.startsWith("/uploads/products/") && !imageUrl.includes("..");
+}
+
+function isVercelBlobUrl(imageUrl: string) {
+  return /^https:\/\/[^/]+\.public\.blob\.vercel-storage\.com\//i.test(imageUrl);
+}
+
+function isManagedProductImageUrl(imageUrl: string) {
+  return isManagedImagePath(imageUrl) || isVercelBlobUrl(imageUrl);
+}
+
+function parseSignedUrlExpiresAtSeconds(imageUrl: string) {
+  try {
+    const url = new URL(imageUrl);
+    const expiresRaw = url.searchParams.get("Expires");
+
+    if (!expiresRaw) {
+      return null;
+    }
+
+    const expiresAt = Number(expiresRaw);
+    if (!Number.isFinite(expiresAt)) {
+      return null;
+    }
+
+    return Math.floor(expiresAt);
+  } catch {
+    return null;
+  }
+}
+
+function isLikelyTemporaryBlingImageUrl(imageUrl: string) {
+  try {
+    const url = new URL(imageUrl);
+    const hasSignature =
+      url.searchParams.has("Signature") ||
+      url.searchParams.has("AWSAccessKeyId") ||
+      url.searchParams.has("X-Amz-Signature");
+    const hasExpires =
+      url.searchParams.has("Expires") ||
+      url.searchParams.has("X-Amz-Expires");
+
+    return BLING_TEMPORARY_IMAGE_HOST_PATTERN.test(url.hostname) && hasSignature && hasExpires;
+  } catch {
+    return false;
+  }
+}
+
+function isSignedUrlExpiredOrExpiringSoon(imageUrl: string, thresholdSeconds = 60 * 60) {
+  const expiresAt = parseSignedUrlExpiresAtSeconds(imageUrl);
+  if (!expiresAt) {
+    return false;
+  }
+
+  const now = Math.floor(Date.now() / 1000);
+  return expiresAt <= now + thresholdSeconds;
+}
+
+type ImageExtension = "jpeg" | "png" | "webp";
+
+function detectImageTypeFromSignature(signature: Uint8Array): ImageExtension | null {
+  const isJpeg = signature.length >= 3
+    && signature[0] === 0xff
+    && signature[1] === 0xd8
+    && signature[2] === 0xff;
+
+  if (isJpeg) {
+    return "jpeg";
+  }
+
+  const isPng = signature.length >= 8
+    && signature[0] === 0x89
+    && signature[1] === 0x50
+    && signature[2] === 0x4e
+    && signature[3] === 0x47
+    && signature[4] === 0x0d
+    && signature[5] === 0x0a
+    && signature[6] === 0x1a
+    && signature[7] === 0x0a;
+
+  if (isPng) {
+    return "png";
+  }
+
+  const isWebp = signature.length >= 12
+    && signature[0] === 0x52
+    && signature[1] === 0x49
+    && signature[2] === 0x46
+    && signature[3] === 0x46
+    && signature[8] === 0x57
+    && signature[9] === 0x45
+    && signature[10] === 0x42
+    && signature[11] === 0x50;
+
+  if (isWebp) {
+    return "webp";
+  }
+
+  return null;
+}
+
+function extensionFromContentType(contentType: string | null): ImageExtension | null {
+  if (!contentType) {
+    return null;
+  }
+
+  const normalized = contentType.toLowerCase();
+
+  if (normalized.includes("image/jpeg") || normalized.includes("image/jpg")) {
+    return "jpeg";
+  }
+
+  if (normalized.includes("image/png")) {
+    return "png";
+  }
+
+  if (normalized.includes("image/webp")) {
+    return "webp";
+  }
+
+  return null;
+}
+
+function extensionFromUrl(imageUrl: string): ImageExtension | null {
+  try {
+    const url = new URL(imageUrl);
+    const pathname = url.pathname.toLowerCase();
+    if (pathname.endsWith(".jpeg") || pathname.endsWith(".jpg")) {
+      return "jpeg";
+    }
+    if (pathname.endsWith(".png")) {
+      return "png";
+    }
+    if (pathname.endsWith(".webp")) {
+      return "webp";
+    }
+  } catch {
+    return null;
+  }
+
+  return null;
+}
+
+function sanitizePathSegment(value: string) {
+  return value
+    .toLowerCase()
+    .replace(/[^a-z0-9_-]/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "")
+    .slice(0, 48);
+}
+
+async function persistImageBuffer(options: {
+  buffer: Buffer;
+  extension: ImageExtension;
+  contentType: string | null;
+  userId: string;
+  reference: string;
+}) {
+  const fileKey = `${Date.now()}-${randomUUID()}`;
+  const fileName = `products/bling/${sanitizePathSegment(options.userId)}/${sanitizePathSegment(options.reference) || "item"}-${fileKey}.${options.extension}`;
+  const blobToken = getBlobToken();
+
+  if (blobToken) {
+    try {
+      const uploaded = await put(fileName, options.buffer, {
+        access: "public",
+        addRandomSuffix: false,
+        contentType: options.contentType ?? `image/${options.extension}`,
+        token: blobToken,
+      });
+
+      return uploaded.url;
+    } catch (error) {
+      if (!(error instanceof BlobAccessError) && !(error instanceof BlobStoreNotFoundError)) {
+        console.error("Falha no upload da capa do produto para Blob.", error);
+      }
+    }
+  }
+
+  if (process.env.VERCEL === "1") {
+    throw new Error("Não foi possível persistir imagem no ambiente Vercel sem Blob configurado.");
+  }
+
+  const uploadDir = path.join(process.cwd(), "public", "uploads", "products");
+  await mkdir(uploadDir, { recursive: true });
+
+  const localFileName = `${sanitizePathSegment(options.reference) || "item"}-${fileKey}.${options.extension}`;
+  const absolutePath = path.join(uploadDir, localFileName);
+
+  await writeFile(absolutePath, options.buffer);
+  return `/uploads/products/${localFileName}`;
+}
+
+async function persistBlingImageUrl(options: {
+  userId: string;
+  reference: string;
+  sourceUrl: string;
+}) {
+  const response = await fetch(options.sourceUrl, { cache: "no-store" });
+
+  if (!response.ok) {
+    throw new Error(`Falha ao baixar imagem do Bling (${response.status}).`);
+  }
+
+  const contentType = response.headers.get("content-type");
+  const rawBuffer = Buffer.from(await response.arrayBuffer());
+
+  if (rawBuffer.length === 0) {
+    throw new Error("Imagem do Bling vazia.");
+  }
+
+  if (rawBuffer.length > PRODUCT_IMAGE_MAX_SIZE_BYTES) {
+    throw new Error("Imagem do Bling excede o limite de tamanho permitido.");
+  }
+
+  const signatureType = detectImageTypeFromSignature(rawBuffer.subarray(0, 12));
+  const extension =
+    signatureType ??
+    extensionFromContentType(contentType) ??
+    extensionFromUrl(options.sourceUrl);
+
+  if (!extension) {
+    throw new Error("Formato de imagem do Bling não suportado.");
+  }
+
+  return persistImageBuffer({
+    buffer: rawBuffer,
+    extension,
+    contentType,
+    userId: options.userId,
+    reference: options.reference,
+  });
+}
+
+function shouldPersistBlingImage(params: {
+  currentImageUrl?: string | null;
+  incomingImageUrl?: string | null;
+  force?: boolean;
+}) {
+  const incoming = params.incomingImageUrl;
+  if (!incoming) {
+    return false;
+  }
+
+  if (params.force) {
+    return true;
+  }
+
+  const current = params.currentImageUrl;
+  if (!current) {
+    return true;
+  }
+
+  if (isManagedProductImageUrl(current)) {
+    return false;
+  }
+
+  if (isLikelyTemporaryBlingImageUrl(current)) {
+    return isSignedUrlExpiredOrExpiringSoon(current);
+  }
+
+  return true;
+}
+
+async function resolveImageUrlForProductSnapshot(params: {
+  userId: string;
+  currentImageUrl?: string | null;
+  incomingImageUrl?: string | null;
+  blingProductId?: string | null;
+  code?: string | null;
+  force?: boolean;
+}) {
+  const incomingImageUrl = params.incomingImageUrl;
+  if (!incomingImageUrl) {
+    return null;
+  }
+
+  if (
+    !shouldPersistBlingImage({
+      currentImageUrl: params.currentImageUrl,
+      incomingImageUrl,
+      force: params.force,
+    })
+  ) {
+    return params.currentImageUrl ?? incomingImageUrl;
+  }
+
+  const reference = params.blingProductId ?? params.code ?? "produto";
+
+  try {
+    return await persistBlingImageUrl({
+      userId: params.userId,
+      reference,
+      sourceUrl: incomingImageUrl,
+    });
+  } catch (error) {
+    console.error(
+      `Falha ao persistir imagem do produto ${reference}. Mantendo URL original do Bling.`,
+      error
+    );
+    return incomingImageUrl;
+  }
+}
 
 function asRecord(value: unknown): UnknownRecord | null {
   return value && typeof value === "object" && !Array.isArray(value)
@@ -409,7 +738,19 @@ async function applyBlingProductSnapshot(
     if (snapshot.blingProductId) payload.blingProductId = snapshot.blingProductId;
     if (snapshot.code) payload.code = snapshot.code;
     if (snapshot.name) payload.name = snapshot.name;
-    if (snapshot.imageUrl) payload.imageUrl = snapshot.imageUrl;
+    if (snapshot.imageUrl) {
+      const persistedImageUrl = await resolveImageUrlForProductSnapshot({
+        userId,
+        currentImageUrl: product.imageUrl,
+        incomingImageUrl: snapshot.imageUrl,
+        blingProductId: snapshot.blingProductId ?? identifiers.blingProductId,
+        code: snapshot.code ?? identifiers.code,
+      });
+
+      if (persistedImageUrl && persistedImageUrl !== product.imageUrl) {
+        payload.imageUrl = persistedImageUrl;
+      }
+    }
     if (snapshot.price !== null) {
       payload.price = new Prisma.Decimal(snapshot.price.toFixed(2));
     }
@@ -446,13 +787,21 @@ async function applyBlingProductSnapshot(
     return false;
   }
 
+  const persistedImageUrl = await resolveImageUrlForProductSnapshot({
+    userId,
+    currentImageUrl: null,
+    incomingImageUrl: snapshot.imageUrl ?? null,
+    blingProductId: snapshot.blingProductId ?? identifiers.blingProductId,
+    code: snapshot.code ?? identifiers.code,
+  });
+
   await prisma.product.create({
     data: {
       userId,
       blingProductId: snapshot.blingProductId,
       code: snapshot.code,
       name: snapshot.name,
-      imageUrl: snapshot.imageUrl,
+      imageUrl: persistedImageUrl,
       price: new Prisma.Decimal((snapshot.price ?? 0).toFixed(2)),
       stockQuantity: new Prisma.Decimal((snapshot.stockQuantity ?? 0).toFixed(3)),
       category: "ACESSORIOS", // Default para novos produtos vindos do Bling
@@ -1060,18 +1409,36 @@ export async function syncProductsFromBlingFull(userId: string) {
   return results;
 }
 
-export async function syncProductImagesFromBling(userId: string, limit = 25) {
+export async function syncProductImagesFromBling(
+  userId: string,
+  options?: { limit?: number; force?: boolean }
+) {
+  const limit = Math.min(Math.max(options?.limit ?? 25, 1), 100);
+  const force = options?.force ?? false;
+
+  const whereClause: Prisma.ProductWhereInput = force
+    ? {
+        userId,
+        blingProductId: { not: null },
+      }
+    : {
+        userId,
+        blingProductId: { not: null },
+        OR: [
+          { imageUrl: null },
+          { imageUrl: { startsWith: "https://orgbling.s3.amazonaws.com/" } },
+        ],
+      };
+
   const products = await prisma.product.findMany({
-    where: {
-      userId,
-      blingProductId: { not: null },
-      imageUrl: null,
-    },
+    where: whereClause,
     orderBy: [{ updatedAt: "desc" }, { createdAt: "desc" }],
     take: limit,
     select: {
       id: true,
+      code: true,
       blingProductId: true,
+      imageUrl: true,
     },
   });
 
@@ -1091,15 +1458,32 @@ export async function syncProductImagesFromBling(userId: string, limit = 25) {
 
     try {
       const details = await getBlingProductDetails(userId, product.blingProductId);
-      const imageUrl = extractBlingImageUrlFromBody(details);
+      const blingImageUrl = extractBlingImageUrlFromBody(details);
 
-      if (!imageUrl) {
+      if (!blingImageUrl) {
+        continue;
+      }
+
+      const persistedImageUrl = await resolveImageUrlForProductSnapshot({
+        userId,
+        currentImageUrl: product.imageUrl,
+        incomingImageUrl: blingImageUrl,
+        blingProductId: product.blingProductId,
+        code: product.code,
+        force,
+      });
+
+      if (!persistedImageUrl || persistedImageUrl === product.imageUrl) {
         continue;
       }
 
       await prisma.product.update({
         where: { id: product.id },
-        data: { imageUrl },
+        data: {
+          imageUrl: persistedImageUrl,
+          lastBlingSyncAt: new Date(),
+          lastBlingError: null,
+        },
       });
       results.updated++;
     } catch {
