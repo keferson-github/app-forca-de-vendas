@@ -472,7 +472,7 @@ function OrderFormSheet({
 }: OrderFormSheetProps) {
   const action = order ? updateOrderAction : createOrderAction;
   const [state, formAction] = useActionState(action, initialState);
-  const { open, onOpenChange, contentRef } = useSheetSlideGsap(initialOpen);
+  const { open, onOpenChange, contentRef } = useSheetSlideGsap({ initialOpen });
   const formRef = useRef<HTMLFormElement | null>(null);
   const values = state.values;
   const initialCustomer = buildOrderCustomer(order);
@@ -720,8 +720,10 @@ function OrderDetailSheet({
   initialOpen?: boolean;
   trigger?: React.ReactNode;
 }) {
+  const { open, onOpenChange, contentRef } = useSheetSlideGsap({ initialOpen });
+
   return (
-    <Sheet defaultOpen={initialOpen}>
+    <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetTrigger asChild>
         {trigger ?? (
           <Button variant="ghost" size="icon-sm" aria-label={`Adicionar itens ao pedido ${order.orderNumber}`}>
@@ -729,7 +731,10 @@ function OrderDetailSheet({
           </Button>
         )}
       </SheetTrigger>
-      <SheetContent className="w-full overflow-y-auto sm:max-w-xl">
+      <SheetContent
+        ref={contentRef}
+        className="w-full overflow-y-auto data-[state=open]:animate-none sm:max-w-xl"
+      >
         <SheetHeader>
           <div className="flex flex-wrap gap-2">
             <Badge variant="secondary">#{order.orderNumber}</Badge>
@@ -787,8 +792,10 @@ function OrderEditItemsSheet({
   initialOpen?: boolean;
   trigger?: React.ReactNode;
 }) {
+  const { open, onOpenChange, contentRef } = useSheetSlideGsap({ initialOpen });
+
   return (
-    <Sheet defaultOpen={initialOpen}>
+    <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetTrigger asChild>
         {trigger ?? (
           <Button variant="ghost" size="icon-sm" aria-label={`Itens adicionados do pedido ${order.orderNumber}`}>
@@ -796,7 +803,10 @@ function OrderEditItemsSheet({
           </Button>
         )}
       </SheetTrigger>
-      <SheetContent className="w-full overflow-y-auto sm:max-w-6xl">
+      <SheetContent
+        ref={contentRef}
+        className="w-full overflow-y-auto data-[state=open]:animate-none sm:max-w-6xl"
+      >
         <SheetHeader>
           <div className="flex flex-wrap gap-2">
             <Badge variant="secondary">#{order.orderNumber}</Badge>
@@ -1105,7 +1115,7 @@ export function OrdersPageClient({
             void handleDownloadPdf(order);
           }}
         >
-          <IconFileTypePdf className={`size-4 ${compact ? "text-amber-700" : "text-amber-600"}`} />
+          <IconFileTypePdf className={`size-4 ${compact ? "text-red-700" : "text-red-600"}`} />
         </Button>
         <OrderDeleteDialog order={order} compact={compact} />
       </div>

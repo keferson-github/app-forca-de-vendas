@@ -267,14 +267,19 @@ function CarrierFormSheet({
 }
 
 function CarrierDetailSheet({ carrier }: { carrier: CarrierListItem }) {
+  const { open, onOpenChange, contentRef } = useSheetSlideGsap();
+
   return (
-    <Sheet>
+    <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetTrigger asChild>
         <Button variant="ghost" size="icon-sm" aria-label={`Ver ${carrier.name}`}>
           <Eye />
         </Button>
       </SheetTrigger>
-      <SheetContent className="w-full overflow-y-auto sm:max-w-xl">
+      <SheetContent
+        ref={contentRef}
+        className="w-full overflow-y-auto data-[state=open]:animate-none sm:max-w-xl"
+      >
         <SheetHeader>
           <Badge variant="secondary" className="w-fit">
             {carrier.ordersCount} pedido(s)

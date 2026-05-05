@@ -11,6 +11,7 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
+import { useSheetSlideGsap } from "@/hooks/use-sheet-slide-gsap";
 import type { CustomerListItem } from "@/components/clientes/customer-form-sheet";
 
 type CustomerDetailSheetProps = {
@@ -34,14 +35,19 @@ function DetailRow({ label, value }: { label: string; value?: string | null }) {
 }
 
 export function CustomerDetailSheet({ customer }: CustomerDetailSheetProps) {
+  const { open, onOpenChange, contentRef } = useSheetSlideGsap();
+
   return (
-    <Sheet>
+    <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetTrigger asChild>
         <Button variant="ghost" size="icon-sm" aria-label={`Ver ${customer.name}`}>
           <Eye />
         </Button>
       </SheetTrigger>
-      <SheetContent className="w-full overflow-y-auto sm:max-w-xl">
+      <SheetContent
+        ref={contentRef}
+        className="w-full overflow-y-auto data-[state=open]:animate-none sm:max-w-xl"
+      >
         <SheetHeader>
           <div className="flex flex-wrap gap-2">
             <Badge variant={customer.isProspect ? "outline" : "default"}>

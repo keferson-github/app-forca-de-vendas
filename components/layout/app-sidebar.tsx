@@ -256,7 +256,10 @@ export function AppSidebar({ user, ...props }: AppSidebarProps) {
           <SidebarMenuItem>
             <form action={logoutAction}>
               <SidebarMenuButton asChild tooltip="Sair">
-                <button type="submit">
+                <button
+                  type="submit"
+                  className="text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
+                >
                   <IconLogout />
                   <span>Sair</span>
                 </button>

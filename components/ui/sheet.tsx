@@ -62,7 +62,6 @@ const SheetContent = React.forwardRef<
         data-slot="sheet-content"
         className={cn(
           "fixed z-50 flex flex-col gap-4 bg-background/98 shadow-[var(--shadow-surface-strong)] backdrop-blur-md transition ease-in-out",
-          // Only apply native animations if NOT a sidebar
           !isSidebar &&
             "data-[state=closed]:animate-out data-[state=closed]:duration-300 data-[state=open]:animate-in data-[state=open]:duration-500",
           side === "right" &&
@@ -100,8 +99,8 @@ const SheetContent = React.forwardRef<
             <span className="sr-only">Close</span>
           </SheetPrimitive.Close>
         )}
-    </SheetPrimitive.Content>
-  </SheetPortal>
+      </SheetPrimitive.Content>
+    </SheetPortal>
   )
 })
 SheetContent.displayName = "SheetContent"

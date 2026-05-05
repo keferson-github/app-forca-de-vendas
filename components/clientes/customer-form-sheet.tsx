@@ -209,7 +209,7 @@ export function CustomerFormSheet({
 }: CustomerFormSheetProps) {
   const action = customer ? updateCustomerAction : createCustomerAction;
   const [state, formAction] = useActionState(action, initialState);
-  const { open, onOpenChange, contentRef } = useSheetSlideGsap(initialOpen);
+  const { open, onOpenChange, contentRef } = useSheetSlideGsap({ initialOpen });
   const values = state.values;
   const commercialAddressValue = values?.commercialAddress ?? customer?.commercialAddress ?? "";
   const deliveryAddressValue = values?.deliveryAddress ?? customer?.deliveryAddress ?? "";

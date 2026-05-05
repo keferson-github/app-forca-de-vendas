@@ -632,8 +632,10 @@ function ProductDetailSheet({
   product: ProductListItem;
   trigger?: React.ReactNode;
 }) {
+  const { open, onOpenChange, contentRef } = useSheetSlideGsap();
+
   return (
-    <Sheet>
+    <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetTrigger asChild>
         {trigger ?? (
           <button type="button" className="text-left">
@@ -660,7 +662,10 @@ function ProductDetailSheet({
           </button>
         )}
       </SheetTrigger>
-      <SheetContent className="w-full overflow-y-auto sm:max-w-xl">
+      <SheetContent
+        ref={contentRef}
+        className="w-full overflow-y-auto data-[state=open]:animate-none sm:max-w-xl"
+      >
         <SheetHeader>
           <SheetTitle>Visualizar produto</SheetTitle>
           <SheetDescription>Confira os dados cadastrados do produto.</SheetDescription>

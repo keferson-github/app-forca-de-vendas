@@ -4,7 +4,48 @@ import { useCallback, useRef, useState } from "react";
 import { useGSAP } from "@gsap/react";
 import gsap from "gsap";
 
-export function useSheetSlideGsap(initialOpen = false) {
+type SheetSide = "top" | "right" | "bottom" | "left";
+
+type UseSheetSlideGsapConfig = {
+  initialOpen?: boolean;
+  side?: SheetSide;
+};
+
+function getOpenFromVars(side: SheetSide) {
+  if (side === "left") {
+    return { x: -64, autoAlpha: 0.75 };
+  }
+
+  if (side === "top") {
+    return { y: -48, autoAlpha: 0.78 };
+  }
+
+  if (side === "bottom") {
+    return { y: 48, autoAlpha: 0.78 };
+  }
+
+  return { x: 64, autoAlpha: 0.75 };
+}
+
+function getCloseToVars(side: SheetSide) {
+  if (side === "left") {
+    return { x: -48, autoAlpha: 0 };
+  }
+
+  if (side === "top") {
+    return { y: -36, autoAlpha: 0 };
+  }
+
+  if (side === "bottom") {
+    return { y: 36, autoAlpha: 0 };
+  }
+
+  return { x: 48, autoAlpha: 0 };
+}
+
+export function useSheetSlideGsap(config: UseSheetSlideGsapConfig = {}) {
+  const initialOpen = config.initialOpen ?? false;
+  const side = config.side ?? "right";
   const [open, setOpen] = useState(initialOpen);
   const contentRef = useRef<HTMLDivElement | null>(null);
   const isClosingRef = useRef(false);
@@ -25,7 +66,7 @@ export function useSheetSlideGsap(initialOpen = false) {
         return;
       }
 
-      if (!open || !element) {
+      if (!open || !element || isClosingRef.current) {
         setOpen(false);
         return;
       }
@@ -34,8 +75,7 @@ export function useSheetSlideGsap(initialOpen = false) {
       gsap.killTweensOf(element);
 
       gsap.to(element, {
-        x: 48,
-        autoAlpha: 0,
+        ...getCloseToVars(side),
         duration: 0.28,
         ease: "power2.in",
         overwrite: "auto",
@@ -46,7 +86,7 @@ export function useSheetSlideGsap(initialOpen = false) {
         },
       });
     },
-    [open]
+    [open, side]
   );
 
   useGSAP(
@@ -57,12 +97,10 @@ export function useSheetSlideGsap(initialOpen = false) {
 
       gsap.fromTo(
         contentRef.current,
-        {
-          x: 64,
-          autoAlpha: 0.75,
-        },
+        getOpenFromVars(side),
         {
           x: 0,
+          y: 0,
           autoAlpha: 1,
           duration: 0.42,
           ease: "power3.out",
@@ -71,7 +109,7 @@ export function useSheetSlideGsap(initialOpen = false) {
         }
       );
     },
-    { dependencies: [open], scope: contentRef }
+    { dependencies: [open, side], scope: contentRef }
   );
 
   return { open, onOpenChange, contentRef };
