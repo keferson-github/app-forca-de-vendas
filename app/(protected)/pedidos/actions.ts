@@ -588,7 +588,7 @@ export async function addOrderItemAction(
   });
 
   revalidatePath("/pedidos");
-  redirect(buildNoticeUrl("/pedidos", "order-item-added"));
+  redirect(`${buildNoticeUrl("/pedidos", "order-item-added")}&openItemsOrderId=${encodeURIComponent(order.id)}`);
 }
 
 export async function updateOrderItemAction(
@@ -728,6 +728,23 @@ export async function deleteOrderItemAction(
 
   revalidatePath("/pedidos");
   redirect(buildNoticeUrl("/pedidos", "order-item-deleted"));
+}
+
+export async function refreshOrderItemsAction(formData: FormData): Promise<void> {
+  const userId = await requireUserId();
+  const orderId = String(formData.get("orderId") ?? "");
+
+  if (orderId) {
+    const order = await getOrderForUser(userId, orderId);
+
+    if (!order) {
+      revalidatePath("/pedidos");
+      redirect(buildNoticeUrl("/pedidos", "order-updated"));
+    }
+  }
+
+  revalidatePath("/pedidos");
+  redirect(buildNoticeUrl("/pedidos", "order-item-updated"));
 }
 
 export async function confirmOrderAction(

@@ -7,6 +7,7 @@ import { prisma } from "@/lib/prisma";
 type SearchParams = Promise<{
   open?: string;
   openOrderId?: string;
+  openItemsOrderId?: string;
   q?: string;
   page?: string;
   pageSize?: string;
@@ -48,6 +49,7 @@ export default async function PedidosPage(props: { searchParams: SearchParams })
 
   const openNewOrder = searchParams.open === "new-order";
   const openOrderId = (searchParams.openOrderId ?? "").trim() || null;
+  const openItemsOrderId = (searchParams.openItemsOrderId ?? "").trim() || null;
   const query = (searchParams.q ?? "").trim();
   const requestedPage = parsePage(searchParams.page);
   const pageSize = parsePageSize(searchParams.pageSize);
@@ -125,6 +127,7 @@ export default async function PedidosPage(props: { searchParams: SearchParams })
     <OrdersPageClient
       openNewOrder={openNewOrder}
       openOrderId={openOrderId}
+      openItemsOrderId={openItemsOrderId}
       orders={orders.map((order) => ({
         id: order.id,
         orderNumber: order.orderNumber,

@@ -10,6 +10,7 @@ import {
   createOrderAction,
   deleteOrderItemAction,
   deleteOrderAction,
+  refreshOrderItemsAction,
   type OrderItemFormState,
   type OrderStatusFormState,
   updateOrderAction,
@@ -142,6 +143,7 @@ export type OrderListItem = {
 type OrdersPageClientProps = {
   openNewOrder: boolean;
   openOrderId?: string | null;
+  openItemsOrderId?: string | null;
   orders: OrderListItem[];
   carriers: CarrierOption[];
   query: string;
@@ -778,13 +780,15 @@ function OrderDetailSheet({
 
 function OrderEditItemsSheet({
   order,
+  initialOpen = false,
   trigger,
 }: {
   order: OrderListItem;
+  initialOpen?: boolean;
   trigger?: React.ReactNode;
 }) {
   return (
-    <Sheet>
+    <Sheet defaultOpen={initialOpen}>
       <SheetTrigger asChild>
         {trigger ?? (
           <Button variant="ghost" size="icon-sm" aria-label={`Itens adicionados do pedido ${order.orderNumber}`}>
@@ -814,7 +818,7 @@ function OrderEditItemsSheet({
 function OrderItemsReadOnlySection({ order }: { order: OrderListItem }) {
   return (
     <div className="grid gap-4">
-      <div className="rounded-lg border border-border/60 bg-background p-4">
+      <div className="rounded-lg border border-border/60 bg-background p-4 lg:order-1">
         <h3 className="text-sm font-semibold">Itens adicionados no pedido</h3>
         <p className="mb-3 text-xs text-muted-foreground">
           Lista de itens já vinculados ao pedido do cliente.
@@ -895,6 +899,7 @@ function EmptyState() {
 export function OrdersPageClient({
   openNewOrder,
   openOrderId = null,
+  openItemsOrderId = null,
   orders,
   carriers,
   query,
@@ -1070,6 +1075,7 @@ export function OrdersPageClient({
         />
         <OrderEditItemsSheet
           order={order}
+          initialOpen={openItemsOrderId === order.id && !compact}
           trigger={(
             <Button
               variant={compact ? "outline" : "ghost"}
@@ -1393,6 +1399,7 @@ function OrderItemsPanel({ order }: { order: OrderListItem }) {
   const [addState, addItemAction] = useActionState(addOrderItemAction, initialItemState);
   const [confirmState, confirmAction] = useActionState(confirmOrderAction, initialStatusState);
   const hasSelectedProduct = selectedProduct !== null;
+  const shouldEnableItemsScroll = order.items.length > 5;
   const selectedProductUnitPriceNumber = selectedProduct?.price ?? 0;
   const selectedProductUnitPrice = selectedProduct ? formatMoneyInput(selectedProductUnitPriceNumber) : "";
   const selectedProductTotalPrice = selectedProductUnitPriceNumber * quantityCounter;
@@ -1618,29 +1625,18 @@ function OrderItemsPanel({ order }: { order: OrderListItem }) {
 
       <div
         id={`${order.id}-items-list`}
-        className="rounded-lg border border-border/60 bg-background p-4 lg:min-h-[560px]"
+        className="rounded-lg border border-border/60 bg-background p-4 lg:order-3 lg:min-h-[560px]"
       >
         <h3 className="mb-3 text-sm font-semibold">Itens adicionados</h3>
         <p className="mb-3 text-xs text-muted-foreground lg:block">
           Visualização em tempo real dos itens em preparação e já adicionados ao pedido.
         </p>
 
-        <div className="mb-3 hidden rounded-lg border border-dashed border-border/80 bg-muted/20 p-3 lg:grid lg:gap-2">
-          <p className="text-xs font-semibold text-muted-foreground">Pré-visualização em tempo real</p>
-          {order.items.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Nenhum item adicionado até o momento.</p>
-          ) : (
-            <div className="grid gap-1">
-              {order.items.slice(0, 3).map((item) => (
-                <p key={`preview-${item.id}`} className="text-sm">
-                  {item.description || item.productName || "Item"} | Qtd: {item.quantity} | Total: {formatCurrency(item.totalPrice)}
-                </p>
-              ))}
-            </div>
-          )}
-        </div>
-
-        <div className="grid gap-2 lg:max-h-[420px] lg:overflow-y-auto lg:pr-1">
+        <div
+          className={`grid h-auto gap-2 ${
+            shouldEnableItemsScroll ? "max-h-[420px] overflow-y-auto pr-1" : ""
+          }`}
+        >
           {order.items.length === 0 ? (
             <p className="rounded-lg border border-dashed border-border px-3 py-4 text-sm text-muted-foreground">
               Nenhum item cadastrado no pedido.
@@ -1676,7 +1672,7 @@ function OrderItemsPanel({ order }: { order: OrderListItem }) {
         </div>
       </div>
 
-      <div className="rounded-lg border border-border/60 bg-background p-4">
+      <div className="rounded-lg border border-border/60 bg-background p-4 lg:order-2">
         <div className="flex flex-col gap-3">
           <div>
             <p className="text-sm font-semibold">Resumo</p>
@@ -1686,18 +1682,12 @@ function OrderItemsPanel({ order }: { order: OrderListItem }) {
           </div>
           {order.status === "DRAFT" ? (
             <div className="grid gap-2 lg:grid-cols-2">
-              <Button
-                type="button"
-                variant="outline"
-                className="w-full"
-                disabled={order.items.length === 0}
-                onClick={() => {
-                  const target = document.getElementById(`${order.id}-items-list`);
-                  target?.scrollIntoView({ behavior: "smooth", block: "start" });
-                }}
-              >
-                Atualizar item
-              </Button>
+              <form action={refreshOrderItemsAction} className="w-full">
+                <input type="hidden" name="orderId" value={order.id} />
+                <Button type="submit" variant="outline" className="w-full" disabled={order.items.length === 0}>
+                  Atualizar item
+                </Button>
+              </form>
               <form action={confirmAction} className="w-full">
                 <input type="hidden" name="orderId" value={order.id} />
                 <SubmitButton className="w-full">
