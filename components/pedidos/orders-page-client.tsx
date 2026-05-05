@@ -13,7 +13,6 @@ import {
   type OrderItemFormState,
   type OrderStatusFormState,
   updateOrderAction,
-  updateOrderItemAction,
   type OrderFormState,
 } from "@/app/(protected)/pedidos/actions";
 import { SubmitButton } from "@/components/auth/submit-button";
@@ -142,6 +141,7 @@ export type OrderListItem = {
 
 type OrdersPageClientProps = {
   openNewOrder: boolean;
+  openOrderId?: string | null;
   orders: OrderListItem[];
   carriers: CarrierOption[];
   query: string;
@@ -316,19 +316,17 @@ function parseProductAutocompletePayload(payload: unknown): OrderAutocompletePro
 }
 
 function getCustomerSearchLabel(customer: OrderAutocompleteCustomer) {
-  if (!customer.companyName) {
-    return customer.name;
-  }
-
-  return `${customer.name} - ${customer.companyName}`;
+  return customer.name;
 }
 
 function getCustomerCompanyLabel(customer: OrderAutocompleteCustomer) {
-  if (!customer.companyName) {
+  const normalizedCompany = normalizeOptionalLabel(customer.companyName);
+
+  if (!normalizedCompany) {
     return "Empresa não informada";
   }
 
-  return customer.companyName;
+  return normalizedCompany;
 }
 
 function buildOrderCustomer(order?: OrderListItem): OrderAutocompleteCustomer | null {
@@ -338,7 +336,7 @@ function buildOrderCustomer(order?: OrderListItem): OrderAutocompleteCustomer | 
 
   return {
     id: order.customerId,
-    name: order.customerName,
+    name: normalizeCustomerDisplayName(order.customerName),
     companyName: order.customerCompany,
     customerCode: null,
     phone: null,
@@ -396,8 +394,21 @@ function formatPhoneToWa(value: string | null) {
   return `55${onlyDigits}`;
 }
 
+function normalizeCustomerDisplayName(value: string) {
+  return value.replace(/\s+(edit|editar)$/i, "").trim();
+}
+
+function normalizeOptionalLabel(value?: string | null) {
+  if (!value) {
+    return null;
+  }
+
+  const normalized = value.replace(/\s+(edit|editar)$/i, "").trim();
+  return normalized || null;
+}
+
 function getFirstName(value: string) {
-  const firstName = value.trim().split(/\s+/)[0];
+  const firstName = normalizeCustomerDisplayName(value).split(/\s+/)[0];
   return firstName || "cliente";
 }
 
@@ -700,17 +711,19 @@ function OrderFormSheet({
 
 function OrderDetailSheet({
   order,
+  initialOpen = false,
   trigger,
 }: {
   order: OrderListItem;
+  initialOpen?: boolean;
   trigger?: React.ReactNode;
 }) {
   return (
-    <Sheet>
+    <Sheet defaultOpen={initialOpen}>
       <SheetTrigger asChild>
         {trigger ?? (
-          <Button variant="ghost" size="icon-sm" aria-label={`Ver pedido ${order.orderNumber}`}>
-            <Eye />
+          <Button variant="ghost" size="icon-sm" aria-label={`Adicionar itens ao pedido ${order.orderNumber}`}>
+            <Plus />
           </Button>
         )}
       </SheetTrigger>
@@ -720,13 +733,24 @@ function OrderDetailSheet({
             <Badge variant="secondary">#{order.orderNumber}</Badge>
             <Badge variant={statusVariants[order.status]}>{statusLabels[order.status]}</Badge>
           </div>
-          <SheetTitle>{order.customerName}</SheetTitle>
+          <SheetTitle>{normalizeCustomerDisplayName(order.customerName)}</SheetTitle>
           <SheetDescription>
             Resumo comercial do pedido e dos dados operacionais cadastrados.
           </SheetDescription>
         </SheetHeader>
         <dl className="grid gap-3 px-4 pb-6">
-          <DetailRow label="Empresa do cliente" value={order.customerCompany} />
+          <DetailRow label="Empresa do cliente" value={normalizeOptionalLabel(order.customerCompany)} />
+          <DetailRow label="Nome do cliente" value={normalizeCustomerDisplayName(order.customerName)} />
+          <div className="grid gap-3 sm:grid-cols-2">
+            <DetailRow label="Código do cliente" value={order.customerCode} />
+            <DetailRow label="CNPJ/CPF" value={order.customerCnpjCpf} />
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <DetailRow label="Telefone do cliente" value={order.customerPhone} />
+            <DetailRow label="Nº do pedido do cliente" value={order.customerOrderNumber} />
+          </div>
+          <DetailRow label="Endereço comercial" value={order.customerCommercialAddress} />
+          <DetailRow label="Endereço de entrega" value={order.customerDeliveryAddress} />
           <DetailRow label="Transportadora" value={order.carrierName} />
           <div className="grid gap-3 sm:grid-cols-2">
             <DetailRow label="Operação" value="Venda" />
@@ -737,7 +761,6 @@ function OrderDetailSheet({
             <DetailRow label="Entrega" value={deliveryTypeLabels[order.deliveryType]} />
           </div>
           <DetailRow label="Empresa que recebe" value={order.receivingCompany} />
-          <DetailRow label="Nº do pedido do cliente" value={order.customerOrderNumber} />
           <DetailRow label="Observação" value={order.notes} />
           <div className="grid gap-3 sm:grid-cols-3">
             <DetailRow label="Itens" value={String(order.itemsCount)} />
@@ -746,10 +769,82 @@ function OrderDetailSheet({
           </div>
         </dl>
         <div className="px-4 pb-6">
+          <OrderItemsReadOnlySection order={order} />
+        </div>
+      </SheetContent>
+    </Sheet>
+  );
+}
+
+function OrderEditItemsSheet({
+  order,
+  trigger,
+}: {
+  order: OrderListItem;
+  trigger?: React.ReactNode;
+}) {
+  return (
+    <Sheet>
+      <SheetTrigger asChild>
+        {trigger ?? (
+          <Button variant="ghost" size="icon-sm" aria-label={`Itens adicionados do pedido ${order.orderNumber}`}>
+            <Pencil />
+          </Button>
+        )}
+      </SheetTrigger>
+      <SheetContent className="w-full overflow-y-auto sm:max-w-[44rem]">
+        <SheetHeader>
+          <div className="flex flex-wrap gap-2">
+            <Badge variant="secondary">#{order.orderNumber}</Badge>
+            <Badge variant={statusVariants[order.status]}>{statusLabels[order.status]}</Badge>
+          </div>
+          <SheetTitle>Itens adicionados #{order.orderNumber}</SheetTitle>
+          <SheetDescription>
+            Gerencie itens do pedido com busca de produtos, quantidade e atualização de valores.
+          </SheetDescription>
+        </SheetHeader>
+        <div className="px-4 pb-6">
           <OrderItemsPanel order={order} />
         </div>
       </SheetContent>
     </Sheet>
+  );
+}
+
+function OrderItemsReadOnlySection({ order }: { order: OrderListItem }) {
+  return (
+    <div className="grid gap-4">
+      <div className="rounded-lg border border-border/60 bg-background p-4">
+        <h3 className="text-sm font-semibold">Itens adicionados no pedido</h3>
+        <p className="mb-3 text-xs text-muted-foreground">
+          Lista de itens já vinculados ao pedido do cliente.
+        </p>
+
+        {order.items.length === 0 ? (
+          <p className="rounded-lg border border-dashed border-border px-3 py-4 text-sm text-muted-foreground">
+            Nenhum item cadastrado no pedido.
+          </p>
+        ) : (
+          <div className="grid gap-2">
+            {order.items.map((item) => (
+              <div key={item.id} className="rounded-lg border border-border/60 bg-muted/20 p-3">
+                <p className="text-sm font-medium">{item.description || item.productName || "Item do pedido"}</p>
+                <p className="text-xs text-muted-foreground">
+                  Quantidade: {item.quantity} | Desconto: {item.discount}% | Unitário: {formatCurrency(item.unitPrice)} | Total: {formatCurrency(item.totalPrice)}
+                </p>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div className="rounded-lg border border-border/60 bg-background p-4">
+        <p className="text-sm font-semibold">Resumo</p>
+        <p className="text-xs text-muted-foreground">
+          Total atual: {formatCurrency(order.total)} | Itens: {order.itemsCount}
+        </p>
+      </div>
+    </div>
   );
 }
 
@@ -799,6 +894,7 @@ function EmptyState() {
 
 export function OrdersPageClient({
   openNewOrder,
+  openOrderId = null,
   orders,
   carriers,
   query,
@@ -961,6 +1057,7 @@ export function OrdersPageClient({
       <div className={`flex items-center gap-1.5 ${compact ? "justify-between" : "justify-end"}`}>
         <OrderDetailSheet
           order={order}
+          initialOpen={openOrderId === order.id && !compact}
           trigger={(
             <Button
               variant={compact ? "outline" : "ghost"}
@@ -971,26 +1068,19 @@ export function OrdersPageClient({
             </Button>
           )}
         />
-        <OrderBillingAction order={order} compact={compact} />
-        <OrderFormSheet
-          key={`edit-${order.id}-${order.updatedAt}`}
-          carriers={carriers}
+        <OrderEditItemsSheet
           order={order}
-          triggerLabel="Editar"
-          title={`Editar pedido #${order.orderNumber}`}
-          description="Atualize os dados principais do pedido registrado."
-          variant="ghost"
-          size={compact ? "icon-sm" : "sm"}
           trigger={(
             <Button
               variant={compact ? "outline" : "ghost"}
               size="icon-sm"
-              aria-label={`Editar pedido ${order.orderNumber}`}
+              aria-label={`Itens adicionados do pedido ${order.orderNumber}`}
             >
               <Pencil />
             </Button>
           )}
         />
+        <OrderBillingAction order={order} compact={compact} />
         <Button
           variant={compact ? "outline" : "ghost"}
           size="icon-sm"
@@ -1061,7 +1151,7 @@ export function OrdersPageClient({
                       </div>
                       <div className="grid gap-1.5">
                         <p className="text-base font-semibold leading-tight tracking-tight uppercase">
-                          {order.customerName}
+                          {normalizeCustomerDisplayName(order.customerName)}
                         </p>
                         <p className="text-sm leading-none">
                           <span className="font-medium text-muted-foreground">Código do pedido:</span>{" "}
@@ -1133,7 +1223,7 @@ export function OrdersPageClient({
                         </div>
                       </TableCell>
                       <TableCell>
-                        <span className="font-medium">{order.customerName}</span>
+                        <span className="font-medium">{normalizeCustomerDisplayName(order.customerName)}</span>
                       </TableCell>
                       <TableCell>
                         {order.customerCode || "Nao informado"}
@@ -1257,12 +1347,12 @@ function ProductLookupField({
 }) {
   return (
     <div className="grid gap-2">
-      <Label htmlFor={inputId}>Produto cadastrado</Label>
+      <Label htmlFor={inputId}>Produtos cadastrados</Label>
       <input type="hidden" name="productId" value={selectedProduct?.id ?? ""} />
       <SearchInputWithAutocomplete
         query={selectedProduct ? getProductSearchLabel(selectedProduct) : ""}
         placeholder="Buscar por código ou nome do produto"
-        minChars={3}
+        minChars={1}
         autocomplete={{
           endpoint: "/api/produtos/autocomplete",
           loadingLabel: "Buscando produtos...",
@@ -1289,83 +1379,8 @@ function ProductLookupField({
         onAutocompleteSelect={onSelect}
       />
       <p className="text-xs text-muted-foreground">
-        Digite ao menos 3 caracteres e selecione um produto cadastrado na página Produtos.
+        Digite ao menos 1 caractere e selecione um produto cadastrado na página Produtos.
       </p>
-    </div>
-  );
-}
-
-function OrderItemRowEditor({ order, item }: { order: OrderListItem; item: OrderListItem["items"][number] }) {
-  const [state, formAction] = useActionState(updateOrderItemAction, initialItemState);
-
-  return (
-    <div className="rounded-lg border border-border/60 bg-muted/20 p-3">
-      <div className="mb-2 flex items-center justify-between gap-3">
-        <p className="text-sm font-medium">{item.description || item.productName || "Item do pedido"}</p>
-        <ConfirmActionDialog
-          action={deleteOrderItemAction}
-          hiddenFields={{ orderId: order.id, itemId: item.id }}
-          title="Remover item"
-          description="Deseja remover este item do pedido?"
-          confirmLabel="Remover item"
-          pendingLabel="Removendo..."
-          confirmVariant="destructive"
-          trigger={(
-            <Button variant="ghost" size="icon-sm" aria-label="Remover item do pedido">
-              <Trash2 />
-            </Button>
-          )}
-        />
-      </div>
-
-      <form action={formAction} className="grid gap-3">
-        <input type="hidden" name="orderId" value={order.id} />
-        <input type="hidden" name="itemId" value={item.id} />
-        <input type="hidden" name="productId" value={item.productId ?? ""} />
-        <div className="grid gap-3 sm:grid-cols-3">
-          <div className="grid gap-1">
-            <Label htmlFor={`item-${item.id}-quantity`}>Quantidade</Label>
-            <Input
-              id={`item-${item.id}-quantity`}
-              name="quantity"
-              type="number"
-              min={1}
-              step={1}
-              defaultValue={String(item.quantity)}
-              required
-            />
-          </div>
-          <div className="grid gap-1">
-            <Label htmlFor={`item-${item.id}-discount`}>Desconto (%)</Label>
-            <Input
-              id={`item-${item.id}-discount`}
-              name="discount"
-              defaultValue={formatMoneyInput(item.discount)}
-              placeholder="0,00"
-            />
-          </div>
-          <div className="grid gap-1">
-            <Label htmlFor={`item-${item.id}-unitPrice`}>Preco unitario</Label>
-            <Input
-              id={`item-${item.id}-unitPrice`}
-              name="unitPrice"
-              defaultValue={formatMoneyInput(item.unitPrice)}
-              placeholder="0,00"
-            />
-          </div>
-        </div>
-        <div className="flex items-center justify-between gap-3">
-          <p className="text-xs text-muted-foreground">
-            Total atual do item: {formatCurrency(item.totalPrice)}
-          </p>
-          <SubmitButton className="sm:w-auto">Atualizar item</SubmitButton>
-        </div>
-        {state.error ? (
-          <p className="rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive">
-            {state.error}
-          </p>
-        ) : null}
-      </form>
     </div>
   );
 }
@@ -1373,12 +1388,19 @@ function OrderItemRowEditor({ order, item }: { order: OrderListItem; item: Order
 function OrderItemsPanel({ order }: { order: OrderListItem }) {
   const [selectedProduct, setSelectedProduct] = useState<OrderAutocompleteProduct | null>(null);
   const [lookupVersion, setLookupVersion] = useState(0);
+  const [quantityCounter, setQuantityCounter] = useState(1);
+  const [discountInput, setDiscountInput] = useState("0");
   const [addState, addItemAction] = useActionState(addOrderItemAction, initialItemState);
   const [confirmState, confirmAction] = useActionState(confirmOrderAction, initialStatusState);
-
+  const hasSelectedProduct = selectedProduct !== null;
+  const selectedProductUnitPriceNumber = selectedProduct?.price ?? 0;
+  const selectedProductUnitPrice = selectedProduct ? formatMoneyInput(selectedProductUnitPriceNumber) : "";
+  const selectedProductTotalPrice = selectedProductUnitPriceNumber * quantityCounter;
   function handleResetAddForm(formElement: HTMLFormElement) {
     formElement.reset();
     setSelectedProduct(null);
+    setQuantityCounter(1);
+    setDiscountInput("0");
     setLookupVersion((current) => current + 1);
   }
 
@@ -1399,33 +1421,187 @@ function OrderItemsPanel({ order }: { order: OrderListItem }) {
             }}
           >
             <input type="hidden" name="orderId" value={order.id} />
+            <input type="hidden" name="unitPrice" value={selectedProductUnitPrice} />
             <ProductLookupField
               key={`${order.id}-product-lookup-${lookupVersion}`}
               inputId={`${order.id}-productId`}
               selectedProduct={selectedProduct}
               onSelect={setSelectedProduct}
             />
-            <div className="grid gap-3 sm:grid-cols-3">
-              <div className="grid gap-1">
-                <Label htmlFor={`${order.id}-quantity`}>Quantidade</Label>
-                <Input id={`${order.id}-quantity`} name="quantity" type="number" min={1} step={1} defaultValue="1" required />
-              </div>
-              <div className="grid gap-1">
-                <Label htmlFor={`${order.id}-discount`}>Desconto (%)</Label>
-                <Input id={`${order.id}-discount`} name="discount" placeholder="0,00" defaultValue="0" />
-              </div>
-              <div className="grid gap-1">
-                <Label htmlFor={`${order.id}-unitPrice`}>Preco unitario</Label>
+            <div className="hidden gap-3 lg:grid lg:grid-cols-20 lg:items-end">
+              <div className="grid gap-1 lg:col-span-10">
+                <Label htmlFor={`${order.id}-quantity-desktop`}>Quantidade</Label>
                 <Input
-                  id={`${order.id}-unitPrice`}
-                  name="unitPrice"
-                  placeholder="Ex.: 59,90"
+                  id={`${order.id}-quantity-desktop`}
+                  name="quantity"
+                  type="number"
+                  min={1}
+                  step={1}
+                  required
+                  value={quantityCounter}
+                  disabled={!hasSelectedProduct}
+                  onChange={(event) => {
+                    const parsed = Number(event.currentTarget.value);
+
+                    if (!Number.isFinite(parsed)) {
+                      setQuantityCounter(1);
+                      return;
+                    }
+
+                    setQuantityCounter(Math.max(1, Math.trunc(parsed)));
+                  }}
                 />
               </div>
+              <div className="lg:col-span-3 lg:self-end">
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="h-9 w-full border-border bg-background text-foreground shadow-[0_0_0_1px_rgba(15,23,42,0.12),0_2px_6px_rgba(15,23,42,0.08)] hover:bg-background hover:shadow-[0_0_0_1px_rgba(15,23,42,0.22),0_4px_10px_rgba(15,23,42,0.12)] dark:bg-input/30 dark:hover:bg-input/30 dark:shadow-[0_0_0_1px_rgba(148,163,184,0.35),0_2px_6px_rgba(2,6,23,0.35)] dark:hover:shadow-[0_0_0_1px_rgba(148,163,184,0.5),0_4px_10px_rgba(2,6,23,0.45)]"
+                  disabled={!hasSelectedProduct}
+                  onClick={() => {
+                    setQuantityCounter((current) => Math.max(1, current - 1));
+                  }}
+                >
+                  -
+                </Button>
+              </div>
+              <div className="lg:col-span-3 lg:self-end">
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="h-9 w-full border-border bg-background text-foreground shadow-[0_0_0_1px_rgba(15,23,42,0.12),0_2px_6px_rgba(15,23,42,0.08)] hover:bg-background hover:shadow-[0_0_0_1px_rgba(15,23,42,0.22),0_4px_10px_rgba(15,23,42,0.12)] dark:bg-input/30 dark:hover:bg-input/30 dark:shadow-[0_0_0_1px_rgba(148,163,184,0.35),0_2px_6px_rgba(2,6,23,0.35)] dark:hover:shadow-[0_0_0_1px_rgba(148,163,184,0.5),0_4px_10px_rgba(2,6,23,0.45)]"
+                  disabled={!hasSelectedProduct}
+                  onClick={() => {
+                    setQuantityCounter((current) => current + 1);
+                  }}
+                >
+                  +
+                </Button>
+              </div>
+              <div className="lg:col-span-4 lg:self-end">
+                <Button type="reset" variant="outline" className="w-full border-border bg-background text-foreground shadow-[0_0_0_1px_rgba(15,23,42,0.12),0_2px_6px_rgba(15,23,42,0.08)] hover:bg-background hover:shadow-[0_0_0_1px_rgba(15,23,42,0.22),0_4px_10px_rgba(15,23,42,0.12)] dark:bg-input/30 dark:hover:bg-input/30 dark:shadow-[0_0_0_1px_rgba(148,163,184,0.35),0_2px_6px_rgba(2,6,23,0.35)] dark:hover:shadow-[0_0_0_1px_rgba(148,163,184,0.5),0_4px_10px_rgba(2,6,23,0.45)]">Limpar</Button>
+              </div>
             </div>
-            <div className="flex items-center justify-end gap-2">
-              <Button type="reset" variant="outline">Limpar</Button>
-              <SubmitButton className="sm:w-auto">Adicionar item</SubmitButton>
+            <p className="hidden text-xs text-muted-foreground lg:block">Item(ns): {quantityCounter}</p>
+
+            <div className="hidden gap-3 lg:grid lg:grid-cols-20 lg:items-end">
+              <div className="grid gap-1 lg:col-span-5">
+                <Label htmlFor={`${order.id}-unitPrice-view-desktop`}>Valor unitário</Label>
+                <Input
+                  id={`${order.id}-unitPrice-view-desktop`}
+                  value={selectedProduct ? formatCurrency(selectedProductUnitPriceNumber) : "Selecione um produto"}
+                  readOnly
+                />
+              </div>
+              <div className="grid gap-1 lg:col-span-5">
+                <Label htmlFor={`${order.id}-totalPrice-view-desktop`}>Valor total do item</Label>
+                <Input
+                  id={`${order.id}-totalPrice-view-desktop`}
+                  value={selectedProduct ? formatCurrency(selectedProductTotalPrice) : "Selecione um produto"}
+                  readOnly
+                />
+              </div>
+              <div className="grid gap-1 lg:col-span-5">
+                <Label htmlFor={`${order.id}-discount-desktop`}>Desconto (%)</Label>
+                <Input
+                  id={`${order.id}-discount-desktop`}
+                  name="discount"
+                  placeholder="0,00"
+                  value={discountInput}
+                  onChange={(event) => {
+                    setDiscountInput(event.currentTarget.value);
+                  }}
+                />
+              </div>
+              <div className="lg:col-span-5 lg:pt-6">
+                <SubmitButton className="w-full" disabled={!hasSelectedProduct}>Adicionar</SubmitButton>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 gap-3 lg:hidden">
+              <div className="grid gap-3">
+                <Label htmlFor={`${order.id}-quantity`}>Quantidade</Label>
+                <div className="grid grid-cols-4 gap-2">
+                  <Input
+                    id={`${order.id}-quantity`}
+                    name="quantity"
+                    type="number"
+                    min={1}
+                    step={1}
+                    required
+                    value={quantityCounter}
+                    disabled={!hasSelectedProduct}
+                    className="col-span-2"
+                    onChange={(event) => {
+                      const parsed = Number(event.currentTarget.value);
+
+                      if (!Number.isFinite(parsed)) {
+                        setQuantityCounter(1);
+                        return;
+                      }
+
+                      setQuantityCounter(Math.max(1, Math.trunc(parsed)));
+                    }}
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="col-span-1 h-9 w-full border-border bg-background text-foreground shadow-[0_0_0_1px_rgba(15,23,42,0.12),0_2px_6px_rgba(15,23,42,0.08)] hover:bg-background hover:shadow-[0_0_0_1px_rgba(15,23,42,0.22),0_4px_10px_rgba(15,23,42,0.12)] dark:bg-input/30 dark:hover:bg-input/30 dark:shadow-[0_0_0_1px_rgba(148,163,184,0.35),0_2px_6px_rgba(2,6,23,0.35)] dark:hover:shadow-[0_0_0_1px_rgba(148,163,184,0.5),0_4px_10px_rgba(2,6,23,0.45)]"
+                    disabled={!hasSelectedProduct}
+                    onClick={() => {
+                      setQuantityCounter((current) => Math.max(1, current - 1));
+                    }}
+                  >
+                    -
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="col-span-1 h-9 w-full border-border bg-background text-foreground shadow-[0_0_0_1px_rgba(15,23,42,0.12),0_2px_6px_rgba(15,23,42,0.08)] hover:bg-background hover:shadow-[0_0_0_1px_rgba(15,23,42,0.22),0_4px_10px_rgba(15,23,42,0.12)] dark:bg-input/30 dark:hover:bg-input/30 dark:shadow-[0_0_0_1px_rgba(148,163,184,0.35),0_2px_6px_rgba(2,6,23,0.35)] dark:hover:shadow-[0_0_0_1px_rgba(148,163,184,0.5),0_4px_10px_rgba(2,6,23,0.45)]"
+                    disabled={!hasSelectedProduct}
+                    onClick={() => {
+                      setQuantityCounter((current) => current + 1);
+                    }}
+                  >
+                    +
+                  </Button>
+                </div>
+                <p className="text-xs text-muted-foreground">Item(ns): {quantityCounter}</p>
+                <div className="grid grid-cols-1 gap-2">
+                  <SubmitButton className="w-full" disabled={!hasSelectedProduct}>Adicionar</SubmitButton>
+                </div>
+              </div>
+              <div className="grid gap-3">
+                <div className="grid gap-1">
+                  <Label htmlFor={`${order.id}-discount`}>Desconto (%)</Label>
+                  <Input
+                    id={`${order.id}-discount`}
+                    name="discount"
+                    placeholder="0,00"
+                    value={discountInput}
+                    onChange={(event) => {
+                    setDiscountInput(event.currentTarget.value);
+                  }}
+                />
+                </div>
+                <div className="grid gap-1">
+                  <Label htmlFor={`${order.id}-unitPrice-view`}>Valor unitário</Label>
+                  <Input
+                    id={`${order.id}-unitPrice-view`}
+                    value={selectedProduct ? formatCurrency(selectedProductUnitPriceNumber) : "Selecione um produto"}
+                    readOnly
+                  />
+                </div>
+                <div className="grid gap-1">
+                  <Label htmlFor={`${order.id}-totalPrice-view`}>Valor total do item</Label>
+                  <Input
+                    id={`${order.id}-totalPrice-view`}
+                    value={selectedProduct ? formatCurrency(selectedProductTotalPrice) : "Selecione um produto"}
+                    readOnly
+                  />
+                </div>
+                <Button type="reset" variant="outline" className="w-full border-border bg-background text-foreground shadow-[0_0_0_1px_rgba(15,23,42,0.12),0_2px_6px_rgba(15,23,42,0.08)] hover:bg-background hover:shadow-[0_0_0_1px_rgba(15,23,42,0.22),0_4px_10px_rgba(15,23,42,0.12)] dark:bg-input/30 dark:hover:bg-input/30 dark:shadow-[0_0_0_1px_rgba(148,163,184,0.35),0_2px_6px_rgba(2,6,23,0.35)] dark:hover:shadow-[0_0_0_1px_rgba(148,163,184,0.5),0_4px_10px_rgba(2,6,23,0.45)]">Limpar</Button>
+              </div>
             </div>
             {addState.error ? (
               <p className="rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive">
@@ -1440,29 +1616,68 @@ function OrderItemsPanel({ order }: { order: OrderListItem }) {
         )}
       </div>
 
-      <div className="grid gap-2">
-        {order.items.length === 0 ? (
-          <p className="rounded-lg border border-dashed border-border px-3 py-4 text-sm text-muted-foreground">
-            Nenhum item cadastrado no pedido.
-          </p>
-        ) : (
-          order.items.map((item) => (
-            order.status === "DRAFT" ? (
-              <OrderItemRowEditor key={item.id} order={order} item={item} />
-            ) : (
+      <div
+        id={`${order.id}-items-list`}
+        className="rounded-lg border border-border/60 bg-background p-4 lg:min-h-[560px]"
+      >
+        <h3 className="mb-3 text-sm font-semibold">Itens adicionados</h3>
+        <p className="mb-3 text-xs text-muted-foreground lg:block">
+          Visualização em tempo real dos itens em preparação e já adicionados ao pedido.
+        </p>
+
+        <div className="mb-3 hidden rounded-lg border border-dashed border-border/80 bg-muted/20 p-3 lg:grid lg:gap-2">
+          <p className="text-xs font-semibold text-muted-foreground">Pré-visualização em tempo real</p>
+          {order.items.length === 0 ? (
+            <p className="text-sm text-muted-foreground">Nenhum item adicionado até o momento.</p>
+          ) : (
+            <div className="grid gap-1">
+              {order.items.slice(0, 3).map((item) => (
+                <p key={`preview-${item.id}`} className="text-sm">
+                  {item.description || item.productName || "Item"} | Qtd: {item.quantity} | Total: {formatCurrency(item.totalPrice)}
+                </p>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div className="grid gap-2 lg:max-h-[420px] lg:overflow-y-auto lg:pr-1">
+          {order.items.length === 0 ? (
+            <p className="rounded-lg border border-dashed border-border px-3 py-4 text-sm text-muted-foreground">
+              Nenhum item cadastrado no pedido.
+            </p>
+          ) : (
+            order.items.map((item) => (
               <div key={item.id} className="rounded-lg border border-border/60 bg-muted/20 p-3">
-                <p className="text-sm font-medium">{item.description || item.productName || "Item do pedido"}</p>
+                <div className="mb-1 flex items-start justify-between gap-3">
+                  <p className="text-sm font-medium">{item.description || item.productName || "Item do pedido"}</p>
+                  {order.status === "DRAFT" ? (
+                    <ConfirmActionDialog
+                      action={deleteOrderItemAction}
+                      hiddenFields={{ orderId: order.id, itemId: item.id }}
+                      title="Remover item"
+                      description="Deseja remover este item do pedido?"
+                      confirmLabel="Remover item"
+                      pendingLabel="Removendo..."
+                      confirmVariant="destructive"
+                      trigger={(
+                        <Button variant="ghost" size="icon-sm" aria-label="Remover item do pedido">
+                          <Trash2 />
+                        </Button>
+                      )}
+                    />
+                  ) : null}
+                </div>
                 <p className="text-xs text-muted-foreground">
                   Quantidade: {item.quantity} | Desconto: {item.discount}% | Unitário: {formatCurrency(item.unitPrice)} | Total: {formatCurrency(item.totalPrice)}
                 </p>
               </div>
-            )
-          ))
-        )}
+            ))
+          )}
+        </div>
       </div>
 
       <div className="rounded-lg border border-border/60 bg-background p-4">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-col gap-3">
           <div>
             <p className="text-sm font-semibold">Resumo</p>
             <p className="text-xs text-muted-foreground">
@@ -1470,13 +1685,27 @@ function OrderItemsPanel({ order }: { order: OrderListItem }) {
             </p>
           </div>
           {order.status === "DRAFT" ? (
-            <form action={confirmAction}>
-              <input type="hidden" name="orderId" value={order.id} />
-              <SubmitButton className="sm:w-auto">
-                <CheckCircle2 />
-                Confirmar pedido
-              </SubmitButton>
-            </form>
+            <div className="grid gap-2 lg:grid-cols-2">
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full"
+                disabled={order.items.length === 0}
+                onClick={() => {
+                  const target = document.getElementById(`${order.id}-items-list`);
+                  target?.scrollIntoView({ behavior: "smooth", block: "start" });
+                }}
+              >
+                Atualizar item
+              </Button>
+              <form action={confirmAction} className="w-full">
+                <input type="hidden" name="orderId" value={order.id} />
+                <SubmitButton className="w-full">
+                  <CheckCircle2 />
+                  Confirmar pedido
+                </SubmitButton>
+              </form>
+            </div>
           ) : (
             <Badge variant="default">Pedido confirmado</Badge>
           )}

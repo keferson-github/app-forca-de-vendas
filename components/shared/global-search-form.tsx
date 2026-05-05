@@ -256,7 +256,7 @@ export function SearchInputWithAutocomplete<TItem = never>({
               {autocomplete?.loadingLabel ?? "Buscando sugestões..."}
             </p>
           ) : autocompleteItems.length > 0 ? (
-            <ul className="grid gap-0.5">
+            <ul className="grid h-auto max-h-64 gap-0.5 overflow-y-auto pr-1">
               {autocompleteItems.map((item) => (
                 <li key={autocomplete?.getItemId(item)}>
                   <button

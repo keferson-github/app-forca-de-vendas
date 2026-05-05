@@ -412,10 +412,10 @@ export async function createOrderAction(
     return { error: relationError, values };
   }
 
-  await createOrderWithUniqueNumber(userId, orderPayload(parsed.data));
+  const createdOrderId = await createOrderWithUniqueNumber(userId, orderPayload(parsed.data));
 
   revalidatePath("/pedidos");
-  redirect(buildNoticeUrl("/pedidos", "order-created"));
+  redirect(`${buildNoticeUrl("/pedidos", "order-created")}&openOrderId=${encodeURIComponent(createdOrderId)}`);
 }
 
 export async function updateOrderAction(
