@@ -236,7 +236,7 @@ export const OrderPdfTemplate = forwardRef<HTMLDivElement, OrderPdfTemplateProps
             <span><span className={styles.label}>E-mail:</span> -</span>
             <span><span className={styles.label}>End. Entrega:</span> {isSameDeliveryAddress ? "O MESMO" : "ALTERADO"}</span>
           </div>
-          <div className={styles.row2}>
+          <div className={`${styles.row2} ${styles.row2Equal}`}>
             <span><span className={styles.label}>Endereco comercial:</span> {order.customerCommercialAddress ?? "-"}</span>
             <span><span className={styles.label}>Endereco de entrega:</span> {order.customerDeliveryAddress ?? "-"}</span>
           </div>
@@ -345,7 +345,7 @@ export const OrderPdfTemplate = forwardRef<HTMLDivElement, OrderPdfTemplateProps
             <span><span className={styles.label}>Entrega (tipo):</span> {deliveryTypeLabels[order.deliveryType]}</span>
             <span><span className={styles.label}>Recebimento:</span> {order.receivingCompany ?? "-"}</span>
           </div>
-          <div className={styles.row2}>
+          <div className={`${styles.row2} ${styles.row2Equal}`}>
             <span><span className={styles.label}>Status do pedido:</span> {orderStatusLabel}</span>
             <span><span className={styles.label}>Empresa recebedora:</span> {order.receivingCompany ?? "-"}</span>
           </div>

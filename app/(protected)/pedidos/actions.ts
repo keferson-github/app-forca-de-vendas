@@ -555,7 +555,20 @@ export async function addOrderItemAction(
     return { error: "Produto não encontrado para o item.", values };
   }
 
-  if (new Prisma.Decimal(quantity).greaterThan(product.stockQuantity)) {
+  const existingQuantityAggregate = await prisma.orderItem.aggregate({
+    where: {
+      orderId: order.id,
+      productId: product.id,
+    },
+    _sum: {
+      quantity: true,
+    },
+  });
+
+  const totalQuantityInOrder = Number(existingQuantityAggregate._sum.quantity ?? 0);
+  const nextTotalQuantityInOrder = totalQuantityInOrder + quantity;
+
+  if (new Prisma.Decimal(nextTotalQuantityInOrder).greaterThan(product.stockQuantity)) {
     return {
       error: `Estoque insuficiente para ${product.code} - ${product.name}.`,
       values,
@@ -571,18 +584,49 @@ export async function addOrderItemAction(
   const totalPrice = gross.sub(discountAmount);
 
   await prisma.$transaction(async (transaction) => {
-    await transaction.orderItem.create({
-      data: {
+    const existingItem = await transaction.orderItem.findFirst({
+      where: {
         orderId: order.id,
         productId: product.id,
-        projectNameCode: `${product.code} - ${product.name}`,
-        quantity,
-        discount: discountDecimal,
-        unitPrice: unitPriceDecimal,
-        totalPrice,
         operation: "VENDA",
+        unitPrice: unitPriceDecimal,
+        discount: discountDecimal,
+      },
+      select: {
+        id: true,
+        quantity: true,
       },
     });
+
+    if (existingItem) {
+      const updatedQuantity = existingItem.quantity + quantity;
+      const updatedGross = unitPriceDecimal.mul(updatedQuantity);
+      const updatedDiscountAmount = updatedGross.mul(discountDecimal).div(100);
+      const updatedTotalPrice = updatedGross.sub(updatedDiscountAmount);
+
+      await transaction.orderItem.update({
+        where: {
+          id: existingItem.id,
+        },
+        data: {
+          quantity: updatedQuantity,
+          totalPrice: updatedTotalPrice,
+        },
+      });
+    } else {
+      await transaction.orderItem.create({
+        data: {
+          orderId: order.id,
+          productId: product.id,
+          projectNameCode: `${product.code} - ${product.name}`,
+          quantity,
+          discount: discountDecimal,
+          unitPrice: unitPriceDecimal,
+          totalPrice,
+          operation: "VENDA",
+        },
+      });
+    }
 
     await recalculateOrderTotal(transaction, order.id);
   });

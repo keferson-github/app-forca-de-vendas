@@ -4,7 +4,7 @@
   --pdf-field-padding: 8px;
   --pdf-block-gap: 10px;
   --pdf-border-color: #b6c1cf;
-  width: 840px;
+  width: 900px;
   min-height: 1123px;
   box-sizing: border-box;
   background: #e6e9ee;
@@ -85,6 +85,10 @@
   display: grid;
   grid-template-columns: 170px minmax(0, 1fr);
   gap: 8px;
+}
+
+.row2Equal {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 .row3 {
