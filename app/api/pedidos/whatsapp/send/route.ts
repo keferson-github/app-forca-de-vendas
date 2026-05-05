@@ -34,19 +34,58 @@ function normalizeWhatsAppNumber(value: string | null | undefined) {
   return digits.length >= 12 ? digits : null;
 }
 
-function getEvolutionConfig() {
-  const baseUrl = process.env.EVOLUTION_API_URL?.trim().replace(/\/+$/g, "");
-  const instance = process.env.EVOLUTION_INSTANCE?.trim();
-  const apiKey = process.env.EVOLUTION_API_KEY?.trim();
+function readEnvValue(candidates: string[]) {
+  for (const name of candidates) {
+    const value = process.env[name];
 
-  if (!baseUrl || !instance || !apiKey) {
-    return null;
+    if (!value) {
+      continue;
+    }
+
+    const normalized = value.trim().replace(/^['"]|['"]$/g, "");
+    if (normalized) {
+      return normalized;
+    }
+  }
+
+  return null;
+}
+
+function getEvolutionConfig() {
+  const baseUrl = readEnvValue([
+    "EVOLUTION_API_URL",
+    "EVOLUTION_BASE_URL",
+    "WHATSAPP_EVOLUTION_API_URL",
+    "NEXT_PUBLIC_EVOLUTION_API_URL",
+  ])?.replace(/\/+$/g, "");
+  const instance = readEnvValue([
+    "EVOLUTION_INSTANCE",
+    "EVOLUTION_INSTANCE_NAME",
+    "WHATSAPP_EVOLUTION_INSTANCE",
+    "NEXT_PUBLIC_EVOLUTION_INSTANCE",
+  ]);
+  const apiKey = readEnvValue([
+    "EVOLUTION_API_KEY",
+    "EVOLUTION_APIKEY",
+    "WHATSAPP_EVOLUTION_API_KEY",
+  ]);
+
+  const missing: string[] = [];
+  if (!baseUrl) {
+    missing.push("EVOLUTION_API_URL");
+  }
+  if (!instance) {
+    missing.push("EVOLUTION_INSTANCE");
+  }
+  if (!apiKey) {
+    missing.push("EVOLUTION_API_KEY");
   }
 
   return {
     baseUrl,
     instance,
     apiKey,
+    missing,
   };
 }
 
@@ -171,9 +210,16 @@ export async function POST(request: Request) {
 
     const evolutionConfig = getEvolutionConfig();
 
-    if (!evolutionConfig) {
+    if (
+      !evolutionConfig.baseUrl
+      || !evolutionConfig.instance
+      || !evolutionConfig.apiKey
+    ) {
       return NextResponse.json(
-        { error: "Evolution API nao configurada. Defina EVOLUTION_API_URL, EVOLUTION_INSTANCE e EVOLUTION_API_KEY." },
+        {
+          error: "Evolution API nao configurada. Defina EVOLUTION_API_URL, EVOLUTION_INSTANCE e EVOLUTION_API_KEY.",
+          missing: evolutionConfig.missing,
+        },
         { status: 500 },
       );
     }
