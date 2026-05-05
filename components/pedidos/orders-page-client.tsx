@@ -796,7 +796,7 @@ function OrderEditItemsSheet({
           </Button>
         )}
       </SheetTrigger>
-      <SheetContent className="w-full overflow-y-auto sm:max-w-[44rem]">
+      <SheetContent className="w-full overflow-y-auto sm:max-w-6xl">
         <SheetHeader>
           <div className="flex flex-wrap gap-2">
             <Badge variant="secondary">#{order.orderNumber}</Badge>
@@ -817,7 +817,7 @@ function OrderEditItemsSheet({
 
 function OrderItemsReadOnlySection({ order }: { order: OrderListItem }) {
   return (
-    <div className="grid gap-4">
+    <div className="grid gap-4 lg:grid-cols-2">
       <div className="rounded-lg border border-border/60 bg-background p-4 lg:order-1">
         <h3 className="text-sm font-semibold">Itens adicionados no pedido</h3>
         <p className="mb-3 text-xs text-muted-foreground">
@@ -1399,7 +1399,9 @@ function OrderItemsPanel({ order }: { order: OrderListItem }) {
   const [addState, addItemAction] = useActionState(addOrderItemAction, initialItemState);
   const [confirmState, confirmAction] = useActionState(confirmOrderAction, initialStatusState);
   const hasSelectedProduct = selectedProduct !== null;
-  const shouldEnableItemsScroll = order.items.length > 5;
+  const shouldEnableDesktopItemsScroll = order.items.length > 7;
+  const previewItems = order.items.slice(0, 3);
+  const remainingPreviewCount = Math.max(0, order.items.length - previewItems.length);
   const selectedProductUnitPriceNumber = selectedProduct?.price ?? 0;
   const selectedProductUnitPrice = selectedProduct ? formatMoneyInput(selectedProductUnitPriceNumber) : "";
   const selectedProductTotalPrice = selectedProductUnitPriceNumber * quantityCounter;
@@ -1412,8 +1414,8 @@ function OrderItemsPanel({ order }: { order: OrderListItem }) {
   }
 
   return (
-    <div className="grid gap-4">
-      <div className="rounded-lg border border-border/60 bg-background p-4">
+    <div className="grid gap-4 lg:grid-cols-2 lg:items-stretch">
+      <div className="rounded-lg border border-border/60 bg-background p-4 lg:flex lg:h-[780px] lg:flex-col">
         <h3 className="text-sm font-semibold">Itens do pedido</h3>
         <p className="mb-3 text-xs text-muted-foreground">
           Monte o pedido com os produtos cadastrados na página Produtos do app.
@@ -1621,11 +1623,69 @@ function OrderItemsPanel({ order }: { order: OrderListItem }) {
             Itens bloqueados para edição porque o pedido já foi confirmado.
           </p>
         )}
+
+        <div className="mt-4 rounded-lg border border-border/60 bg-muted/20 p-4">
+          <p className="text-sm font-semibold">Pré-visualização do pedido</p>
+          <p className="mb-2 text-xs text-muted-foreground">
+            Itens selecionados até o momento para este pedido.
+          </p>
+          {previewItems.length === 0 ? (
+            <p className="text-xs text-muted-foreground">Nenhum item adicionado ainda.</p>
+          ) : (
+            <div className="grid gap-1">
+              {previewItems.map((item) => (
+                <p key={`preview-${item.id}`} className="text-xs text-foreground">
+                  {item.description || item.productName || "Item do pedido"} | Qtd: {item.quantity} | Total: {formatCurrency(item.totalPrice)}
+                </p>
+              ))}
+              {remainingPreviewCount > 0 ? (
+                <p className="text-xs text-muted-foreground">
+                  + {remainingPreviewCount} item(ns) na lista completa.
+                </p>
+              ) : null}
+            </div>
+          )}
+        </div>
+
+        <div className="mt-4 hidden rounded-lg border border-border/60 bg-background p-4 lg:mt-auto lg:block">
+          <div className="flex flex-col gap-3">
+            <div>
+              <p className="text-sm font-semibold">Resumo</p>
+              <p className="text-xs text-muted-foreground">
+                Total atual: {formatCurrency(order.total)} | Itens: {order.itemsCount}
+              </p>
+            </div>
+            {order.status === "DRAFT" ? (
+              <div className="grid gap-2 lg:grid-cols-2">
+                <form action={refreshOrderItemsAction} className="w-full">
+                  <input type="hidden" name="orderId" value={order.id} />
+                  <Button type="submit" variant="outline" className="w-full" disabled={order.items.length === 0}>
+                    Atualizar item
+                  </Button>
+                </form>
+                <form action={confirmAction} className="w-full">
+                  <input type="hidden" name="orderId" value={order.id} />
+                  <SubmitButton className="w-full">
+                    <CheckCircle2 />
+                    Confirmar pedido
+                  </SubmitButton>
+                </form>
+              </div>
+            ) : (
+              <Badge variant="default">Pedido confirmado</Badge>
+            )}
+          </div>
+          {confirmState.error ? (
+            <p className="mt-3 rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive">
+              {confirmState.error}
+            </p>
+          ) : null}
+        </div>
       </div>
 
       <div
         id={`${order.id}-items-list`}
-        className="rounded-lg border border-border/60 bg-background p-4 lg:order-3 lg:min-h-[560px]"
+        className="rounded-lg border border-border/60 bg-background p-4 lg:order-2 lg:h-[780px]"
       >
         <h3 className="mb-3 text-sm font-semibold">Itens adicionados</h3>
         <p className="mb-3 text-xs text-muted-foreground lg:block">
@@ -1634,7 +1694,7 @@ function OrderItemsPanel({ order }: { order: OrderListItem }) {
 
         <div
           className={`grid h-auto gap-2 ${
-            shouldEnableItemsScroll ? "max-h-[420px] overflow-y-auto pr-1" : ""
+            shouldEnableDesktopItemsScroll ? "lg:max-h-[640px] lg:overflow-y-auto lg:pr-1" : ""
           }`}
         >
           {order.items.length === 0 ? (
@@ -1672,7 +1732,29 @@ function OrderItemsPanel({ order }: { order: OrderListItem }) {
         </div>
       </div>
 
-      <div className="rounded-lg border border-border/60 bg-background p-4 lg:order-2">
+      <div className="rounded-lg border border-border/60 bg-background p-4 lg:order-3 lg:col-span-2 lg:hidden">
+        <div className="mb-4 rounded-lg border border-border/60 bg-muted/20 p-4">
+          <p className="text-sm font-semibold">Pré-visualização do pedido</p>
+          <p className="mb-2 text-xs text-muted-foreground">
+            Itens selecionados até o momento para este pedido.
+          </p>
+          {previewItems.length === 0 ? (
+            <p className="text-xs text-muted-foreground">Nenhum item adicionado ainda.</p>
+          ) : (
+            <div className="grid gap-1">
+              {previewItems.map((item) => (
+                <p key={`preview-mobile-${item.id}`} className="text-xs text-foreground">
+                  {item.description || item.productName || "Item do pedido"} | Qtd: {item.quantity} | Total: {formatCurrency(item.totalPrice)}
+                </p>
+              ))}
+              {remainingPreviewCount > 0 ? (
+                <p className="text-xs text-muted-foreground">
+                  + {remainingPreviewCount} item(ns) na lista completa.
+                </p>
+              ) : null}
+            </div>
+          )}
+        </div>
         <div className="flex flex-col gap-3">
           <div>
             <p className="text-sm font-semibold">Resumo</p>
