@@ -340,7 +340,7 @@ export default async function DashboardPage(props: { searchParams: SearchParams 
       key: "whatsapp",
       label: "WhatsApp",
       value: data.modules.dispatchSentCount,
-      summary: `${data.modules.dispatchFailedCount} falha(s) registrada(s) no envio via Evolution API.`,
+      summary: `${data.modules.dispatchFailedCount} falha(s) registrada(s) no envio por WhatsApp.`,
       icon: IconMessageCircle,
       color: "#f59e0b",
     },

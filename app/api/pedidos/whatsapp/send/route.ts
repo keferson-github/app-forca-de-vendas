@@ -12,6 +12,15 @@ export const runtime = "nodejs";
 const MAX_PDF_SIZE_BYTES = 16 * 1024 * 1024;
 const BLOB_TOKEN_PATTERN = /^vercel_blob_rw_[A-Za-z0-9_-]+$/;
 
+function normalizeConfigValue(value: string | null | undefined) {
+  if (!value) {
+    return null;
+  }
+
+  const normalized = value.trim().replace(/^['"]|['"]$/g, "");
+  return normalized || null;
+}
+
 function normalizeWhatsAppNumber(value: string | null | undefined) {
   if (!value) {
     return null;
@@ -37,12 +46,7 @@ function normalizeWhatsAppNumber(value: string | null | undefined) {
 function readEnvValue(candidates: string[]) {
   for (const name of candidates) {
     const value = process.env[name];
-
-    if (!value) {
-      continue;
-    }
-
-    const normalized = value.trim().replace(/^['"]|['"]$/g, "");
+    const normalized = normalizeConfigValue(value);
     if (normalized) {
       return normalized;
     }
@@ -51,19 +55,43 @@ function readEnvValue(candidates: string[]) {
   return null;
 }
 
-function getEvolutionConfig() {
+function readStringField(formData: FormData, candidates: string[]) {
+  for (const candidate of candidates) {
+    const field = formData.get(candidate);
+    if (typeof field === "string") {
+      const normalized = normalizeConfigValue(field);
+      if (normalized) {
+        return normalized;
+      }
+    }
+  }
+
+  return null;
+}
+
+function getEvolutionConfig(options?: { requestInstance?: string | null }) {
   const baseUrl = readEnvValue([
     "EVOLUTION_API_URL",
     "EVOLUTION_BASE_URL",
     "WHATSAPP_EVOLUTION_API_URL",
     "NEXT_PUBLIC_EVOLUTION_API_URL",
   ])?.replace(/\/+$/g, "");
-  const instance = readEnvValue([
+  const requestInstance = normalizeConfigValue(options?.requestInstance);
+  const envInstance = readEnvValue([
     "EVOLUTION_INSTANCE",
     "EVOLUTION_INSTANCE_NAME",
+    "EVOLUTION_INSTANCE_ID",
+    "EVOLUTION_INSTANCEID",
+    "EVOLUTION_INSTANC",
+    "EVOLUTION_INSTANCIA",
+    "EVOLUTION_INSTACE",
     "WHATSAPP_EVOLUTION_INSTANCE",
+    "WHATSAPP_EVOLUTION_INSTANCE_NAME",
     "NEXT_PUBLIC_EVOLUTION_INSTANCE",
+    "NEXT_PUBLIC_EVOLUTION_INSTANCE_NAME",
+    "NEXT_PUBLIC_WHATSAPP_EVOLUTION_INSTANCE",
   ]);
+  const instance = requestInstance ?? envInstance;
   const apiKey = readEnvValue([
     "EVOLUTION_API_KEY",
     "EVOLUTION_APIKEY",
@@ -87,6 +115,23 @@ function getEvolutionConfig() {
     apiKey,
     missing,
   };
+}
+
+function mapMissingWhatsAppConfig(missing: string[]) {
+  const mapped = missing.map((item) => {
+    if (item === "EVOLUTION_API_URL") {
+      return "url";
+    }
+    if (item === "EVOLUTION_INSTANCE") {
+      return "instance";
+    }
+    if (item === "EVOLUTION_API_KEY") {
+      return "token";
+    }
+    return item.toLowerCase();
+  });
+
+  return [...new Set(mapped)];
 }
 
 function getBlobToken() {
@@ -208,7 +253,21 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Nao autenticado." }, { status: 401 });
     }
 
-    const evolutionConfig = getEvolutionConfig();
+    const formData = await request.formData();
+    const orderId = String(formData.get("orderId") ?? "").trim();
+    const pdfFile = formData.get("pdfFile");
+    const instanceFromRequest =
+      readStringField(formData, [
+        "evolutionInstance",
+        "instance",
+        "instanceName",
+        "evolution_instance",
+      ])
+      ?? normalizeConfigValue(request.headers.get("x-evolution-instance"));
+
+    const evolutionConfig = getEvolutionConfig({
+      requestInstance: instanceFromRequest,
+    });
 
     if (
       !evolutionConfig.baseUrl
@@ -217,16 +276,12 @@ export async function POST(request: Request) {
     ) {
       return NextResponse.json(
         {
-          error: "Evolution API nao configurada. Defina EVOLUTION_API_URL, EVOLUTION_INSTANCE e EVOLUTION_API_KEY.",
-          missing: evolutionConfig.missing,
+          error: "Canal de WhatsApp nao configurado. Defina URL, instancia e token.",
+          missing: mapMissingWhatsAppConfig(evolutionConfig.missing),
         },
         { status: 500 },
       );
     }
-
-    const formData = await request.formData();
-    const orderId = String(formData.get("orderId") ?? "").trim();
-    const pdfFile = formData.get("pdfFile");
 
     if (!orderId) {
       return NextResponse.json({ error: "Pedido nao identificado." }, { status: 400 });
@@ -272,155 +327,159 @@ export async function POST(request: Request) {
     const pdfBuffer = Buffer.from(await pdfFile.arrayBuffer());
     const fileName = pdfFile.name?.trim() || `pedido-${order.orderNumber}.pdf`;
 
-  let dispatchLogId: string | null = null;
+    let dispatchLogId: string | null = null;
 
     try {
-    const dispatchLog = await prisma.whatsappDispatchLog.create({
-      data: {
+      const dispatchLog = await prisma.whatsappDispatchLog.create({
+        data: {
+          userId: session.user.id,
+          orderId: order.id,
+          destinationPhone: destinationPhone,
+          status: "PENDING",
+        },
+        select: {
+          id: true,
+        },
+      });
+      dispatchLogId = dispatchLog.id;
+    } catch (error) {
+      // Em caso de schema/migration pendente em producao, nao bloquear envio.
+      console.warn("Nao foi possivel criar log inicial de envio WhatsApp.", error);
+    }
+
+    let providerPayload: unknown = null;
+    let providerResponseText: string | null = null;
+
+    try {
+      const documentUrl = await persistOrderPdf({
         userId: session.user.id,
         orderId: order.id,
-        destinationPhone: destinationPhone,
-        status: "PENDING",
-      },
-      select: {
-        id: true,
-      },
-    });
-    dispatchLogId = dispatchLog.id;
-    } catch (error) {
-    // Em caso de schema/migration pendente em producao, nao bloquear envio.
-    console.warn("Nao foi possivel criar log inicial de envio WhatsApp.", error);
-  }
-
-  let providerPayload: unknown = null;
-  let providerResponseText: string | null = null;
-
-  try {
-    const documentUrl = await persistOrderPdf({
-      userId: session.user.id,
-      orderId: order.id,
-      fileName,
-      buffer: pdfBuffer,
-    });
-
-    let orderDocumentId: string | null = null;
-
-    if (documentUrl) {
-      try {
-        const document = await prisma.orderDocument.create({
-          data: {
-            userId: session.user.id,
-            orderId: order.id,
-            type: "DECLARACAO_CONTEUDO",
-            fileName,
-            fileUrl: documentUrl,
-            generatedByUserId: session.user.id,
-          },
-          select: {
-            id: true,
-          },
-        });
-
-        orderDocumentId = document.id;
-      } catch (error) {
-        // Nao impedir envio caso tabela de documentos nao exista ainda.
-        console.warn("Nao foi possivel persistir documento do pedido.", error);
-      }
-    }
-
-    const mediaSource = isHttpUrl(documentUrl)
-      ? documentUrl
-      : pdfBuffer.toString("base64");
-    const endpoint = `${evolutionConfig.baseUrl}/message/sendMedia/${encodeURIComponent(evolutionConfig.instance)}`;
-
-    const response = await fetch(endpoint, {
-      method: "POST",
-      headers: {
-        "content-type": "application/json",
-        apikey: evolutionConfig.apiKey,
-      },
-      body: JSON.stringify({
-        number: destinationPhone,
-        mediatype: "document",
-        mimetype: "application/pdf",
-        caption: `Pedido #${order.orderNumber} - Total ${Number(order.total).toFixed(2)}`,
-        media: mediaSource,
         fileName,
-      }),
-    });
+        buffer: pdfBuffer,
+      });
 
-    providerResponseText = await response.text();
+      let orderDocumentId: string | null = null;
 
-    if (providerResponseText) {
-      try {
-        providerPayload = JSON.parse(providerResponseText);
-      } catch {
-        providerPayload = { raw: providerResponseText };
+      if (documentUrl) {
+        try {
+          const document = await prisma.orderDocument.create({
+            data: {
+              userId: session.user.id,
+              orderId: order.id,
+              type: "DECLARACAO_CONTEUDO",
+              fileName,
+              fileUrl: documentUrl,
+              generatedByUserId: session.user.id,
+            },
+            select: {
+              id: true,
+            },
+          });
+
+          orderDocumentId = document.id;
+        } catch (error) {
+          // Nao impedir envio caso tabela de documentos nao exista ainda.
+          console.warn("Nao foi possivel persistir documento do pedido.", error);
+        }
       }
-    }
 
-    if (!response.ok) {
-      const providerErrorMessage = extractProviderErrorMessage(providerPayload);
-      throw new Error(
-        providerErrorMessage
-          ? `Evolution API retornou ${response.status}: ${providerErrorMessage}`
-          : `Evolution API retornou ${response.status}.`
-      );
-    }
+      const mediaSource = isHttpUrl(documentUrl)
+        ? documentUrl
+        : pdfBuffer.toString("base64");
+      const endpoint = `${evolutionConfig.baseUrl}/message/sendMedia/${encodeURIComponent(evolutionConfig.instance)}`;
 
-    if (dispatchLogId) {
-      try {
-        await prisma.whatsappDispatchLog.update({
-          where: {
-            id: dispatchLogId,
-          },
-          data: {
-            orderDocumentId,
-            status: "SENT",
-            sentAt: new Date(),
-            providerMessageId: extractProviderMessageId(providerPayload),
-            providerPayload: providerPayload
-              ? (providerPayload as Prisma.InputJsonValue)
-              : undefined,
-            errorMessage: null,
-          },
-        });
-      } catch (error) {
-        console.warn("Nao foi possivel atualizar log de envio WhatsApp (SENT).", error);
+      const response = await fetch(endpoint, {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          apikey: evolutionConfig.apiKey,
+        },
+        body: JSON.stringify({
+          number: destinationPhone,
+          mediatype: "document",
+          mimetype: "application/pdf",
+          caption: `Pedido #${order.orderNumber} - Total ${Number(order.total).toFixed(2)}`,
+          media: mediaSource,
+          fileName,
+        }),
+      });
+
+      providerResponseText = await response.text();
+
+      if (providerResponseText) {
+        try {
+          providerPayload = JSON.parse(providerResponseText);
+        } catch {
+          providerPayload = { raw: providerResponseText };
+        }
       }
-    }
 
-    return NextResponse.json({
-      success: true,
-      orderId: order.id,
-      orderNumber: order.orderNumber,
-      destinationPhone,
-    });
-  } catch (error) {
-    const errorMessage = error instanceof Error
-      ? error.message
-      : "Falha ao enviar PDF do pedido via Evolution API.";
+      if (!response.ok) {
+        const providerErrorMessage = extractProviderErrorMessage(providerPayload);
+        if (providerErrorMessage) {
+          console.error("Falha no servico de envio WhatsApp.", {
+            status: response.status,
+            providerErrorMessage,
+          });
+        }
+        throw new Error(
+          `Falha no envio de WhatsApp (status ${response.status}).`
+        );
+      }
 
-    if (dispatchLogId) {
-      try {
-        await prisma.whatsappDispatchLog.update({
-          where: {
-            id: dispatchLogId,
-          },
-          data: {
-            status: "FAILED",
-            errorMessage,
-            providerPayload: providerPayload
-              ? (providerPayload as Prisma.InputJsonValue)
-              : providerResponseText
-                ? ({ raw: providerResponseText } as Prisma.InputJsonValue)
+      if (dispatchLogId) {
+        try {
+          await prisma.whatsappDispatchLog.update({
+            where: {
+              id: dispatchLogId,
+            },
+            data: {
+              orderDocumentId,
+              status: "SENT",
+              sentAt: new Date(),
+              providerMessageId: extractProviderMessageId(providerPayload),
+              providerPayload: providerPayload
+                ? (providerPayload as Prisma.InputJsonValue)
                 : undefined,
-          },
-        });
-      } catch (logError) {
-        console.warn("Nao foi possivel atualizar log de envio WhatsApp (FAILED).", logError);
+              errorMessage: null,
+            },
+          });
+        } catch (error) {
+          console.warn("Nao foi possivel atualizar log de envio WhatsApp (SENT).", error);
+        }
       }
-    }
+
+      return NextResponse.json({
+        success: true,
+        orderId: order.id,
+        orderNumber: order.orderNumber,
+        destinationPhone,
+      });
+    } catch (error) {
+      const errorMessage = error instanceof Error
+        ? error.message
+        : "Falha ao enviar PDF do pedido por WhatsApp.";
+
+      if (dispatchLogId) {
+        try {
+          await prisma.whatsappDispatchLog.update({
+            where: {
+              id: dispatchLogId,
+            },
+            data: {
+              status: "FAILED",
+              errorMessage,
+              providerPayload: providerPayload
+                ? (providerPayload as Prisma.InputJsonValue)
+                : providerResponseText
+                  ? ({ raw: providerResponseText } as Prisma.InputJsonValue)
+                  : undefined,
+            },
+          });
+        } catch (logError) {
+          console.warn("Nao foi possivel atualizar log de envio WhatsApp (FAILED).", logError);
+        }
+      }
 
       return NextResponse.json(
         { error: `Nao foi possivel enviar o pedido por WhatsApp. ${errorMessage}` },

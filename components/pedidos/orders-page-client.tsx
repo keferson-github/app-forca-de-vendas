@@ -1027,6 +1027,15 @@ export function OrdersPageClient({
       const payload = new FormData();
       payload.set("orderId", order.id);
       payload.set("pdfFile", file);
+      const evolutionInstance =
+        process.env.NEXT_PUBLIC_EVOLUTION_INSTANCE
+        ?? process.env.NEXT_PUBLIC_EVOLUTION_INSTANCE_NAME
+        ?? process.env.NEXT_PUBLIC_WHATSAPP_EVOLUTION_INSTANCE
+        ?? null;
+      const normalizedEvolutionInstance = evolutionInstance?.trim();
+      if (normalizedEvolutionInstance) {
+        payload.set("evolutionInstance", normalizedEvolutionInstance);
+      }
 
       const response = await fetch("/api/pedidos/whatsapp/send", {
         method: "POST",
